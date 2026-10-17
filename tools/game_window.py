@@ -1,0 +1,165 @@
+"""Capture and interact with the identified BrownDust II client window."""
+import ctypes
+import os
+import time
+from pathlib import Path
+from ctypes import wintypes
+from dataclasses import dataclass
+
+try:
+    ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
+except (AttributeError, OSError):
+    pass
+
+import win32api
+import win32con
+import win32gui
+import win32process
+import win32ui
+import pywintypes
+from PIL import Image
+
+_capture_api = ctypes.WinDLL('user32', use_last_error=True)
+_capture_api.PrintWindow.argtypes = (wintypes.HWND, wintypes.HDC, wintypes.UINT)
+_capture_api.PrintWindow.restype = wintypes.BOOL
+
+
+def check_requested_stop():
+    signal = os.environ.get('BD2_STOP_FILE')
+    if signal and Path(signal).is_file():
+        raise RuntimeError('用户已停止当前任务')
+    if win32api.GetAsyncKeyState(0x77)&0x8000:
+        raise RuntimeError('用户已按F8停止当前任务')
+
+
+@dataclass
+class GameWindow:
+    hwnd: int
+    pid: int
+    title: str
+
+    @classmethod
+    def find(cls):
+        matches = []
+
+        def visit(hwnd, _):
+            title = win32gui.GetWindowText(hwnd)
+            if win32gui.IsWindowVisible(hwnd) and title.casefold() == "browndust ii":
+                matches.append(cls(hwnd, win32process.GetWindowThreadProcessId(hwnd)[1], title))
+
+        win32gui.EnumWindows(visit, None)
+        if len(matches) != 1:
+            raise RuntimeError(f"Expected one visible BrownDust II window; found {len(matches)}")
+        return matches[0]
+
+    def geometry(self):
+        if not win32gui.IsWindow(self.hwnd) or win32gui.IsIconic(self.hwnd):
+            raise RuntimeError("Game window closed or minimized")
+        if win32process.GetWindowThreadProcessId(self.hwnd)[1] != self.pid:
+            raise RuntimeError("Game window identity changed")
+        _, _, width, height = win32gui.GetClientRect(self.hwnd)
+        if width <= 0 or height <= 0:
+            raise RuntimeError("Empty client area")
+        origin = win32gui.ClientToScreen(self.hwnd, (0, 0))
+        return {"hwnd": self.hwnd, "pid": self.pid, "title": self.title,
+                "width": width, "height": height, "origin": list(origin)}
+
+    def capture(self):
+        check_requested_stop()
+        geometry = self.geometry()
+        width, height = geometry["width"], geometry["height"]
+        dc_handle = win32gui.GetDC(self.hwnd)
+        source_dc = win32ui.CreateDCFromHandle(dc_handle)
+        memory_dc = source_dc.CreateCompatibleDC()
+        bitmap = win32ui.CreateBitmap()
+        previous = None
+        try:
+            bitmap.CreateCompatibleBitmap(source_dc, width, height)
+            previous = memory_dc.SelectObject(bitmap)
+            # PW_CLIENTONLY | PW_RENDERFULLCONTENT: no title bar or frame.
+            # HWND/HDC are pointer-sized, including in the packaged x64 app.
+            ctypes.set_last_error(0)
+            ok = _capture_api.PrintWindow(self.hwnd, memory_dc.GetSafeHdc(), 3)
+            if not ok:
+                raise RuntimeError(f"PrintWindow did not capture the client (Win32 error {ctypes.get_last_error()})")
+            image = Image.frombuffer("RGB", (width, height), bitmap.GetBitmapBits(True), "raw", "BGRX", 0, 1)
+            if image.getextrema() == ((0, 0), (0, 0), (0, 0)):
+                raise RuntimeError("Game capture is black")
+            return image.copy(), geometry
+        finally:
+            if previous is not None:
+                memory_dc.SelectObject(previous)
+            win32gui.DeleteObject(bitmap.GetHandle())
+            memory_dc.DeleteDC()
+            source_dc.DeleteDC()
+            win32gui.ReleaseDC(self.hwnd, dc_handle)
+
+    def focus_client(self, expected_geometry):
+        """Activate the verified game without sending mouse or keyboard input."""
+        check_requested_stop()
+        if self.geometry() != expected_geometry:
+            raise RuntimeError("Window changed before activation")
+        if win32gui.GetForegroundWindow() != self.hwnd:
+            try:
+                win32gui.SetForegroundWindow(self.hwnd)
+            except pywintypes.error:
+                pass
+            if win32gui.GetForegroundWindow() != self.hwnd:
+                # Hidden workers may lack the launcher's foreground permission.
+                # Attach only the current foreground and verified game queues;
+                # all geometry, foreground and covered-target checks still apply.
+                attached = []
+                caller = ctypes.windll.kernel32.GetCurrentThreadId()
+                try:
+                    foreground = win32gui.GetForegroundWindow()
+                    for hwnd in (foreground, self.hwnd):
+                        if not hwnd:
+                            continue
+                        thread = win32process.GetWindowThreadProcessId(hwnd)[0]
+                        if thread != caller and thread not in attached:
+                            if not ctypes.windll.user32.AttachThreadInput(caller, thread, True):
+                                raise RuntimeError('Could not attach the verified game focus queue')
+                            attached.append(thread)
+                    win32gui.BringWindowToTop(self.hwnd)
+                    win32gui.SetForegroundWindow(self.hwnd)
+                finally:
+                    for thread in reversed(attached):
+                        ctypes.windll.user32.AttachThreadInput(caller, thread, False)
+        deadline = time.monotonic() + 0.8
+        while win32gui.GetForegroundWindow() != self.hwnd and time.monotonic() < deadline:
+            time.sleep(0.02)
+        if win32gui.GetForegroundWindow() != self.hwnd:
+            raise RuntimeError("Could not foreground the game")
+        if self.geometry() != expected_geometry:
+            raise RuntimeError("Window changed while activating; capture again")
+
+    def click_client(self, point, expected_geometry):
+        check_requested_stop()
+        if self.geometry() != expected_geometry:
+            raise RuntimeError("Window changed since recognition; capture again")
+        x, y = [int(round(value)) for value in point]
+        if not (0 <= x < expected_geometry["width"] and 0 <= y < expected_geometry["height"]):
+            raise ValueError("Click is outside client")
+        self.focus_client(expected_geometry)
+        position = win32gui.ClientToScreen(self.hwnd, (x, y))
+        hit = win32gui.WindowFromPoint(position)
+        if hit != self.hwnd and win32gui.GetAncestor(hit, win32con.GA_ROOT) != self.hwnd:
+            raise RuntimeError("Game click target is covered")
+        old_position = win32api.GetCursorPos()
+        try:
+            win32api.SetCursorPos(position)
+            time.sleep(0.10)
+            if win32gui.GetForegroundWindow() != self.hwnd or self.geometry() != expected_geometry:
+                raise RuntimeError("Game changed before mouse press")
+            check_requested_stop()
+            win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+            try:
+                # Keep a short press visible to a game's frame-based input loop.
+                ctypes.windll.kernel32.Sleep(100)
+            finally:
+                win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+            # Let the game consume mouse-up at the target before restoring the cursor.
+            time.sleep(0.10)
+        finally:
+            win32api.SetCursorPos(old_position)
+        return {"client_point": [x, y], "screen_point": list(position)}

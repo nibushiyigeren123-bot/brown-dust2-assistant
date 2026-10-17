@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "event": {
+    "event_id": "configure_current_event",
+    "enabled": false,
+    "mode": "normal",
+    "runs": 0,
+    "ap_budget": 0,
+    "use_owned_extra_ap": false,
+    "buy_ap": false,
+    "keep_existing_team": true,
+    "entry_mode": "user_prepared_battle_screen",
+    "story": {
+      "enabled": false,
+      "run_once": true,
+      "editable_steps": []
+    },
+    "quick_battle": {
+      "enabled": false,
+      "status": "waiting_for_unlocked_sample"
+    },
+    "rerun_boss": {
+      "enabled": false,
+      "adapter": null
+    },
+    "event_scene": {
+      "enabled": false,
+      "adapter": null
+    }
+  },
+  "guild": {
+    "enabled": false,
+    "enter_once_per_cycle": true,
+    "reward_destination": "mailbox"
+  },
+  "rewards": {
+    "pass_order": [
+      "special",
+      "season"
+    ],
+    "pass_tasks": true,
+    "pass_levels": true,
+    "daily_task_rewards": true,
+    "daily_milestones": true,
+    "weekly_completed_task_rewards": true,
+    "weekly_milestones": true,
+    "buy_pass_or_levels": false,
+    "mailbox": {
+      "enabled": false,
+      "status": "user_disabled_keep_manual"
+    }
+  },
+  "workflow_order": [
+    "opening",
+    "management",
+    "free_draw",
+    "guild",
+    "hunting_daily",
+    "goddess_check_in",
+    "mirror",
+    "equipment_refine",
+    "equipment_dismantle",
+    "current_event",
+    "goddess_daily_reward",
+    "pass_tasks",
+    "pass_levels",
+    "daily_task_rewards",
+    "daily_milestones",
+    "weekly_completed_task_rewards",
+    "weekly_milestones"
+  ],
+  "cache_date": null
+}

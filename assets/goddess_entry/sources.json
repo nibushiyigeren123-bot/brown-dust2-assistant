@@ -1,0 +1,69 @@
+{
+  "home_collection": {
+    "file": "home_collection.png",
+    "box": [
+      1116,
+      600,
+      1144,
+      625
+    ],
+    "purpose": "cartridge drawer at bottom-right, not ordinary book collection",
+    "click_box": [
+      1118,
+      598,
+      1144,
+      632
+    ],
+    "click_point": [
+      1130,
+      621
+    ],
+    "click_reason": "User marked chevrons only; click the lower white chevron, not the card cover"
+  },
+  "library_title": {
+    "file": "library_title.png",
+    "box": [
+      158,
+      21,
+      282,
+      45
+    ]
+  },
+  "square_logo": {
+    "file": "square_logo.png",
+    "box": [
+      335,
+      461,
+      404,
+      492
+    ]
+  },
+  "home_cartridge_key": {
+    "file": "home_cartridge_key.png",
+    "box": [
+      1123,
+      689,
+      1138,
+      706
+    ],
+    "purpose": "cartridge drawer at bottom-right, not ordinary book collection"
+  },
+  "square_logo_active": {
+    "file": "square_logo_active.png",
+    "box": [
+      330,
+      354,
+      400,
+      383
+    ]
+  },
+  "square_team": {
+    "file": "square_team.png",
+    "box": [
+      1048,
+      86,
+      1262,
+      114
+    ]
+  }
+}

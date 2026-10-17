@@ -1,0 +1,51 @@
+{
+  "anchors": [
+    {
+      "id": "house",
+      "box_1280": [
+        93,
+        87,
+        128,
+        119
+      ],
+      "file": "house.png",
+      "foreground_mean_reference": 209.55153203342618,
+      "gray_threshold": 175,
+      "maximum_channel_spread": 45
+    },
+    {
+      "id": "friends",
+      "box_1280": [
+        161,
+        87,
+        191,
+        118
+      ],
+      "file": "friends.png",
+      "foreground_mean_reference": 239.33962264150944,
+      "gray_threshold": 210,
+      "maximum_channel_spread": 35
+    },
+    {
+      "id": "bag",
+      "box_1280": [
+        234,
+        640,
+        259,
+        669
+      ],
+      "file": "bag.png",
+      "foreground_mean_reference": 243.9190031152648,
+      "gray_threshold": 210,
+      "maximum_channel_spread": 35
+    }
+  ],
+  "generation": {
+    "normalized_size": [
+      1280,
+      720
+    ],
+    "support_dilation_pixels": 1,
+    "training_background": "old screenshot only; new wallpaper used for verification"
+  }
+}

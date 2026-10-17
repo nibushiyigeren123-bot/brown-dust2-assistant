@@ -1,0 +1,202 @@
+{
+  "guild_entry": {
+    "file": "guild_entry.png",
+    "box": [
+      232,
+      89,
+      251,
+      115
+    ]
+  },
+  "guild_title": {
+    "file": "guild_title.png",
+    "box": [
+      188,
+      22,
+      232,
+      46
+    ]
+  },
+  "guild_success": {
+    "file": "guild_success.png",
+    "box": [
+      608,
+      273,
+      672,
+      294
+    ]
+  },
+  "guild_success_live": {
+    "file": "guild_success_live.png",
+    "box": [
+      615,
+      277,
+      665,
+      293
+    ]
+  },
+  "victory": {
+    "file": "victory.png",
+    "box": [
+      906,
+      22,
+      1050,
+      73
+    ]
+  },
+  "pass_title": {
+    "file": "pass_title.png",
+    "box": [
+      186,
+      22,
+      255,
+      47
+    ]
+  },
+  "pass_tasks_tab": {
+    "file": "pass_tasks_tab.png",
+    "box": [
+      1043,
+      435,
+      1078,
+      478
+    ]
+  },
+  "pass_levels_tab": {
+    "file": "pass_levels_tab.png",
+    "box": [
+      1043,
+      252,
+      1078,
+      285
+    ]
+  },
+  "task_claim_ready": {
+    "file": "task_claim_ready.png",
+    "box": [
+      1128,
+      107,
+      1188,
+      166
+    ]
+  },
+  "task_claimed": {
+    "file": "task_claimed.png",
+    "box": [
+      1130,
+      207,
+      1180,
+      270
+    ]
+  },
+  "ap_5": {
+    "file": "ap_5.png",
+    "box": [
+      1163,
+      30,
+      1194,
+      47
+    ],
+    "numeric_kind": "free_ap",
+    "value": 5
+  },
+  "ap_4": {
+    "file": "ap_4.png",
+    "box": [
+      1163,
+      30,
+      1194,
+      47
+    ],
+    "numeric_kind": "free_ap",
+    "value": 4
+  },
+  "ap_3": {
+    "file": "ap_3.png",
+    "box": [
+      1163,
+      30,
+      1194,
+      47
+    ],
+    "numeric_kind": "free_ap",
+    "value": 3
+  },
+  "ap_2": {
+    "file": "ap_2.png",
+    "box": [
+      1163,
+      30,
+      1194,
+      47
+    ],
+    "numeric_kind": "free_ap",
+    "value": 2
+  },
+  "ap_1": {
+    "file": "ap_1.png",
+    "box": [
+      1163,
+      30,
+      1194,
+      47
+    ],
+    "numeric_kind": "free_ap",
+    "value": 1
+  },
+  "ap_0": {
+    "file": "ap_0.png",
+    "box": [
+      1163,
+      30,
+      1194,
+      47
+    ],
+    "numeric_kind": "free_ap",
+    "value": 0
+  },
+  "ap_preparation_0": {
+    "file": "ap_preparation_0.png",
+    "box": [
+      1163,
+      30,
+      1194,
+      47
+    ],
+    "numeric_kind": "free_ap",
+    "value": 0
+  },
+  "cost_5": {
+    "file": "cost_5.png",
+    "box": [
+      712,
+      537,
+      727,
+      557
+    ],
+    "numeric_kind": "total_cost",
+    "value": 5
+  },
+  "cost_1": {
+    "file": "cost_1.png",
+    "box": [
+      712,
+      537,
+      727,
+      557
+    ],
+    "numeric_kind": "total_cost",
+    "value": 1
+  },
+  "unit_1": {
+    "file": "unit_1.png",
+    "box": [
+      895,
+      652,
+      906,
+      668
+    ],
+    "numeric_kind": "unit_cost",
+    "value": 1
+  }
+}

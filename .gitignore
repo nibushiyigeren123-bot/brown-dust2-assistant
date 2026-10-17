@@ -1,0 +1,13 @@
+/config/
+/runtime/
+/evidence/
+/发布/
+/build/
+/dist/
+__pycache__/
+*.pyc
+*.lock
+*.log
+.env
+
+.codex-project.json

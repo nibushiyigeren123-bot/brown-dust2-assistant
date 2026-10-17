@@ -1,0 +1,11 @@
+{
+  "template": "home_glyph.png",
+  "search_roi_normalized": [
+    0.78,
+    0,
+    1,
+    0.17
+  ],
+  "normalized_width": 1280,
+  "threshold": 0.76
+}

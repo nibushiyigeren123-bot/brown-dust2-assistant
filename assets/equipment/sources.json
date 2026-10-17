@@ -1,0 +1,447 @@
+{
+  "quality_UR": {
+    "file": "quality_UR.png",
+    "box": [
+      786,
+      99,
+      810,
+      117
+    ],
+    "kind": "quality",
+    "value": "UR"
+  },
+  "quality_R": {
+    "file": "quality_R.png",
+    "box": [
+      534,
+      99,
+      558,
+      117
+    ],
+    "kind": "quality",
+    "value": "R"
+  },
+  "badge_24": {
+    "file": "badge_24.png",
+    "box": [
+      949,
+      137,
+      978,
+      164
+    ],
+    "kind": "badge",
+    "value": 24
+  },
+  "badge_18": {
+    "file": "badge_18.png",
+    "box": [
+      529,
+      221,
+      558,
+      248
+    ],
+    "kind": "badge",
+    "value": 18
+  },
+  "badge_12": {
+    "file": "badge_12.png",
+    "box": [
+      613,
+      221,
+      642,
+      248
+    ],
+    "kind": "badge",
+    "value": 12
+  },
+  "badge_22": {
+    "file": "badge_22.png",
+    "box": [
+      697,
+      221,
+      726,
+      248
+    ],
+    "kind": "badge",
+    "value": 22
+  },
+  "badge_20": {
+    "file": "badge_20.png",
+    "box": [
+      781,
+      221,
+      810,
+      248
+    ],
+    "kind": "badge",
+    "value": 20
+  },
+  "badge_19": {
+    "file": "badge_19.png",
+    "box": [
+      865,
+      221,
+      894,
+      248
+    ],
+    "kind": "badge",
+    "value": 19
+  },
+  "badge_16": {
+    "file": "badge_16.png",
+    "box": [
+      613,
+      305,
+      642,
+      332
+    ],
+    "kind": "badge",
+    "value": 16
+  },
+  "badge_15": {
+    "file": "badge_15.png",
+    "box": [
+      949,
+      305,
+      978,
+      332
+    ],
+    "kind": "badge",
+    "value": 15
+  },
+  "badge_14": {
+    "file": "badge_14.png",
+    "box": [
+      613,
+      389,
+      642,
+      416
+    ],
+    "kind": "badge",
+    "value": 14
+  },
+  "badge_13": {
+    "file": "badge_13.png",
+    "box": [
+      865,
+      389,
+      894,
+      416
+    ],
+    "kind": "badge",
+    "value": 13
+  },
+  "badge_10": {
+    "file": "badge_10.png",
+    "box": [
+      781,
+      473,
+      810,
+      500
+    ],
+    "kind": "badge",
+    "value": 10
+  },
+  "badge_8": {
+    "file": "badge_8.png",
+    "box": [
+      1117,
+      473,
+      1146,
+      500
+    ],
+    "kind": "badge",
+    "value": 8
+  },
+  "badge_9": {
+    "file": "badge_9.png",
+    "box": [
+      529,
+      557,
+      558,
+      584
+    ],
+    "kind": "badge",
+    "value": 9
+  },
+  "grid_title": {
+    "file": "grid_title.png",
+    "box": [
+      190,
+      21,
+      235,
+      47
+    ],
+    "kind": "anchor"
+  },
+  "filter_button": {
+    "file": "filter_button.png",
+    "box": [
+      1124,
+      52,
+      1157,
+      82
+    ],
+    "kind": "anchor"
+  },
+  "detail_refine": {
+    "file": "detail_refine.png",
+    "box": [
+      870,
+      478,
+      945,
+      503
+    ],
+    "kind": "anchor"
+  },
+  "detail_score20": {
+    "file": "detail_score20.png",
+    "box": [
+      915,
+      411,
+      946,
+      445
+    ],
+    "kind": "anchor"
+  },
+  "refine_title": {
+    "file": "refine_title.png",
+    "box": [
+      154,
+      18,
+      317,
+      47
+    ],
+    "kind": "anchor"
+  },
+  "refine_single": {
+    "file": "refine_single.png",
+    "box": [
+      987,
+      657,
+      1141,
+      686
+    ],
+    "kind": "anchor"
+  },
+  "refine_score20": {
+    "file": "refine_score20.png",
+    "box": [
+      1135,
+      163,
+      1179,
+      210
+    ],
+    "kind": "anchor"
+  },
+  "refine_score_label": {
+    "file": "refine_score_label.png",
+    "box": [
+      776,
+      172,
+      858,
+      199
+    ],
+    "kind": "anchor"
+  },
+  "refine_material_label": {
+    "file": "refine_material_label.png",
+    "box": [
+      930,
+      594,
+      988,
+      615
+    ],
+    "kind": "anchor"
+  },
+  "filter_title": {
+    "file": "filter_title.png",
+    "box": [
+      596,
+      166,
+      685,
+      194
+    ],
+    "kind": "anchor"
+  },
+  "filter_r_only": {
+    "file": "filter_r_only.png",
+    "box": [
+      316,
+      389,
+      622,
+      424
+    ],
+    "kind": "anchor"
+  },
+  "filter_worn_off": {
+    "file": "filter_worn_off.png",
+    "box": [
+      593,
+      512,
+      618,
+      535
+    ],
+    "kind": "anchor"
+  },
+  "filter_saved_toast": {
+    "file": "filter_saved_toast.png",
+    "box": [
+      579,
+      147,
+      694,
+      167
+    ],
+    "kind": "anchor"
+  },
+  "detail_r_gun": {
+    "file": "detail_r_gun.png",
+    "box": [
+      331,
+      221,
+      434,
+      246
+    ],
+    "kind": "anchor"
+  },
+  "detail_unlocked": {
+    "file": "detail_unlocked.png",
+    "box": [
+      331,
+      269,
+      368,
+      293
+    ],
+    "kind": "anchor"
+  },
+  "detail_wear_available": {
+    "file": "detail_wear_available.png",
+    "box": [
+      790,
+      476,
+      865,
+      504
+    ],
+    "kind": "anchor"
+  },
+  "decompose_select_prompt": {
+    "file": "decompose_select_prompt.png",
+    "box": [
+      479,
+      651,
+      623,
+      671
+    ],
+    "kind": "anchor"
+  },
+  "selected_count_one": {
+    "file": "selected_count_one.png",
+    "box": [
+      478,
+      676,
+      536,
+      697
+    ],
+    "kind": "anchor"
+  },
+  "selected_r_gun": {
+    "file": "selected_r_gun.png",
+    "box": [
+      983,
+      96,
+      1064,
+      177
+    ],
+    "kind": "anchor"
+  },
+  "decompose_confirm_one": {
+    "file": "decompose_confirm_one.png",
+    "box": [
+      446,
+      285,
+      825,
+      307
+    ],
+    "kind": "anchor"
+  },
+  "decompose_confirm_warning": {
+    "file": "decompose_confirm_warning.png",
+    "box": [
+      496,
+      404,
+      778,
+      422
+    ],
+    "kind": "anchor"
+  },
+  "decompose_confirm_button": {
+    "file": "decompose_confirm_button.png",
+    "box": [
+      643,
+      450,
+      752,
+      485
+    ],
+    "kind": "anchor"
+  },
+  "decompose_result_rewards": {
+    "file": "decompose_result_rewards.png",
+    "box": [
+      570,
+      333,
+      711,
+      401
+    ],
+    "kind": "anchor"
+  },
+  "decompose_result_title": {
+    "file": "decompose_result_title.png",
+    "box": [
+      591,
+      206,
+      691,
+      263
+    ],
+    "kind": "anchor"
+  },
+  "filter_quality_default": {
+    "file": "filter_quality_default.png",
+    "box": [
+      316,
+      389,
+      622,
+      424
+    ],
+    "kind": "anchor"
+  },
+  "filter_worn_default": {
+    "file": "filter_worn_default.png",
+    "box": [
+      593,
+      512,
+      618,
+      535
+    ],
+    "kind": "anchor"
+  },
+  "filter_other_default": {
+    "file": "filter_other_default.png",
+    "box": [
+      315,
+      207,
+      968,
+      357
+    ],
+    "kind": "anchor"
+  },
+  "grid_quick_filter_default": {
+    "file": "grid_quick_filter_default.png",
+    "box": [
+      1075,
+      48,
+      1112,
+      82
+    ],
+    "kind": "anchor"
+  }
+}

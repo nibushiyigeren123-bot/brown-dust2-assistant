@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "execute_not_before": "2020-01-01",
+  "hunting": {
+    "enabled": false,
+    "daily_runs": 1,
+    "daily_task_status": "unknown",
+    "daily_target": {
+      "category": "狩猎场",
+      "stage": "野猪洞穴",
+      "difficulty": "极难",
+      "free_only": true
+    },
+    "free_only": true,
+    "budgets": {
+      "rice": 0,
+      "torch": 0
+    },
+    "extra_plans": []
+  },
+  "goddess": {
+    "enabled": false,
+    "user_positioned_near_statue": false,
+    "actions": [
+      "check_in",
+      "daily_reward"
+    ],
+    "labels": {
+      "check_in": [
+        "向女神像许愿",
+        "女神像签到",
+        "每日签到"
+      ],
+      "daily_reward": [
+        "日常奖励",
+        "每日奖励"
+      ]
+    },
+    "interaction_point_normalized": [
+      0.735,
+      0.82
+    ],
+    "missing_option_policy": "stop_without_marking_done"
+  },
+  "mirror": {
+    "enabled": false,
+    "max_battles": 0,
+    "resource_budget": 0,
+    "resource_multiplier": 1,
+    "free_only": true,
+    "auto_skip": true,
+    "keep_existing_team": true,
+    "entry_mode": "user_prepared_battle_screen",
+    "battle_timeout_seconds": 240
+  },
+  "cache_date": null
+}

@@ -1,0 +1,164 @@
+{
+  "costume_title": {
+    "file": "costume_title.png",
+    "box_1280": [
+      188,
+      22,
+      230,
+      48
+    ]
+  },
+  "equipment_title": {
+    "file": "equipment_title.png",
+    "box_1280": [
+      188,
+      22,
+      230,
+      48
+    ]
+  },
+  "costume_tab": {
+    "file": "costume_tab.png",
+    "box_1280": [
+      100,
+      222,
+      134,
+      241
+    ]
+  },
+  "equipment_tab": {
+    "file": "equipment_tab.png",
+    "box_1280": [
+      100,
+      295,
+      134,
+      314
+    ]
+  },
+  "batch_free": {
+    "file": "batch_free.png",
+    "box_1280": [
+      189,
+      636,
+      286,
+      655
+    ]
+  },
+  "paid_label": {
+    "file": "paid_label.png",
+    "box_1280": [
+      774,
+      630,
+      852,
+      647
+    ]
+  },
+  "confirm_title": {
+    "file": "confirm_title.png",
+    "box_1280": [
+      588,
+      289,
+      692,
+      311
+    ]
+  },
+  "free_word": {
+    "file": "free_word.png",
+    "box_1280": [
+      612,
+      376,
+      644,
+      393
+    ]
+  },
+  "confirm_button": {
+    "file": "confirm_button.png",
+    "box_1280": [
+      680,
+      429,
+      711,
+      445
+    ]
+  },
+  "cancel_button": {
+    "file": "cancel_button.png",
+    "box_1280": [
+      566,
+      429,
+      598,
+      445
+    ]
+  },
+  "back": {
+    "file": "back.png",
+    "box_1280": [
+      107,
+      19,
+      125,
+      48
+    ]
+  },
+  "result_badge": {
+    "file": "result_badge.png",
+    "box_1280": [
+      108,
+      623,
+      136,
+      653
+    ]
+  },
+  "equipment_result_badge": {
+    "file": "equipment_result_badge.png",
+    "box_1280": [
+      108,
+      623,
+      136,
+      653
+    ]
+  },
+  "home_entry": {
+    "file": "home_entry.png",
+    "box_1280": [
+      86,
+      674,
+      128,
+      689
+    ]
+  },
+  "skip_light": {
+    "file": "skip_light.png",
+    "box_1280": [
+      1165,
+      25,
+      1197,
+      55
+    ]
+  },
+  "animation_loop_light": {
+    "file": "animation_loop_light.png",
+    "box_1280": [
+      1090,
+      23,
+      1127,
+      56
+    ]
+  },
+  "skip_dark": {
+    "file": "skip_dark.png",
+    "box_1280": [
+      1165,
+      25,
+      1197,
+      55
+    ]
+  },
+  "animation_loop_dark": {
+    "file": "animation_loop_dark.png",
+    "box_1280": [
+      1090,
+      23,
+      1127,
+      56
+    ]
+  }
+}

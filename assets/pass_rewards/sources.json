@@ -1,0 +1,56 @@
+{
+  "identity:special": {
+    "file": "identity_special.png",
+    "box": [
+      212,
+      181,
+      352,
+      316
+    ]
+  },
+  "identity:season": {
+    "file": "identity_season.png",
+    "box": [
+      212,
+      181,
+      352,
+      316
+    ]
+  },
+  "tab:special:tasks": {
+    "file": "tab_special_tasks.png",
+    "box": [
+      1037,
+      179,
+      1086,
+      539
+    ]
+  },
+  "tab:special:levels": {
+    "file": "tab_special_levels.png",
+    "box": [
+      1037,
+      179,
+      1086,
+      539
+    ]
+  },
+  "tab:season:tasks": {
+    "file": "tab_season_tasks.png",
+    "box": [
+      1037,
+      179,
+      1086,
+      539
+    ]
+  },
+  "tab:season:levels": {
+    "file": "tab_season_levels.png",
+    "box": [
+      1037,
+      179,
+      1086,
+      539
+    ]
+  }
+}

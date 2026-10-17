@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "character_pass": {
+    "enabled": false,
+    "display_name": "角色通行证",
+    "period_basis": "day",
+    "entry_mode": "reserved",
+    "adapter": null,
+    "status": "deferred_pending_samples",
+    "buy_pass_or_levels": false
+  }
+}

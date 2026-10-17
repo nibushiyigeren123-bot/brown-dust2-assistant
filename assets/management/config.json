@@ -1,0 +1,26 @@
+{
+  "title_box": [
+    122,
+    64,
+    274,
+    91
+  ],
+  "cancel_box": [
+    49,
+    539,
+    259,
+    579
+  ],
+  "collect_box": [
+    273,
+    539,
+    483,
+    579
+  ],
+  "entry_template": "entry_label.png",
+  "title_template": "panel_title.png",
+  "entry_source": "codex-clipboard-211a6f9e-4873-4ced-a3e4-cfaac402fee7.png",
+  "panel_source": "codex-clipboard-9a216b0d-1152-436d-95fd-8300650683c3.png",
+  "disabled_ratio_max": 0.58,
+  "enabled_ratio_min": 0.78
+}

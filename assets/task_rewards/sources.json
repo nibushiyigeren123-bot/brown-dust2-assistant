@@ -1,0 +1,22 @@
+{
+  "daily": {
+    "file": "daily.png",
+    "box": [
+      184,
+      21,
+      276,
+      49
+    ],
+    "sha256": "4a65df68ebd3b669f7fc7d2e7150b2f456ecae9769ad7781d3354878c6dee3ea"
+  },
+  "weekly": {
+    "file": "weekly.png",
+    "box": [
+      184,
+      21,
+      276,
+      49
+    ],
+    "sha256": "eb84a256aa8f26f909b1883568fd2e4a8e117e27dfa530d394cad76f56d79f8c"
+  }
+}

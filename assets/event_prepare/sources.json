@@ -1,0 +1,47 @@
+{
+  "home_loyal_maid": {
+    "file": "home_loyal_maid.png",
+    "box": [
+      1079,
+      470,
+      1190,
+      543
+    ]
+  },
+  "hub_loyal_maid": {
+    "file": "hub_loyal_maid.png",
+    "box": [
+      144,
+      171,
+      430,
+      401
+    ]
+  },
+  "observed_ap_5": {
+    "file": "observed_ap_5.png",
+    "box": [
+      1164,
+      24,
+      1198,
+      45
+    ]
+  },
+  "observed_ap_0_final": {
+    "file": "observed_ap_0_final.png",
+    "box": [
+      1164,
+      24,
+      1198,
+      45
+    ]
+  },
+  "observed_ap_0_preparation": {
+    "file": "observed_ap_0_preparation.png",
+    "box": [
+      1164,
+      24,
+      1198,
+      45
+    ]
+  }
+}

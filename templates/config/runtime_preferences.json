@@ -1,0 +1,4 @@
+{
+  "network_wait_seconds": 120,
+  "auto_clear_old_cache": true
+}

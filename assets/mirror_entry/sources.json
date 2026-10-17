@@ -1,0 +1,203 @@
+{
+  "card_logo": {
+    "file": "card_logo.png",
+    "box": [
+      128,
+      171,
+      238,
+      218
+    ]
+  },
+  "lobby_score": {
+    "file": "lobby_score.png",
+    "box": [
+      343,
+      83,
+      385,
+      101
+    ]
+  },
+  "lobby_wine": {
+    "file": "lobby_wine.png",
+    "box": [
+      525,
+      25,
+      546,
+      50
+    ]
+  },
+  "multiplier_title": {
+    "file": "multiplier_title.png",
+    "box": [
+      543,
+      211,
+      735,
+      235
+    ]
+  },
+  "editor_value_1": {
+    "file": "editor_value_1.png",
+    "box": [
+      630,
+      381,
+      670,
+      405
+    ],
+    "field": "editor",
+    "value": 1
+  },
+  "editor_value_10": {
+    "file": "editor_value_10.png",
+    "box": [
+      630,
+      381,
+      670,
+      405
+    ],
+    "field": "editor",
+    "value": 10
+  },
+  "editor_value_11": {
+    "file": "editor_value_11.png",
+    "box": [
+      630,
+      381,
+      670,
+      405
+    ],
+    "field": "editor",
+    "value": 11
+  },
+  "editor_value_15": {
+    "file": "editor_value_15.png",
+    "box": [
+      630,
+      381,
+      670,
+      405
+    ],
+    "field": "editor",
+    "value": 15
+  },
+  "editor_value_18": {
+    "file": "editor_value_18.png",
+    "box": [
+      630,
+      381,
+      670,
+      405
+    ],
+    "field": "editor",
+    "value": 18
+  },
+  "editor_value_39": {
+    "file": "editor_value_39.png",
+    "box": [
+      630,
+      381,
+      670,
+      405
+    ],
+    "field": "editor",
+    "value": 39
+  },
+  "editor_value_40": {
+    "file": "editor_value_40.png",
+    "box": [
+      630,
+      381,
+      670,
+      405
+    ],
+    "field": "editor",
+    "value": 40
+  },
+  "auto_value_1": {
+    "file": "auto_value_1.png",
+    "box": [
+      828,
+      219,
+      866,
+      245
+    ],
+    "field": "auto",
+    "value": 1
+  },
+  "auto_value_10": {
+    "file": "auto_value_10.png",
+    "box": [
+      828,
+      219,
+      866,
+      245
+    ],
+    "field": "auto",
+    "value": 10
+  },
+  "auto_value_15": {
+    "file": "auto_value_15.png",
+    "box": [
+      828,
+      219,
+      866,
+      245
+    ],
+    "field": "auto",
+    "value": 15
+  },
+  "auto_value_40": {
+    "file": "auto_value_40.png",
+    "box": [
+      828,
+      219,
+      866,
+      245
+    ],
+    "field": "auto",
+    "value": 40
+  },
+  "price_value_1": {
+    "file": "price_value_1.png",
+    "box": [
+      737,
+      529,
+      771,
+      553
+    ],
+    "field": "price",
+    "value": 1
+  },
+  "price_value_10": {
+    "file": "price_value_10.png",
+    "box": [
+      737,
+      529,
+      771,
+      553
+    ],
+    "field": "price",
+    "value": 10
+  },
+  "price_value_15": {
+    "file": "price_value_15.png",
+    "box": [
+      737,
+      529,
+      771,
+      553
+    ],
+    "field": "price",
+    "value": 15
+  },
+  "price_value_40": {
+    "file": "price_value_40.png",
+    "box": [
+      737,
+      529,
+      771,
+      553
+    ],
+    "field": "price",
+    "value": 40
+  }
+}

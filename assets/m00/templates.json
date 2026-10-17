@@ -1,0 +1,48 @@
+{
+  "reference_size": [
+    1280,
+    720
+  ],
+  "regions": [
+    {
+      "id": "home_top",
+      "file": "home_top.png",
+      "box_1280": [
+        80,
+        75,
+        265,
+        145
+      ]
+    },
+    {
+      "id": "home_bottom",
+      "file": "home_bottom.png",
+      "box_1280": [
+        155,
+        630,
+        420,
+        695
+      ]
+    },
+    {
+      "id": "signin_event",
+      "file": "signin_event.png",
+      "box_1280": [
+        300,
+        260,
+        550,
+        370
+      ]
+    },
+    {
+      "id": "signin_pass",
+      "file": "signin_pass.png",
+      "box_1280": [
+        235,
+        145,
+        550,
+        190
+      ]
+    }
+  ]
+}

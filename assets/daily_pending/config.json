@@ -1,0 +1,119 @@
+{
+  "hunt_title": {
+    "file": "hunt_title.png",
+    "box_1280": [
+      430,
+      192,
+      512,
+      217
+    ]
+  },
+  "hunt_map_quick": {
+    "file": "hunt_map_quick.png",
+    "box_1280": [
+      1075,
+      650,
+      1170,
+      671
+    ]
+  },
+  "hunt_home_entry": {
+    "file": "hunt_home_entry.png",
+    "box_1280": [
+      1160,
+      160,
+      1188,
+      186
+    ]
+  },
+  "hunt_reward": {
+    "file": "hunt_reward.png",
+    "box_1280": [
+      573,
+      225,
+      709,
+      253
+    ]
+  },
+  "goddess_interact": {
+    "file": "goddess_interact.png",
+    "box_1280": [
+      924,
+      574,
+      957,
+      606
+    ]
+  },
+  "goddess_hand": {
+    "file": "goddess_hand.png",
+    "box_1280": [
+      931,
+      578,
+      950,
+      600
+    ]
+  },
+  "goddess_reward_ready": {
+    "file": "goddess_reward_ready.png",
+    "box_1280": [
+      935,
+      578,
+      947,
+      599
+    ]
+  },
+  "goddess_reward_loot": {
+    "file": "goddess_reward_loot.png",
+    "box_1280": [
+      129,
+      356,
+      157,
+      391
+    ]
+  },
+  "mirror_auto_title": {
+    "file": "mirror_auto_title.png",
+    "box_1280": [
+      597,
+      175,
+      683,
+      199
+    ]
+  },
+  "mirror_auto_entry": {
+    "file": "mirror_auto_entry.png",
+    "box_1280": [
+      987,
+      658,
+      1042,
+      680
+    ]
+  },
+  "mirror_battle": {
+    "file": "mirror_battle.png",
+    "box_1280": [
+      1140,
+      644,
+      1211,
+      673
+    ]
+  },
+  "mirror_result_title": {
+    "file": "mirror_result_title.png",
+    "box_1280": [
+      578,
+      215,
+      704,
+      240
+    ]
+  },
+  "mirror_result_leave": {
+    "file": "mirror_result_leave.png",
+    "box_1280": [
+      1122,
+      659,
+      1167,
+      684
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "generator": "Gemini image-to-image",
+  "original_design": true,
+  "user_accepted": true,
+  "revision": 2,
+  "master_sha256": "8cc6d95f6daac383128d941e68955f293d74447c71271d0c714165cb1975c358",
+  "windows_sizes": [
+    16,
+    24,
+    32,
+    48,
+    64,
+    128,
+    256
+  ]
+}

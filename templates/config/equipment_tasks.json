@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "order": [
+    "refine_once",
+    "filter_r_first_else_n_and_save",
+    "decompose_one",
+    "initialize_filter_once"
+  ],
+  "refine": {
+    "quality": "UR",
+    "require_plain_number_badge": true,
+    "excluded_scores": [
+      24
+    ],
+    "attempt_limit": 1,
+    "require_score_increase": false,
+    "apply_ur_filter": false
+  },
+  "decompose": {
+    "allowed_qualities": [
+      "N",
+      "R"
+    ],
+    "item_count": 1,
+    "exclude_locked": true,
+    "exclude_equipped": true,
+    "save_filter": true,
+    "initialize_afterwards": true,
+    "quality_priority": [
+      "R",
+      "N"
+    ],
+    "single_quality_filter": true,
+    "require_no_eligible_r_before_n": true
+  }
+}

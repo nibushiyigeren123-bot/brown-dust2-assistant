@@ -1,0 +1,120 @@
+{
+  "daily:top": {
+    "file": "daily_top.png",
+    "box": [
+      390,
+      85,
+      900,
+      645
+    ]
+  },
+  "daily:bottom": {
+    "file": "daily_bottom.png",
+    "box": [
+      390,
+      85,
+      900,
+      645
+    ]
+  },
+  "weekly:top": {
+    "file": "weekly_top.png",
+    "box": [
+      390,
+      85,
+      900,
+      645
+    ]
+  },
+  "weekly:bottom": {
+    "file": "weekly_bottom.png",
+    "box": [
+      390,
+      85,
+      900,
+      645
+    ]
+  },
+  "special:tasks:top": {
+    "file": "special_tasks_top.png",
+    "box": [
+      700,
+      200,
+      945,
+      480
+    ]
+  },
+  "special:tasks:bottom": {
+    "file": "special_tasks_bottom.png",
+    "box": [
+      700,
+      200,
+      945,
+      480
+    ]
+  },
+  "special:levels:top": {
+    "file": "special_levels_top.png",
+    "box": [
+      622,
+      235,
+      680,
+      483
+    ]
+  },
+  "special:levels:bottom": {
+    "file": "special_levels_bottom.png",
+    "box": [
+      622,
+      235,
+      680,
+      483
+    ]
+  },
+  "season:tasks:top": {
+    "file": "season_tasks_top.png",
+    "box": [
+      700,
+      200,
+      945,
+      480
+    ]
+  },
+  "season:tasks:bottom": {
+    "file": "season_tasks_bottom.png",
+    "box": [
+      700,
+      200,
+      945,
+      480
+    ]
+  },
+  "season:levels:top": {
+    "file": "season_levels_top.png",
+    "box": [
+      622,
+      235,
+      680,
+      483
+    ]
+  },
+  "season:levels:bottom": {
+    "file": "season_levels_bottom.png",
+    "box": [
+      622,
+      235,
+      680,
+      483
+    ]
+  },
+  "weekly:top:claimed": {
+    "file": "weekly_top_claimed.png",
+    "box": [
+      390,
+      85,
+      900,
+      645
+    ],
+    "review": "actual first daily-login row at top after claims; selected weekly title checked"
+  }
+}

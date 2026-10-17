@@ -1,0 +1,271 @@
+"""Inspect or explicitly execute the three prepared daily modules.
+
+Execution is date-gated by configuration. Read-only inspection is the default.
+"""
+import argparse
+import hashlib
+import json
+import msvcrt
+import time
+from contextlib import contextmanager
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from local_cache import cache_path, load_local_config
+
+from daily_tasks import DailyController, DailyLedger, load_config, guard_foreign_pending
+from daily_vision import DailyVision, inspect_frame
+from m00_recognize import ROOT, read_image
+from common_navigation import ensure_main_menu
+from runtime_policy import network_wait_seconds
+
+
+@contextmanager
+def exclusive_ledger(path):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.with_suffix('.lock').open('a+b') as handle:
+        if handle.tell() == 0:
+            handle.write(b'0')
+            handle.flush()
+        handle.seek(0)
+        try:
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        except OSError as error:
+            raise RuntimeError('This local cache is already controlled by another runner') from error
+        try:
+            yield
+        finally:
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+
+
+def inspect(path, vision, config, output, ocr_json=None):
+    payload = json.loads(ocr_json.read_text(encoding='utf-8')) if ocr_json else None
+    return inspect_frame(path, vision, config, output, payload)
+
+
+def same_rechecked_action(original,fresh):
+    if original==fresh:
+        return True
+    # Nearby characters can hide different edges of the same red platform.
+    # A fresh uniquely recognized platform may move its safe center slightly;
+    # this exception never applies to resource-consuming submissions.
+    if (original.get('type')==fresh.get('type')=='enter_mirror_arena'
+            and original.get('status')==fresh.get('status')=='action'
+            and not original.get('consumes') and not fresh.get('consumes')):
+        return sum((a-b)**2 for a,b in zip(original['point'],fresh['point']))<=40**2
+    return False
+
+
+def prepare_goddess_menu(window,vision,output):
+    """Establish the fixed menu starting point, including an open collection."""
+    import win32api
+    output.mkdir(parents=True,exist_ok=True)
+    actions=[]
+    for attempt in range(3):
+        if win32api.GetAsyncKeyState(0x77)&0x8000:
+            return {'completed':False,'stopped':'F8','collection_actions':actions}
+        image,geometry=window.capture()
+        path=output/f'collection_check_{attempt}.png'
+        image.save(path)
+        collection=vision.goddess_entry.library(read_image(path))
+        if not collection: break
+        fresh,fresh_geometry=window.capture()
+        fresh.save(output/f'collection_preclick_{attempt}.png')
+        if not vision.goddess_entry.library(read_image(output/f'collection_preclick_{attempt}.png')):
+            continue
+        if win32api.GetAsyncKeyState(0x77)&0x8000:
+            return {'completed':False,'stopped':'F8','collection_actions':actions}
+        x,y=collection['back_point']
+        event=window.click_client([x*fresh_geometry['width']/1280,y*fresh_geometry['height']/720],fresh_geometry)
+        actions.append({'type':'leave_collection_for_menu',**event})
+        time.sleep(.9)
+    result=ensure_main_menu(window,output/'menu_check',execute=True,timeout=network_wait_seconds())
+    result['collection_actions']=actions
+    return result
+
+
+def run(args):
+    config = load_config(args.config.resolve(strict=True))
+    output = args.output.resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    vision = DailyVision()
+    if args.image:
+        if args.execute:
+            raise ValueError('Saved-image inspection cannot send input')
+        observation = inspect(args.image.resolve(strict=True), vision, config, output, args.ocr_json)
+        ledger = DailyLedger(None, config)
+        result = {'execute': False, 'observation': observation,
+                  'proposed': DailyController(config, ledger, args.module, args.checkpoint).step(observation)}
+        (output / 'inspection.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
+        return result
+    if args.execute:
+        china_date = datetime.now(timezone(timedelta(hours=8))).date().isoformat()
+        if china_date < config['execute_not_before']:
+            raise RuntimeError('Today is preparation only; execution is disabled until the configured test date')
+    ledger_path = cache_path(ROOT, config)
+    from game_window import GameWindow
+    import win32api
+    window = GameWindow.find()
+    report = {'module': args.module, 'execute': args.execute, 'completed': False,
+              'actions': [], 'observations': [], 'ledger': str(ledger_path) if args.execute else None}
+
+    def save():
+        (output / 'run.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
+
+    with exclusive_ledger(ROOT / 'runtime/game_control'):
+        if args.execute:
+            guard_foreign_pending(ROOT / 'runtime', ledger_path)
+        ledger = DailyLedger(ledger_path if args.execute else None, config)
+        controller = DailyController(config, ledger, args.module, args.checkpoint)
+        from runtime_policy import network_wait_seconds
+        controller.network_wait_seconds = network_wait_seconds()
+        entry_scene_observations=0
+        deadline = time.monotonic() + max(args.timeout, controller.network_wait_seconds * 5)
+        try:
+            wanted=config['goddess']['actions']
+            if getattr(args,'entry_only',False) and ledger.data['pending']:
+                raise RuntimeError('Entry-only navigation refuses an unresolved action')
+            if (args.execute and args.module=='goddess' and not ledger.data['pending']
+                    and config['goddess']['enabled'] and config['goddess']['user_positioned_near_statue']
+                    and set(wanted)<=set(config['goddess']['actions'])
+                    and not all(task in ledger.data['goddess']['done'] for task in wanted)):
+                prepared=prepare_goddess_menu(window,vision,output/'prepare_menu')
+                report['menu_preparation']=prepared
+                save()
+                if not prepared['completed']:
+                    report['stopped']=prepared.get('stopped','main_menu_not_established_before_goddess')
+                    return report
+            if (args.execute and args.module=='mirror' and not ledger.data['pending']
+                    and config['mirror']['enabled']
+                    and ledger.data['mirror']['completed']<config['mirror']['max_battles']
+                    and ledger.data['mirror']['spent']<config['mirror']['resource_budget']):
+                startup,geometry=window.capture()
+                startup_path=output/'startup.png';startup.save(startup_path)
+                startup_obs=inspect(startup_path,vision,config,output)
+                report['startup_observation']=startup_obs
+                if startup_obs['state'] not in ('main_menu','goddess_collection','mirror_lobby','mirror_ready','mirror_auto_dialog'):
+                    prepared=prepare_goddess_menu(window,vision,output/'prepare_menu')
+                    report['menu_preparation']=prepared;save()
+                    if not prepared['completed']:
+                        report['stopped']='main_menu_not_established_before_mirror'
+                        return report
+            while time.monotonic() < deadline:
+                if win32api.GetAsyncKeyState(0x77) & 0x8000:
+                    report['stopped'] = 'F8'
+                    break
+                image, geometry = window.capture()
+                path = output / f"frame_{len(report['observations']):03}.png"
+                image.save(path)
+                observation = inspect(path, vision, config, output)
+                if (args.execute and getattr(args,'entry_only',False)
+                        and observation['state'] in ('goddess_scene','goddess_options')
+                        and controller.goddess_scene_attempts):
+                    entry_scene_observations+=1
+                    report['observations'].append({'image':str(path),'geometry':geometry,
+                        'observation':observation,'decision':{'status':'entry_verified' if entry_scene_observations>=2 else 'wait_for_stable_scene'}})
+                    if entry_scene_observations<2:
+                        save()
+                        time.sleep(.25)
+                        continue
+                    report['entry_completed']=True
+                    report['verification_scope']='entry_only_no_interaction'
+                    returned=ensure_main_menu(window,output/'return_to_menu',execute=True,timeout=network_wait_seconds())
+                    report['returned_to_main_menu']=returned['completed']
+                    report['completed']=returned['completed']
+                    if not returned['completed']: report['stopped']='entry_verified_but_return_to_menu_not_verified'
+                    break
+                if getattr(args,'entry_only',False):
+                    entry_scene_observations=0
+                    if observation['state'] in ('goddess_options','goddess_scene'):
+                        report['stopped']='entry_only_scene_not_reached_by_fixed_route'
+                        break
+                decision = controller.step(observation)
+                report['observations'].append({'image': str(path), 'geometry': geometry,
+                                               'observation': observation, 'decision': decision})
+                save()
+                if not args.execute:
+                    break
+                if decision['status'] == 'action':
+                    if getattr(args,'entry_only',False) and (decision.get('consumes') or decision.get('type') not in ('open_goddess_collection','enter_goddess_square')):
+                        report['stopped']='entry_only_refused_non_navigation_action'
+                        break
+                    # OCR takes time. Re-read the current UI immediately before
+                    # committing an input, so an old cost or moving panel cannot
+                    # authorize a later click merely because geometry is stable.
+                    fresh, fresh_geometry = window.capture()
+                    fresh_path = output / f"preclick_{len(report['observations']):03}.png"
+                    fresh.save(fresh_path)
+                    fresh_observation = inspect(fresh_path, vision, config, output)
+                    fresh_decision = controller.step(fresh_observation)
+                    report['observations'][-1]['preclick'] = {'image': str(fresh_path),
+                        'observation': fresh_observation, 'decision': fresh_decision}
+                    if not same_rechecked_action(decision,fresh_decision):
+                        report['observations'][-1]['input_skipped'] = 'UI or proposed action changed during verification'
+                        save()
+                        continue
+                    decision=fresh_decision
+                    geometry = fresh_geometry
+                    if win32api.GetAsyncKeyState(0x77) & 0x8000:
+                        report['stopped'] = 'F8'
+                        break
+                    if decision.get('consumes'):
+                        ledger.submit_intent(decision)
+                    x, y = decision['point']
+                    receipt = window.click_client([x * geometry['width'] / 1280, y * geometry['height'] / 720], geometry)
+                    report['actions'].append({**decision, **receipt})
+                    controller.after_action(decision)
+                    if decision.get('consumes'):
+                        ledger.data['pending']['input_receipt'] = receipt
+                        ledger.save()
+                    save()
+                    time.sleep(0.9)
+                elif decision['status'] == 'finished':
+                    deferred=decision.get('deferred_actions',[])
+                    report['module_completed'] = not deferred
+                    report['deferred_actions'] = deferred
+                    report['completion_scope'] = decision.get('completion_scope','requested_tasks')
+                    report['completion_reason'] = decision.get('reason')
+                    returned = ensure_main_menu(window, output/'return_to_menu', execute=True, timeout=network_wait_seconds())
+                    report['returned_to_main_menu'] = returned['completed']
+                    report['completed'] = returned['completed']
+                    if not returned['completed']:
+                        report['stopped'] = 'task_verified_but_return_to_menu_not_verified'
+                    break
+                elif decision['status'] not in ('wait',):
+                    if decision['status']=='skipped':
+                        report['skipped']=True
+                    report['stopped'] = decision
+                    break
+                time.sleep(0.25)
+            if args.execute and not report['completed'] and 'stopped' not in report:
+                report['stopped'] = 'timeout_without_verified_completion'
+        except Exception as error:
+            report['error'] = str(error)
+            raise
+        finally:
+            report['progress'] = ledger.data
+            save()
+    return report
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--module', required=True, choices=['hunting', 'goddess', 'mirror'])
+    parser.add_argument('--checkpoint', default='available', choices=['available', 'check_in', 'daily_reward'])
+    parser.add_argument('--config', type=Path, default=ROOT / 'config/daily_tasks.json')
+    parser.add_argument('--image', type=Path)
+    parser.add_argument('--ocr-json', type=Path, help='Use a retained OCR result for offline review')
+    parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--execute', action='store_true')
+    parser.add_argument('--entry-only',action='store_true',help='Verify square entry and return only; never interact')
+    parser.add_argument('--timeout', type=float, default=300)
+    args = parser.parse_args()
+    if args.entry_only and args.module!='goddess': parser.error('--entry-only is limited to goddess navigation')
+    result = run(args)
+    print(json.dumps({k: result.get(k) for k in ('execute', 'completed', 'observation', 'proposed', 'stopped')}, ensure_ascii=False))
+    if args.execute and not result.get('completed'):
+        raise SystemExit(1)
+
+
+if __name__ == '__main__':
+    main()
