@@ -7,6 +7,7 @@ from pathlib import Path
 
 from local_cache import cache_path, load_local_config, save
 from pending_daily import exclusive_ledger
+from game_calendar import game_day
 
 CACHE_NAME = re.compile(r'^(\d{4}-\d{2}-\d{2})_[0-9a-f]{12}\.json$')
 
@@ -40,7 +41,7 @@ def protected_dates(root):
 
 def plan_cleanup(root, today=None):
     root = Path(root)
-    today = today or date.today()
+    today = today or game_day()
     cutoff = today - timedelta(days=1)
     result = {'today':today.isoformat(), 'keep_since':cutoff.isoformat(), 'candidates':[], 'kept':[], 'errors':[]}
     try:
@@ -87,7 +88,8 @@ def plan_cleanup(root, today=None):
     return result
 
 
-def clear_old_cache(root, today_provider=date.today):
+def clear_old_cache(root, today_provider=None):
+    today_provider = today_provider or game_day
     root = Path(root)
     result = {'deleted':[], 'kept':[], 'errors':[], 'busy':False}
     try:

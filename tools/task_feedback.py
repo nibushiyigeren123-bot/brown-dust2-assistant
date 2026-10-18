@@ -5,6 +5,13 @@ from pathlib import Path
 
 STATES = {
     'main_menu': '主菜单', 'unknown': '暂未识别',
+    'signin_event': '每日登录奖励', 'signin_pass': '通行证登录奖励',
+    'menu_overlay': '主菜单上的弹窗或遮罩', 'other_page': '当前为其他页面',
+    'loading_or_unknown_overlay': '疑似加载或未知遮罩（等待，不点击）',
+    'page_with_back':'带返回箭头的页面','page_with_circle_back':'活动首页返回入口',
+    'talk_panel':'格鲁TALK面板','equipment_filter':'装备筛选','equipment_detail':'装备详情',
+    'pass_panel': '通行证面板（已核对专属页签）',
+    'mirror_settlement':'镜中战赛季结算提示','page_with_narrow_back':'带返回箭头的战斗准备页',
     'guild_page': '公会页面', 'guild_check_in_receipt': '公会签到成功提示',
     'management_panel': '经营面板', 'gacha_page': '抽抽乐页面',
     'hunt_map': '狩猎地图', 'hunt_dialog': '快速狩猎窗口',
@@ -15,6 +22,11 @@ STATES = {
     'goddess_options':'女神像互动选项',
 }
 REASONS = {
+    'Hunting daily task was not automatically verified':'每日狩猎任务尚未自动核对，不提交。',
+    'Hunting resource balance could not be read':'当前免费或额外体力余额未读清，未提交狩猎。',
+    'Not enough observed hunting resource':'当前识别到的可用体力不足，未提交狩猎。',
+    'Hunting resource differs from target category':'体力图标与目标类别不一致，停止核对，未提交。',
+    'Cannot determine free hunting count from observed balance and unit price':'未读清免费余额或单次消耗，无法计算次数，未提交。',
     'Mirror multiplier value could not be read':'未读清鲜血鸡尾酒倍率，未提交战斗；请关闭遮挡后重试。',
     'Mirror battle count could not be read':'未读清自动战斗次数，未提交战斗。',
     'Mirror start button resource cost could not be read':'未读清开战按钮的鸡尾酒消耗，未提交战斗。',
@@ -53,6 +65,12 @@ REASONS = {
 }
 
 
+def readable_reason(value):
+    if isinstance(value, dict):
+        value = value.get('reason') or value.get('status') or str(value)
+    return REASONS.get(str(value), str(value))
+
+
 def summarize_report(report, task_id):
     observations = report.get('observations', [])
     last = observations[-1] if observations else {}
@@ -64,10 +82,21 @@ def summarize_report(report, task_id):
                          (('refine_completed','精炼'),('decompose_completed','分解'),('filter_initialized','初始化')))
         prefix+='缓存日期 '+report.get('cache_date','未知')+'：'+stages+'。'
     if not report.get('execute'):
+        if report.get('error'):
+            return prefix + '只读检查异常：' + str(report['error'])
+        if report.get('stopped'):
+            return prefix + '只读检查已停步：' + readable_reason(report['stopped']) + ' 没有点击游戏。'
+        if task_id == 'navigation' and state and state != 'main_menu':
+            return prefix + '只读模式仅识别，不会关闭弹窗或进入主菜单。若要进入主菜单，请切换实机操作，再点“执行选中单段”。'
         return prefix + '只读检查结束，没有点击游戏。'
     if report.get('completed') and task_id == 'task_rewards':
         return prefix + '每日及每周可领奖励已检查并返回主页；未完成任务保留。下次运行会重新检查每周。'
     if report.get('completed'):
+        if report.get('unavailable')=='season_settlement':
+            from mirror_status import settlement_from_report
+            if not settlement_from_report(report, report.get('cache_date')):
+                return prefix+'赛季末回执尚未完整核实，请查看任务进度与运行记录。'
+            return prefix+'赛季末 · 已跳过。'+(report.get('skip_reason') or '已确认结算提示并返回主菜单，继续其他日常；未记作战斗完成。')
         if task_id in ('goddess_check_in','goddess_daily_reward') and report.get('deferred_actions'):
             done=report.get('progress',{}).get('goddess',{}).get('done',[])
             if 'check_in' in done and 'daily_reward' in report['deferred_actions']:

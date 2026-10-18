@@ -28,6 +28,20 @@ class OpeningRecognizer:
         self.templates = {item["id"]: read_image(self.assets / item["file"])
                           for item in self.config["regions"] if not item["id"].startswith("home_")}
         self.menu = MenuForegroundRecognizer()
+        from panel_identity import PassPanelSignature
+        self.pass_panel = PassPanelSignature()
+
+    @staticmethod
+    def large_center_panel(normalized):
+        """Layout is supporting evidence only; dark backdrop alone authorizes nothing."""
+        gray=cv2.cvtColor(normalized,cv2.COLOR_BGR2GRAY)
+        center=gray[100:615,180:1100]
+        surround=np.concatenate((gray[100:615,0:100].ravel(),gray[100:615,1180:1280].ravel()))
+        bright=(center>100).astype(np.uint8)
+        points=cv2.findNonZero(bright)
+        if points is None:return False
+        _,_,width,height=cv2.boundingRect(points)
+        return bool(bright.mean()>.18 and center.mean()-surround.mean()>20 and width>500 and height>230)
 
     def recognize(self, image):
         height, width = image.shape[:2]
@@ -54,9 +68,18 @@ class OpeningRecognizer:
             if scores[name]["correlation"] >= 0.86:
                 return {"state": name, "next_action": "click_blank",
                         "suggested_point_normalized": [0.04, 0.50], "scores": scores, "ui": menu}
+        # A pass has the same central layout as an opening advertisement.
+        # Its independent identity AND active-tab signature prevent blank clicks.
+        panel = self.pass_panel.identify(normalized)
+        if panel:
+            return {'state':'pass_panel','next_action':'pause','panel':panel,'ui':menu}
         if menu["state"] == "menu_overlay":
-            return {"state": "menu_overlay", "next_action": "click_blank",
-                    "suggested_point_normalized": [0.04, 0.50], "ui": menu}
+            if self.large_center_panel(normalized):
+                return {"state": "menu_overlay", "next_action": "click_blank",
+                        "suggested_point_normalized": [0.04, 0.50], "ui": menu,
+                        "layout": "large_center_panel_with_dimmed_menu"}
+            return {"state":"loading_or_unknown_overlay","next_action":"pause","ui":menu,
+                    "reason":"dimmed_menu_without_verified_large_panel_wait_without_input"}
         return {"state": "unknown", "next_action": "pause", "scores": scores, "ui": menu}
 
 

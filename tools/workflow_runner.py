@@ -12,6 +12,8 @@ from local_cache import cache_path, load_local_config
 from module_catalog import BY_ID, default_plan, validate_plan
 from pending_daily import exclusive_ledger
 from project_paths import ROOT
+from task_feedback import STATES
+from game_calendar import check_execution_day
 
 
 def save(path, value):
@@ -40,8 +42,11 @@ def evaluate_result(report, exit_code, execute):
         latest = observations[-1] if observations else {}
         observation = latest.get('observation', latest)
         return 'inspected' if observation.get('state') not in (None, 'unknown') else 'needs_review'
-    if report.get('pending') or report.get('completed') is not True or report.get('module_completed') is False:
+    if report.get('pending') or (report.get('progress') or {}).get('pending') or report.get('completed') is not True or report.get('module_completed') is False:
         return 'needs_review'
+    if report.get('unavailable') == 'season_settlement':
+        from mirror_status import settlement_from_report
+        return 'skipped' if settlement_from_report(report, report.get('cache_date')) else 'needs_review'
     return 'verified'
 
 
@@ -64,9 +69,12 @@ def run(args):
             raise RuntimeError('当前队列不处于可恢复状态。')
         state['status'] = 'running'
         state.pop('reason', None)
+        state.pop('stop_kind', None)
     else:
         plan = json.loads(args.manifest.read_text(encoding='utf-8')) if args.manifest else default_plan()
         tasks = validate_plan(plan)
+        if args.execute:
+            tasks = ['navigation', *[key for key in tasks if key != 'navigation']]
         state = {'schema_version': 1, 'identity': identity, 'config_hashes': hashes,
                  'execute': args.execute, 'status': 'running', 'cursor': 0,
                  'tasks': [{'id': key, 'status': 'queued'} for key in tasks], 'completed': False}
@@ -74,10 +82,16 @@ def run(args):
               **identity, 'workflow': str(state_path)}
     stop_path = Path(os.environ.get('BD2_STOP_FILE', str(output / 'stop.requested')))
     pause_path = Path(os.environ.get('BD2_PAUSE_FILE', str(output / 'pause.requested')))
+    def verify_day():
+        if args.execute:
+            check_execution_day(identity['cache_date'])
+
     save(state_path, state)
     try:
+        verify_day()
         with exclusive_ledger(ROOT / 'runtime/workflow_control'):
             for index in range(state['cursor'], len(state['tasks'])):
+                verify_day()
                 state['cursor'] = index
                 if stop_path.is_file():
                     state['status'] = 'stopped'; state['reason'] = '已停止，未启动下一段。'
@@ -102,6 +116,7 @@ def run(args):
                 save(state_path, state)
                 command = worker_command(key, step_output, args.execute)
                 env = dict(os.environ, BD2_STOP_FILE=str(stop_path), PYTHONUTF8='1', PYTHONIOENCODING='utf-8')
+                env['BD2_DAILY_AUDIT_ID'] = state.get('daily_audit_id','')
                 with (step_output / 'process.log').open('wb') as log:
                     process = subprocess.Popen(command, cwd=str(ROOT), env=env, stdout=log, stderr=log,
                                                creationflags=subprocess.CREATE_NO_WINDOW)
@@ -113,12 +128,42 @@ def run(args):
                 if not result_path.exists():
                     raise RuntimeError(module.name + '未产生可核对的结果；退出码不能代替完成。')
                 child = json.loads(result_path.read_text(encoding='utf-8'))
+                try:
+                    verify_day()
+                except RuntimeError:
+                    item.update(status='needs_review', ended_at=time.time(), exit_code=code)
+                    raise
+                observations = child.get('observations') or []
+                latest = observations[-1] if observations else {}
+                observation = latest.get('observation', latest)
+                has_observation = isinstance(observation.get('state'), str) and bool(observation['state'])
                 status = evaluate_result(child, code, args.execute)
+                if status == 'verified' and key == 'navigation':
+                    audit=child.get('startup_task_audit') or {}
+                    if audit.get('cache_date') != identity['cache_date'] or audit.get('completed') is not True or not audit.get('audit_id'):
+                        status='needs_review'
+                        child['stopped']='开始任务前的每日任务核对尚未完成。'
+                    else:
+                        state['daily_audit_id']=audit['audit_id']
                 item.update(status=status, ended_at=time.time(), exit_code=code)
                 if status == 'needs_review':
                     state['status'] = 'stopped' if stop_path.is_file() else 'needs_review'
-                    state['reason'] = child.get('stopped') or child.get('error') or module.name + '尚未确认完成。'
+                    state['reason'] = child.get('stopped') or child.get('error') or (
+                        f'{module.name}执行器退出码：{code}，请核对运行记录。' if code else module.name + ('当前页面未识别，后续段暂未检查；只读检查不代表任务完成。' if not args.execute else '尚未确认完成。'))
+                    if not args.execute and code == 0 and not child.get('error') and not child.get('stopped'):
+                        if has_observation and state['status'] == 'needs_review':
+                            state['stop_kind'] = 'recognition'
+                        elif not has_observation:
+                            state['reason'] = module.name + '未产生有效的页面识别回执，请核对运行记录。'
                     break
+                if not args.execute and key == 'navigation':
+                    if observation.get('state') != 'main_menu':
+                        page = STATES.get(observation.get('state'), str(observation.get('state')))
+                        state.update(status='needs_review', stop_kind='recognition',
+                                     reason=f'已识别：{page}。只读模式不会关闭弹窗或进入主菜单，后续段暂未检查。'
+                                            '若要进入主菜单，请选中“进入主菜单”，切换实机操作，再执行选中单段。')
+                        # Recheck navigation on resume; do not skip an unready starting page.
+                        break
                 if args.execute:
                     from game_window import GameWindow
                     from common_navigation import PageDiagnosis
@@ -139,9 +184,11 @@ def run(args):
                                   on_wait=waiting_home, stop=check_requested_stop)
                     state.pop('message', None)
                     item['return_verified'] = True
+                verify_day()
                 state['cursor'] = index + 1
                 save(state_path, state)
             else:
+                verify_day()
                 state['status'] = 'complete' if args.execute else 'inspected'
                 state['completed'] = args.execute
                 report['completed'] = args.execute
@@ -150,6 +197,7 @@ def run(args):
         report['error'] = str(error)
     finally:
         report['stopped'] = state.get('reason') if state['status'] not in ('complete', 'inspected') else None
+        report['stop_kind'] = state.get('stop_kind')
         report['completed'] = state['status'] == 'complete'
         report['returned_to_main_menu'] = report['completed']
         save(state_path, state)
@@ -167,7 +215,8 @@ def main():
     result = run(args)
     print(json.dumps({'status': result['status'], 'completed': result['completed'],
                       'reason': result.get('reason')}, ensure_ascii=False))
-    if result['status'] in ('needs_review', 'stopped'):
+    if result['status'] in ('needs_review', 'stopped') and not (
+            not args.execute and result.get('stop_kind') == 'recognition'):
         raise SystemExit(1)
 
 

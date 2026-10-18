@@ -17,6 +17,8 @@ from cache_cleanup import automatic_cleanup_enabled, set_automatic_cleanup, clea
 
 from module_catalog import MODULES, BY_ID, default_plan, validate_plan
 from project_paths import ROOT
+from game_calendar import game_day
+from date_rollover import synchronize_date, require_current_cache
 
 BG, PANEL, EDGE = '#171b23', '#222834', '#343e50'
 TEXT, MUTED, BLUE, GOLD = '#eeeae0', '#a6adbb', '#8dafff', '#e7d5ae'
@@ -41,7 +43,7 @@ class WorkbenchApp:
         self.auto_cleanup = tk.BooleanVar(value=automatic_cleanup_enabled(ROOT))
         self.cleanup_day = None
         self.queue_summary = tk.StringVar()
-        root.title('棕色尘埃2辅助 · 日常作战台 0.2.4')
+        root.title('棕色尘埃2辅助 · 日常作战台 0.2.13')
         root.geometry('1360x900'); root.minsize(1150, 800); root.configure(bg=BG)
         style = ttk.Style(root); style.theme_use('clam')
         style.configure('.', font=('Microsoft YaHei UI', 10), background=BG, foreground=TEXT)
@@ -186,18 +188,27 @@ class WorkbenchApp:
         self.process_button.pack(side='left')
 
     def load_context(self):
+        self.date_ready = False
         try:
             previous = getattr(self, 'daily', {}).get('cache_date')
+            if self.process is None and self.settings_window is None:
+                change = synchronize_date(ROOT)
+                if change['changed']:
+                    self.task_reports.clear(); self.row_status.clear()
+                    for key in self.table.get_children():
+                        self.table.set(key, 'status', '待运行'); self.table.item(key, tags=())
+                    self.status.set('已按北京时间08:00切换游戏日，历史缓存保留，今日完成状态重新核对。')
+            self.date_ready = require_current_cache(ROOT) == game_day().isoformat()
             self.daily = load_local_config(ROOT / 'config/daily_tasks.json')
             self.event = load_local_config(ROOT / 'config/event_and_rewards.json')
             day = self.daily['cache_date']
             if previous and previous != day:
                 self.task_reports.clear()
             count = len(list((ROOT / 'runtime').glob(day + '_*.json')))
-            self.context.set('日期  ' + date.today().isoformat() + '    /    数据缓存  ' + day + f' · {count}项')
+            self.context.set('游戏日  ' + game_day().isoformat() + '（北京时间08:00刷新） / 数据缓存 ' + day + f' · {count}项')
         except Exception as error:
             self.daily, self.event = {}, {}
-            self.context.set('配置读取失败，请打开日常设置核对')
+            self.context.set('游戏日 ' + game_day().isoformat() + ' / 换日暂缓，请核对旧回执')
             self.status.set(str(error))
         self.refresh_task_progress()
 
@@ -231,7 +242,11 @@ class WorkbenchApp:
         if failed:
             report = dict(report or {}, error=(report or {}).get('error') or '本次执行未通过核对')
         if report is not None:
-            report.setdefault('cache_date', self.daily.get('cache_date'))
+            try:
+                receipt = json.loads((Path(output) / 'worker_result.json').read_text(encoding='utf-8'))
+            except (OSError, ValueError):
+                receipt = {}
+            report.setdefault('cache_date', receipt.get('cache_date') or getattr(self, 'running_cache_date', None))
             self.task_reports[task_id] = report
 
     def save_cleanup_preference(self):
@@ -257,9 +272,10 @@ class WorkbenchApp:
         return not result['busy'] and not result['errors']
 
     def maintenance_tick(self):
-        if self.auto_cleanup.get() and self.cleanup_day != date.today():
+        self.load_context()
+        if self.auto_cleanup.get() and self.date_ready and self.cleanup_day != game_day():
             if self.clean_cache(automatic=True):
-                self.cleanup_day = date.today()
+                self.cleanup_day = game_day()
         self.maintenance_after = self.root.after(60000, self.maintenance_tick)
 
     def render_queue(self):
@@ -289,18 +305,23 @@ class WorkbenchApp:
             self.steps.configure(state='disabled')
             if not module.worker:
                 self.scope.set('停用入口 · 按后续样本扩展')
+            elif module.id == 'navigation':
+                self.scope.set('只读：仅识别当前画面，不会关闭弹窗。\n实机：返回主页后顺查并领取每日／每周可领奖励；不启动其他日常段。')
             elif module.id == 'mirror':
                 cfg = self.daily.get('mirror', {})
-                self.scope.set(f"本周期最多 {cfg.get('max_battles', '—')} 场 · 总额度 {cfg.get('resource_budget', '—')}\n保持当前阵容，先核对已完成记录。")
+                self.scope.set(f"本周期最多 {cfg.get('max_battles', '—')} 场 · 总额度 {cfg.get('resource_budget', '—')}\n保持当前阵容；实测自动战斗入口，赛季末跳过并返回主页。")
             elif module.id == 'event':
                 cfg = self.event.get('event', {})
                 self.scope.set(f"配置 {'启用' if cfg.get('enabled') else '停用'} · {cfg.get('runs', '—')} 次 / 额度 {cfg.get('ap_budget', '—')}\n普通与挑战共用AP。通用开战/快速战斗适配待接入；已完成账本保留。")
+            elif module.id == 'hunting':
+                from hunting_resources import resource_text
+                self.scope.set('自动读取每日任务进度；固定1次只用免费体力。\n米饭：'+resource_text(ROOT,'rice')+'\n火把：'+resource_text(ROOT,'torch'))
             elif module.id == 'task_rewards':
                 self.scope.set('每次检查每日 + 每周\n只领取已完成项目和当前已达标区间奖励。')
             elif module.id == 'equipment':
-                self.scope.set('按缓存日期核对精炼、分解与初始化\n已完成不重做；新周期通用执行链待接入。')
+                self.scope.set('按游戏日核对精炼、分解与初始化；已完成不重做。\n核对UR20分候选、R单选、未锁未穿戴及恰好1件；未读清即停步。')
             elif module.id == 'rewards':
-                self.scope.set('本期两本通行证 · 任务后复查等级\n四组空奖励链已核实；领取后仍须核对回执。')
+                self.scope.set('本期两本通行证 · 任务后复查等级\n两本任务与等级奖励分别复查；领取后核对回执。')
             else:
                 self.scope.set('读取日期与本地缓存 · 保持当前阵容\n未知画面或未决操作停步核对。')
             self.steps.configure(state='normal')
@@ -362,6 +383,7 @@ class WorkbenchApp:
         if self.settings_window is not None and self.settings_window.winfo_exists():
             self.settings_window.deiconify(); self.settings_window.lift(); self.settings_window.focus_force()
             return
+        self.load_context()
         from daily_settings import SettingsWindow
         window = self.settings_window = tk.Toplevel(self.root)
         self.settings_editor = SettingsWindow(window, ROOT / 'config/daily_tasks.json')
@@ -370,7 +392,7 @@ class WorkbenchApp:
                 self.settings_window = self.settings_editor = None
                 if self.banner.winfo_exists():
                     self.load_context()
-        window.bind('<Destroy>', destroyed)
+        window.bind('<Destroy>', destroyed,add='+')
 
     def open_process_window(self):
         if self.process_view is not None and self.process_view.window.winfo_exists():
@@ -411,11 +433,15 @@ class WorkbenchApp:
             return
         if self.settings_window is not None and self.settings_window.winfo_exists():
             self.status.set('请先保存或关闭日常设置，再启动任务。'); return
+        self.load_context()
+        if self.execute.get() and not self.date_ready:
+            return
         if not resume:
             stamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
             self.output = ROOT / 'evidence/workbench_runs' / f'{stamp}_{task_id}'
             self.output.mkdir(parents=True, exist_ok=False)
         self.running_task_id = task_id
+        self.running_cache_date = self.daily.get('cache_date')
         if task_id != 'workflow':
             self.task_reports.pop(task_id, None)
         self.stop_file, self.pause_file = self.output / 'stop.requested', self.output / 'pause.requested'
@@ -463,7 +489,7 @@ class WorkbenchApp:
         if path.exists():
             try:
                 snapshot = json.loads(path.read_text(encoding='utf-8'))
-                labels = {'queued': '待运行', 'running': '正在核对', 'verified': '已核实', 'inspected': '已识别', 'needs_review': '待核对'}
+                labels = {'queued': '待运行', 'running': '正在核对', 'verified': '已核实', 'inspected': '已识别', 'needs_review': '待核对','skipped':'已跳过'}
                 for item in snapshot['tasks']:
                     if self.table.exists(item['id']):
                         if item.get('output'):
@@ -508,11 +534,11 @@ class WorkbenchApp:
             try:
                 report = json.loads((self.output / 'run.json').read_text(encoding='utf-8'))
                 state = evaluate_result(report, code, self.execute.get())
-                label = {'verified': '已核实', 'inspected': '已识别', 'needs_review': '待核对'}[state]
+                label = {'verified': '已核实', 'inspected': '已识别', 'needs_review': '待核对','skipped':'已跳过'}[state]
                 values = list(self.table.item(self.running_task_id, 'values')); values[2] = label
                 self.table.item(self.running_task_id, values=values, tags=(state,))
                 self.row_status[self.running_task_id] = label
-                self.progress['value'] = 100 if state in ('verified', 'inspected') else 0
+                self.progress['value'] = 100 if state in ('verified', 'inspected', 'skipped') else 0
             except (OSError, ValueError, KeyError):
                 pass
             self.capture_task_report(self.running_task_id, self.output, bool(code))
@@ -528,7 +554,10 @@ class WorkbenchApp:
             elif state == 'inspected':
                 self.status.set('勾选队列只读检查结束，没有点击游戏。')
             elif state == 'complete':
-                self.status.set('本轮队列逐段核实完成，已返回主菜单。')
+                skipped = [BY_ID[item['id']].name for item in snapshot['tasks'] if item['status'] == 'skipped']
+                self.status.set('本轮队列已结束，已返回主菜单。' + ('赛季末跳过：' + '、'.join(skipped) + '。' if skipped else '各段结果已核实。'))
+            elif state == 'needs_review' and snapshot.get('reason'):
+                self.status.set(snapshot['reason'])
             self.resume_button.configure(state='normal' if state in ('paused', 'stopped', 'needs_review') else 'disabled')
         self.append_log(self.status.get()); self.stop_button.configure(state='disabled'); self.pause_button.configure(state='disabled')
         missing_report = not any((self.output / name).is_file() for name in ('run.json', 'inspection.json'))
@@ -547,6 +576,8 @@ class WorkbenchApp:
     def resume(self):
         if not self.process and self.output and (self.output / 'workflow.json').exists():
             previous = json.loads((self.output / 'workflow.json').read_text(encoding='utf-8'))
+            if previous['identity'].get('cache_date') != game_day().isoformat():
+                self.status.set('旧游戏日队列已保留，不能恢复到今天；请重新启动本轮检查。'); return
             if previous['execute'] != self.execute.get():
                 self.status.set('恢复本轮需选择原来的' + ('实机执行' if previous['execute'] else '只读检查') + '模式。')
                 return
@@ -560,6 +591,8 @@ class WorkbenchApp:
             output = Path(json.loads(path.read_text(encoding='utf-8'))['output']).resolve(strict=True)
             output.relative_to((ROOT / 'evidence/workbench_runs').resolve())
             state = json.loads((output / 'workflow.json').read_text(encoding='utf-8'))
+            if state['identity'].get('cache_date') != game_day().isoformat():
+                return
             if state['status'] in ('paused', 'stopped', 'needs_review'):
                 self.output = output
                 self.resume_button.configure(state='normal')

@@ -25,6 +25,10 @@ _capture_api.PrintWindow.restype = wintypes.BOOL
 
 
 def check_requested_stop():
+    expected_day = os.environ.get('BD2_EXECUTION_GAME_DAY')
+    if expected_day:
+        from game_calendar import check_execution_day
+        check_execution_day(expected_day)
     signal = os.environ.get('BD2_STOP_FILE')
     if signal and Path(signal).is_file():
         raise RuntimeError('用户已停止当前任务')
@@ -66,6 +70,16 @@ class GameWindow:
 
     def capture(self):
         check_requested_stop()
+        if os.environ.get('BD2_EXECUTION_GAME_DAY'):
+            # Background GPU frames can be stale. Execution observations must
+            # foreground this verified client before diagnosing the next step.
+            if (win32gui.IsWindow(self.hwnd) and win32gui.IsIconic(self.hwnd)
+                    and win32process.GetWindowThreadProcessId(self.hwnd)[1]==self.pid):
+                win32gui.ShowWindow(self.hwnd,win32con.SW_RESTORE)
+                time.sleep(.3)
+            if win32gui.GetForegroundWindow()!=self.hwnd:
+                self.focus_client(self.geometry())
+                time.sleep(.3)
         geometry = self.geometry()
         width, height = geometry["width"], geometry["height"]
         dc_handle = win32gui.GetDC(self.hwnd)
@@ -108,6 +122,8 @@ class GameWindow:
                 # Hidden workers may lack the launcher's foreground permission.
                 # Attach only the current foreground and verified game queues;
                 # all geometry, foreground and covered-target checks still apply.
+                # A worker without a GUI must initialize its own message queue.
+                win32gui.PeekMessage(None, 0, 0, win32con.PM_NOREMOVE)
                 attached = []
                 caller = ctypes.windll.kernel32.GetCurrentThreadId()
                 try:
@@ -133,7 +149,29 @@ class GameWindow:
         if self.geometry() != expected_geometry:
             raise RuntimeError("Window changed while activating; capture again")
 
-    def click_client(self, point, expected_geometry):
+    def recover_input(self, expected_geometry):
+        """One native restore of this same window; caller must re-observe before input."""
+        check_requested_stop()
+        if self.geometry()!=expected_geometry:
+            raise RuntimeError('Window changed before native input recovery')
+        win32gui.ShowWindow(self.hwnd,win32con.SW_MINIMIZE)
+        try:
+            time.sleep(.3)
+            check_requested_stop()
+        finally:
+            # Restore even if stopped, leaving the user's game visible.
+            if win32gui.IsWindow(self.hwnd) and win32process.GetWindowThreadProcessId(self.hwnd)[1]==self.pid:
+                win32gui.ShowWindow(self.hwnd,win32con.SW_RESTORE)
+        time.sleep(.5)
+        restored=self.geometry()
+        if restored!=expected_geometry:
+            raise RuntimeError('Window changed during native input recovery; capture again')
+        self.focus_client(restored)
+        return {'hwnd':self.hwnd,'pid':self.pid,'method':'native_minimize_restore','geometry':restored}
+
+    def click_client(self, point, expected_geometry, *, press_ms=100):
+        if type(press_ms) is not int or not 100<=press_ms<=350:
+            raise ValueError('Supported mouse press is 100 to 350 milliseconds')
         check_requested_stop()
         if self.geometry() != expected_geometry:
             raise RuntimeError("Window changed since recognition; capture again")
@@ -149,17 +187,20 @@ class GameWindow:
         try:
             win32api.SetCursorPos(position)
             time.sleep(0.10)
+            if win32api.GetCursorPos() != position:
+                raise RuntimeError('Pointer moved before game input; no mouse press sent')
             if win32gui.GetForegroundWindow() != self.hwnd or self.geometry() != expected_geometry:
                 raise RuntimeError("Game changed before mouse press")
             check_requested_stop()
             win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
             try:
                 # Keep a short press visible to a game's frame-based input loop.
-                ctypes.windll.kernel32.Sleep(100)
+                ctypes.windll.kernel32.Sleep(press_ms)
             finally:
                 win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
             # Let the game consume mouse-up at the target before restoring the cursor.
             time.sleep(0.10)
         finally:
-            win32api.SetCursorPos(old_position)
-        return {"client_point": [x, y], "screen_point": list(position)}
+            if win32api.GetCursorPos() == position:
+                win32api.SetCursorPos(old_position)
+        return {"client_point": [x, y], "screen_point": list(position),'input_kind':'left_click','press_ms':press_ms}

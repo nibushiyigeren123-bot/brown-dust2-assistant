@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import msvcrt
+import os
 import time
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
@@ -99,6 +100,9 @@ def run(args):
         (output / 'inspection.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
         return result
     if args.execute:
+        from game_calendar import check_execution_day
+        check_execution_day(config['cache_date'])
+        os.environ['BD2_EXECUTION_GAME_DAY'] = config['cache_date']
         china_date = datetime.now(timezone(timedelta(hours=8))).date().isoformat()
         if china_date < config['execute_not_before']:
             raise RuntimeError('Today is preparation only; execution is disabled until the configured test date')
@@ -106,7 +110,7 @@ def run(args):
     from game_window import GameWindow
     import win32api
     window = GameWindow.find()
-    report = {'module': args.module, 'execute': args.execute, 'completed': False,
+    report = {'module': args.module, 'execute': args.execute, 'cache_date':config['cache_date'], 'completed': False,
               'actions': [], 'observations': [], 'ledger': str(ledger_path) if args.execute else None}
 
     def save():
@@ -122,6 +126,29 @@ def run(args):
         entry_scene_observations=0
         deadline = time.monotonic() + max(args.timeout, controller.network_wait_seconds * 5)
         try:
+            if args.module == 'hunting':
+                from hunting_probe import probe_hunting_task
+                def probe_frame(observation,path):
+                    message='读取固定资源栏与狩猎页面，不提交战斗。' if observation.get('state') in ('hunt_map','hunt_dialog') else '开头核对每日狩猎任务进度，不领取奖励。'
+                    report['observations'].append({'image':str(path),'observation':observation,'decision':{'status':'wait','reason':message}})
+                    save()
+            if args.execute and args.module == 'hunting' and config['hunting']['enabled'] and not ledger.data['pending']:
+                progress = ledger.data['hunting']
+                check=progress.get('daily_check') or {}
+                audit_id=os.environ.get('BD2_DAILY_AUDIT_ID')
+                reuse=bool(audit_id and check.get('audit_id')==audit_id and check.get('cache_date')==config['cache_date'] and check.get('status') in ('done','not_done'))
+                if reuse or progress['daily_done'] or progress['runs'].get('daily',0):
+                    report['daily_task_check']={'source':'initial_menu_audit' if reuse else 'settled_daily_cache','evidence':check}
+                else:
+                    evidence=probe_hunting_task(config, output/'daily_task_check', ROOT, on_frame=probe_frame)
+                    progress['daily_check']=evidence
+                    if evidence['status']=='done':progress['daily_done']=True
+                    ledger.save()
+                    report['daily_task_check']=evidence
+                save()
+                from hunting_survey import survey_resources
+                report['resource_survey']=survey_resources(window,config,output/'resource_survey',ROOT,on_frame=probe_frame)
+                save()
             wanted=config['goddess']['actions']
             if getattr(args,'entry_only',False) and ledger.data['pending']:
                 raise RuntimeError('Entry-only navigation refuses an unresolved action')
@@ -157,6 +184,9 @@ def run(args):
                 path = output / f"frame_{len(report['observations']):03}.png"
                 image.save(path)
                 observation = inspect(path, vision, config, output)
+                if args.module == 'hunting':
+                    from hunting_resources import retain_observation
+                    retain_observation(ROOT, observation, path, config['cache_date'])
                 if (args.execute and getattr(args,'entry_only',False)
                         and observation['state'] in ('goddess_scene','goddess_options')
                         and controller.goddess_scene_attempts):
@@ -179,6 +209,9 @@ def run(args):
                     if observation['state'] in ('goddess_options','goddess_scene'):
                         report['stopped']='entry_only_scene_not_reached_by_fixed_route'
                         break
+                if args.execute and args.module == 'mirror' and observation['state'] in ('mirror_auto_dialog', 'mirror_multiplier_dialog', 'mirror_battle', 'mirror_result', 'mirror_result_footer'):
+                    if ledger.data['mirror'].pop('availability', None) is not None:
+                        ledger.save()
                 decision = controller.step(observation)
                 report['observations'].append({'image': str(path), 'geometry': geometry,
                                                'observation': observation, 'decision': decision})
@@ -196,6 +229,8 @@ def run(args):
                     fresh_path = output / f"preclick_{len(report['observations']):03}.png"
                     fresh.save(fresh_path)
                     fresh_observation = inspect(fresh_path, vision, config, output)
+                    if args.module == 'hunting':
+                        retain_observation(ROOT, fresh_observation, fresh_path, config['cache_date'])
                     fresh_decision = controller.step(fresh_observation)
                     report['observations'][-1]['preclick'] = {'image': str(fresh_path),
                         'observation': fresh_observation, 'decision': fresh_decision}
@@ -220,6 +255,8 @@ def run(args):
                     save()
                     time.sleep(0.9)
                 elif decision['status'] == 'finished':
+                    if decision.get('skipped'):
+                        report.update(skipped=True,unavailable=decision.get('unavailable'),skip_reason=decision.get('reason'))
                     deferred=decision.get('deferred_actions',[])
                     report['module_completed'] = not deferred
                     report['deferred_actions'] = deferred
@@ -228,6 +265,14 @@ def run(args):
                     returned = ensure_main_menu(window, output/'return_to_menu', execute=True, timeout=network_wait_seconds())
                     report['returned_to_main_menu'] = returned['completed']
                     report['completed'] = returned['completed']
+                    if args.module == 'mirror':
+                        from mirror_status import settlement_from_report
+                        report['progress'] = ledger.data
+                        availability = settlement_from_report(report, config['cache_date'])
+                        if availability and not ledger.data.get('pending'):
+                            availability['source_run'] = str(output)
+                            ledger.data['mirror']['availability'] = availability
+                            ledger.save()
                     if not returned['completed']:
                         report['stopped'] = 'task_verified_but_return_to_menu_not_verified'
                     break

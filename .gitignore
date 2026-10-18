@@ -9,5 +9,3 @@ __pycache__/
 *.lock
 *.log
 .env
-
-.codex-project.json

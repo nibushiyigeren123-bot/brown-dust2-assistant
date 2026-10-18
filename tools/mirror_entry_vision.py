@@ -21,7 +21,7 @@ class MirrorEntryVision(GoddessEntryVision):
         return logo['point'] if logo else None
 
     def lobby(self,image):
-        if not (self.match(image,'lobby_score',threshold=.70)
+        if not ((self.match(image,'lobby_score',threshold=.70) or self.match(image,'lobby_trophy',foreground=False,threshold=.82))
                 and self.match(image,'lobby_wine',foreground=False,threshold=.78)):
             return None
         normalized=cv2.resize(image,(1280,720),interpolation=cv2.INTER_AREA)

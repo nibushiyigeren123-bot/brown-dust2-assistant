@@ -202,10 +202,14 @@ def main():
                         report['stopped'] = {'status': 'needs_review',
                                              'reason': 'Equipment cycle is complete; return to menu without repeating it'}
                 else:
-                    report['stopped'] = {'status': 'needs_review',
-                                         'reason': 'General equipment execution is not yet released'}
+                    from equipment_workflow import EquipmentRun
+                    EquipmentRun(GameWindow.find(),ledger,report,output,
+                                 lambda:save_json(output/'run.json',report)).execute()
             except RuntimeError as error:
                 report['stopped'] = {'status': 'needs_review', 'reason': str(error)}
+            finally:
+                report['progress']=ledger.progress.state.copy()
+                report['pending']=ledger.data['pending']
         save_json(output / 'run.json', report)
     print(json.dumps({k: v for k, v in report.items() if k != 'observations'}, ensure_ascii=False))
 

@@ -185,7 +185,7 @@ class TaskRewardRun:
         from reward_endpoints import RewardEndpoints
         endpoints = RewardEndpoints()
         if not endpoints.confirmed(image, mode + ':top'):
-            raise RuntimeError('未核实任务列表顶部端点；不把滚轮回执当作滚动成功。')
+            self.report.setdefault('coverage_warnings',[]).append(mode+':顶部内容变化，任务覆盖未确认；继续核对全局全部获得按钮。')
         if obs.get('claimable') is None:
             raise RuntimeError('未读清全部获得按钮，未领取。')
         if obs['claimable']:
@@ -221,9 +221,13 @@ class TaskRewardRun:
             if stable >= 2:
                 if endpoints.confirmed(image, mode + ':bottom'):
                     break
-                raise RuntimeError('任务列表静止但底部端点未核实，保留未完成状态。')
+                self.report.setdefault('coverage_warnings',[]).append(mode+':底部覆盖未确认；不推断所有任务完成。')
+                break
         else:
-            raise RuntimeError('尚未确认任务列表滚到底，不标记本页检查完成。')
+            self.report.setdefault('coverage_warnings',[]).append(mode+':列表覆盖达到观察上限；不推断所有任务完成。')
+        # The global claim-all button covers available rewards independently of
+        # list position. Task-list coverage is separate from reward collection.
+        self.report['all_tasks_completed']=False
         self.report['checked_modes'].append(mode)
         self.ledger['checked_modes'] = self.report['checked_modes'][:]
         save(self.path, self.ledger)

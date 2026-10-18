@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import time
+from datetime import datetime, timezone
 from datetime import date
 from pathlib import Path
 from local_cache import cache_path, load_local_config
@@ -15,6 +16,8 @@ from daily_vision import compact
 
 STONE_STAGES = ('火之洞穴', '水之洞穴', '风之洞穴', '光之洞穴', '暗之洞穴')
 HUNT_DIFFICULTIES = ('中游', '困难', '极难')
+HUNT_TARGETS = {'金币': ('哥布林遗迹',), '史莱姆': ('史莱姆王国',), '圣石洞穴': STONE_STAGES,
+                '狩猎场': ('野猪洞穴',)}
 
 
 def hunt_free_only(settings, plan):
@@ -26,6 +29,7 @@ def hunt_target_key(plan):
     target = [plan['category'], plan.get('stage'), plan['difficulty']]
     if plan.get('target_mode', 'specified') != 'specified':
         target.append(plan['target_mode'])
+    if plan.get('runs_mode','fixed')!='fixed':target.append(plan['runs_mode'])
     return target
 
 
@@ -69,6 +73,10 @@ def validate_config(config):
     for plan in plans:
         if type(plan['runs']) is not int or plan['runs'] < 0:
             raise ValueError('Invalid extra hunting run count')
+        if plan.get('runs_mode','fixed') not in ('fixed','all_free'):
+            raise ValueError('额外次数请选择指定次数或用完当前免费体力')
+        if plan.get('runs_mode')=='all_free' and not hunt_free_only(hunt,plan):
+            raise ValueError('用完当前免费体力模式必须开启仅免费')
     for plan in [hunt['daily_target'], *plans]:
         if 'free_only' in plan and type(plan['free_only']) is not bool:
             raise ValueError('Each hunting free-only switch must be true or false')
@@ -81,6 +89,10 @@ def validate_config(config):
             raise ValueError('Lowest-stock selection is supported only for holy stones')
         if mode=='specified' and plan['category']=='圣石洞穴' and plan.get('stage') not in STONE_STAGES:
             raise ValueError('圣石目标请选择火、水、风、光、暗的洞穴')
+        if mode == 'specified' and plan['category'] in ('金币', '史莱姆') and plan.get('stage') not in HUNT_TARGETS[plan['category']]:
+            raise ValueError('金币请选择哥布林遗迹，史莱姆请选择史莱姆王国')
+        if mode == 'specified' and plan['category'] == '狩猎场' and plan.get('stage') in (*STONE_STAGES,'哥布林遗迹','史莱姆王国'):
+            raise ValueError('狩猎场关卡不能使用哥布林、史莱姆或圣石目标')
         if mode=='specified' and plan is not hunt['daily_target'] and not plan.get('stage'):
             raise ValueError('每条额外狩猎计划都需要填写关卡')
     return config
@@ -149,6 +161,13 @@ class DailyLedger:
             state['spent'][pending['resource']] += pending['cost']
             if pending['plan_id'] == 'daily':
                 state['daily_done'] = True
+                state['daily_check'] = {'status': 'done', 'cache_date': self.config['cache_date'],
+                    'source': 'settled_hunting_receipt', 'before_check': state.get('daily_check'),
+                    'evidence': evidence}
+            if pending.get('runs_mode')=='all_free':
+                check=state.setdefault('free_sweep_checks',{}).setdefault(pending['plan_id'],{})
+                check.update(free_available=evidence.get('free_remaining'),cache_date=self.config['cache_date'],source='settled_hunting_receipt')
+                check['observed_at']=datetime.now(timezone.utc).isoformat()
         elif module == 'goddess':
             self.data['goddess']['done'].append(pending['task'])
         elif module == 'mirror':
@@ -174,6 +193,8 @@ class DailyController:
         self.selected_hunt_stage = None
         self.difficulty_changes = 0
         self.active_hunt_plan = None
+        self.checked_free_sweeps = set()
+        self.resolved_this_run = set()
         self.goddess_scene_attempts = 0
         self.goddess_scene_transition_since = None
         self.goddess_collection_attempts = 0
@@ -255,7 +276,11 @@ class DailyController:
                     return self.stop('Hunting result quantity differs from the submission', 'needs_review')
                 if count is None:
                     before, after = pending.get('free_before'), observation.get('free_remaining')
-                    if before is None or after is None or before-after != pending['cost']:
+                    matched = type(before) is int and type(after) is int and before-after == pending['cost']
+                    extra_before,extra_after=pending.get('extra_before'),observation.get('owned_extra')
+                    if not pending.get('free_only',True) and all(type(value) is int for value in (before,after,extra_before,extra_after)) and not pending.get('extra_approximate') and observation.get('extra_approximate') is False:
+                        matched = before>=after and extra_before>=extra_after and before-after+extra_before-extra_after==pending['cost']
+                    if not matched:
                         return self.stop('Hunt result lacks a verified quantity or matching resource deduction', 'needs_review')
                 match = True
             elif self.module == 'mirror' and state == 'mirror_result':
@@ -270,6 +295,8 @@ class DailyController:
                     match = state in ('goddess_reward_result', 'goddess_loot_result')
             if match:
                 self.ledger.settle(observation)
+                if self.module=='hunting' and pending.get('runs_mode')=='all_free':
+                    self.checked_free_sweeps.add(pending['plan_id'])
                 if self.module=='mirror':
                     self.mirror_auto_attempts,self.mirror_portal_attempts=0,0
                 self.last_ready, self.ready_observations = None, 0
@@ -286,16 +313,22 @@ class DailyController:
     def hunting_plan(self):
         settings, progress = self.config['hunting'], self.ledger.data['hunting']
         if not progress['daily_done']:
-            if settings['daily_task_status'] == 'done':
+            check = progress.get('daily_check') or {}
+            if check.get('cache_date') != self.config['cache_date']:
+                return None, {'status':'wait','reason':'执行时自动打开每日任务页，核对狩猎0/1或1/1。'}
+            if check.get('status') == 'done':
                 progress['daily_done'] = True
                 self.ledger.save()
-            elif settings['daily_task_status'] == 'unknown':
-                return None, self.stop('Confirm whether today\'s fixed hunting daily is already done')
+            elif check.get('status') != 'not_done':
+                return None, self.stop('Hunting daily task was not automatically verified', 'needs_review')
             else:
                 target = {**settings['daily_target']}
                 target['stage'] = target.get('stage') or '野猪洞穴'
-                return {'id': 'daily', 'runs': 1, **target}, None
+                return {'id': 'daily', 'runs': 1, **target, 'free_only': True}, None
         for plan in settings['extra_plans']:
+            if plan.get('runs_mode')=='all_free':
+                if plan['id'] not in self.checked_free_sweeps:return {**plan,'runs':1},None
+                continue
             remaining = plan['runs'] - progress['runs'].get(plan['id'], 0)
             if remaining > 0:
                 return {**plan, 'runs': remaining}, None
@@ -309,9 +342,7 @@ class DailyController:
             if (self.ledger.data.get('last_settled') or {}).get('module') == 'hunting':
                 return self.cleanup('dismiss_hunt_reward', obs['dismiss_point'])
             return self.stop('Unowned hunting reward requires review', 'needs_review')
-        if obs.get('daily_task_done'):
-            progress['daily_done'] = True
-            self.ledger.save()
+        # Map banners are not a substitute for the verified daily task row.
         plan, end = self.hunting_plan()
         if end:
             if end['status'] == 'finished':
@@ -328,10 +359,12 @@ class DailyController:
             self.last_ready, self.ready_observations = None, 0
         if plan.get('target_mode') == 'lowest_stock':
             resolved = progress.setdefault('resolved_targets', {})
-            if plan['id'] not in resolved:
+            if plan['id'] not in resolved or (plan.get('runs_mode')=='all_free' and plan['id'] not in self.resolved_this_run):
                 if obs['state'] == 'hunt_dialog':
                     return self.cleanup('close_hunt_for_target_change', obs['points']['cancel'])
                 if obs['state'] != 'hunt_map':
+                    if obs['state'] == 'main_menu' and obs.get('hunt_entry_point'):
+                        return self.click('open_hunting', obs['hunt_entry_point'])
                     return {'status': 'wait', 'reason': 'Open the holy-stone map to read its five inventories'}
                 inventory = obs.get('stone_inventory')
                 if not inventory or set(inventory) != set(STONE_STAGES):
@@ -344,7 +377,10 @@ class DailyController:
                 if not self.stable(('stone_inventory', plan['id'], tuple(inventory[s] for s in STONE_STAGES))):
                     return {'status': 'wait', 'reason': 'Verify all five stone inventories on a second observation'}
                 stage = min(STONE_STAGES, key=lambda name: inventory[name])
+                if plan['id'] in resolved:
+                    progress.setdefault('target_history',[]).append({'plan_id':plan['id'],**resolved[plan['id']]})
                 resolved[plan['id']] = {'stage': stage, 'inventory': inventory}
+                self.resolved_this_run.add(plan['id'])
                 progress['plan_targets'][plan['id']] = hunt_target_key(plan)
                 self.ledger.save()
             plan = {**plan, 'stage': resolved[plan['id']]['stage']}
@@ -372,7 +408,9 @@ class DailyController:
             nodes = [n for n in [*obs['nodes'], *obs.get('stone_stage_points', [])]
                      if compact(plan['stage']) in n['text']]
             if len(nodes) == 1:
-                return self.click('select_hunting_stage', nodes[0]['point'], target=selected)
+                evidence=progress.get('resolved_targets',{}).get(plan['id']) if plan.get('target_mode')=='lowest_stock' else None
+                return self.click('select_hunting_stage', nodes[0]['point'], target=selected,
+                                  **({'selection_evidence':evidence,'selection_reason':'五种库存双帧一致后选择最少'} if evidence else {}))
             if plan['category'] in obs['category_points']:
                 if self.selected_hunt_category != plan['category']:
                     return self.click('select_hunting_category', obs['category_points'][plan['category']], category=plan['category'])
@@ -393,34 +431,55 @@ class DailyController:
             return self.click('set_hunt_free_only', obs['points']['free_toggle'])
         if obs.get('count') is None:
             return self.stop('Hunt quantity could not be read', 'needs_review')
+        if plan.get('runs_mode')=='all_free':
+            count,cost,free=obs['count'],obs.get('cost'),obs.get('free_available')
+            if type(count) is not int or count<=0 or type(cost) is not int or cost<=0 or cost%count or type(free) is not int:
+                return self.stop('Cannot determine free hunting count from observed balance and unit price','needs_review')
+            unit=cost//count;quantity=free//unit
+            progress.setdefault('free_sweep_checks',{})[plan['id']]={'free_available':free,'unit_cost':unit,'cache_date':self.config['cache_date'],'target':hunt_target_key(plan),'observed_at':datetime.now(timezone.utc).isoformat()}
+            self.ledger.save()
+            if quantity==0:
+                self.checked_free_sweeps.add(plan['id'])
+                return self.hunting(obs)
+            plan={**plan,'runs':quantity}
         if obs['count'] != plan['runs']:
-            return self.adjust_count(obs, plan['runs'])
+            if type(obs['count']) is int and obs['count']>0 and type(obs.get('cost')) is int and obs['cost']>0 and obs['cost']%obs['count']==0:
+                from resource_pools import available_for_policy
+                required=obs['cost']//obs['count']*plan['runs']
+                available=available_for_policy(obs.get('free_available'),obs.get('owned_extra'),free_only,required)
+                if available is None:return self.stop('Hunting resource balance could not be read','needs_review')
+                if available<required:return self.stop('Not enough observed hunting resource','resources_exhausted')
+            return self.adjust_count(obs, plan['runs'],use_max=plan.get('runs_mode')=='all_free')
         resource, cost = obs.get('resource'), obs.get('cost')
-        if resource not in settings['budgets'] or type(cost) is not int or cost <= 0:
+        if resource not in ('rice','torch') or type(cost) is not int or cost <= 0:
             return self.stop('Resource type/cost could not be verified', 'needs_review')
-        budget = settings['budgets'][resource]
-        if budget is None:
-            return self.stop(f'Set the {resource} budget before spending it')
-        if progress['spent'][resource] + cost > budget:
-            return self.stop('Hunting resource budget reached', 'budget_reached')
-        if free_only:
-            if obs.get('free_available') is None:
-                return self.stop('Available free hunting resource could not be read', 'needs_review')
-            if obs['free_available'] < cost:
-                return self.stop('Not enough free hunting resource', 'resources_exhausted')
-        if not self.stable(('hunt', plan['id'], plan['runs'], cost, resource, obs['free_only'])):
+        if resource != ('torch' if plan['category'] == '圣石洞穴' else 'rice'):
+            return self.stop('Hunting resource differs from target category', 'needs_review')
+        from resource_pools import available_for_policy
+        available = available_for_policy(obs.get('free_available'), obs.get('owned_extra'), free_only, cost)
+        if available is None:
+            return self.stop('Hunting resource balance could not be read', 'needs_review')
+        if available < cost:
+            return self.stop('Not enough observed hunting resource', 'resources_exhausted')
+        if not self.stable(('hunt', plan['id'], plan['runs'], cost, resource, obs['free_only'], obs.get('free_available'), obs.get('owned_extra'))):
             return {'status': 'wait', 'reason': 'Verify the same quantity/cost on a second observation'}
         return self.click('submit_quick_hunt', obs['points']['submit'], consumes=True, module='hunting',
                           plan_id=plan['id'], quantity=plan['runs'], resource=resource, cost=cost,
                           free_only=obs['free_only'], free_before=obs.get('free_available'),
+                          extra_before=obs.get('owned_extra'), extra_approximate=obs.get('extra_approximate'),
+                          runs_mode=plan.get('runs_mode','fixed'),
                           resolved_stage=plan['stage'])
 
-    def adjust_count(self, obs, target):
+    def adjust_count(self, obs, target, use_max=False):
         self.last_ready, self.ready_observations = None, 0
         if self.adjustments >= 300:
             return self.stop('Quantity control did not reach its configured value', 'needs_review')
         if obs['count'] > target:
             return self.click('set_quantity_min', obs['points']['min'], adjustment=True)
+        if use_max and obs['points'].get('max'):
+            return self.click('set_quantity_max',obs['points']['max'],adjustment=True)
+        if target-obs['count']>=10 and obs['points'].get('plus_ten'):
+            return self.click('increase_quantity_ten',obs['points']['plus_ten'],adjustment=True)
         return self.click('increase_quantity_once', obs['points']['plus'], adjustment=True)
 
     def goddess(self, obs):
@@ -490,6 +549,11 @@ class DailyController:
         state = obs['state']
         if not settings['enabled']:
             return self.stop('Mirror battles disabled', 'skipped')
+        if state=='mirror_settlement' and obs.get('settlement_evidence'):
+            if not self.mirror_auto_attempts:
+                return self.click('open_mirror_auto',obs['open_auto_point'])
+            return {'status':'finished','skipped':True,'unavailable':'season_settlement',
+                    'reason':'镜中之战赛季结算中，当前无法开战；保留未完成状态，继续其他日常。'}
         if state == 'mirror_result':
             if (self.ledger.data.get('last_settled') or {}).get('module') == 'mirror':
                 return self.cleanup('close_mirror_result', obs['close_point'])
@@ -532,14 +596,15 @@ class DailyController:
             return self.click('open_mirror_collection',obs['collection_entry_point'])
         if state=='goddess_collection':
             if self.mirror_card_attempts:
-                if elapsed is not None and elapsed<getattr(self, 'network_wait_seconds', 45):
+                if elapsed is not None and elapsed<.9:
                     return {'status':'wait','reason':'Waiting for mirror navigation'}
-                return self.stop('Mirror cartridge did not finish loading','needs_review')
+                if self.mirror_card_attempts>=3:
+                    return self.stop('Mirror cartridge did not finish loading','needs_review')
             if not obs.get('mirror_entry_point'):
                 return self.stop('Mirror Wars cartridge is not visible','needs_review')
             return self.click('enter_mirror_card',obs['mirror_entry_point'])
         if state=='mirror_lobby':
-            if self.mirror_portal_attempts and elapsed is not None and elapsed<getattr(self, 'network_wait_seconds', 2):
+            if self.mirror_portal_attempts and elapsed is not None and elapsed<.9:
                 return {'status':'wait','reason':'Waiting for mirror navigation'}
             if self.mirror_portal_attempts>=3 or not obs.get('arena_entry_point'):
                 return self.stop('Mirror red platform could not open the preparation screen','needs_review')
@@ -547,7 +612,7 @@ class DailyController:
         if state == 'mirror_ready':
             if self.mirror_auto_attempts>=3:
                 return self.stop('Mirror automatic battle window did not open','needs_review')
-            if self.mirror_auto_attempts and elapsed is not None and elapsed<getattr(self, 'network_wait_seconds', 1.5):
+            if self.mirror_auto_attempts and elapsed is not None and elapsed<1.5:
                 return {'status':'wait','reason':'Waiting for mirror navigation'}
             return self.click('open_mirror_auto', obs['open_auto_point'])
         if state != 'mirror_auto_dialog':

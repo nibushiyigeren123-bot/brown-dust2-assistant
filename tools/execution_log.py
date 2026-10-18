@@ -120,10 +120,19 @@ class ReceiptLog:
         parts = []
         if observation.get('state'):
             parts.append('识别：' + PAGES.get(observation['state'], observation['state']))
+        if observation.get('resource') in ('rice','torch') and observation.get('free_available') is not None:
+            name={'rice':'米饭','torch':'火把'}[observation['resource']]
+            extra=observation.get('extra_display')
+            parts.append(name+'：免费 '+str(observation['free_available'])+'，额外 '+(str(extra) if extra is not None else '待识别'))
+        if observation.get('stage_text_raw'):parts.append('当前关卡：'+observation['stage_text_raw'])
         for key in ('claimable', 'count', 'cost', 'free_only', 'pass_id'):
             if key in observation:
                 label = {'claimable': '可领取', 'count': '次数', 'cost': '消耗', 'free_only': '仅免费', 'pass_id': '通行证'}[key]
                 parts.append(label + '=' + str(observation[key]))
+        inventory=observation.get('stone_inventory')
+        if isinstance(inventory,dict) and len(inventory)==5:
+            parts.append('圣石库存：'+' / '.join(name+': '+str(value) for name,value in inventory.items()))
+            parts.append('当前最少：'+min(inventory,key=inventory.get)+'（执行器另做双帧核对）')
         decision = record.get('decision') or observation.get('decision')
         if decision:
             parts.append('判断：' + readable(decision))

@@ -13,11 +13,16 @@ class PassRewardVision:
         self.folder = ROOT / 'assets/pass_rewards'
         self.specs = json.loads((self.folder / 'sources.json').read_text(encoding='utf-8'))
         self.templates = {key: read_image(self.folder / spec['file']) for key, spec in self.specs.items()}
+        from m00_recognize import OpeningRecognizer
+        self.opening=OpeningRecognizer()
 
     def inspect(self, image, payload):
         if abs(image.shape[1] / image.shape[0] - 16 / 9) > .025:
             return {'state': 'unknown', 'reason': 'unsupported_aspect_ratio'}
         doc = OcrDocument(payload)
+        startup=self.opening.recognize(image)
+        if startup['state'] in ('signin_event','signin_pass','loading_or_unknown_overlay'):
+            return {'state':startup['state'],'reason':'opening_overlay_is_not_pass_rewards'}
         if doc.find('点击画面即可返回', (400, 595, 900, 690)):
             return {'state': 'reward_overlay'}
         if not doc.find('通行证', (155, 15, 265, 55)):

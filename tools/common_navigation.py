@@ -14,6 +14,8 @@ from ui_foreground import foreground_mask, masked_shape_match
 class PageDiagnosis:
     def __init__(self):
         self.opening = OpeningRecognizer()
+        from return_navigation_vision import ReturnNavigationVision
+        self.returns = ReturnNavigationVision()
         self.assets = ROOT / "assets" / "navigation"
         self.config = json.loads((self.assets / "home_button.json").read_text(encoding="utf-8"))
         self.glyph = read_image(self.assets / self.config["template"])
@@ -75,10 +77,21 @@ class PageDiagnosis:
 
     def inspect(self, image):
         opening = self.opening.recognize(image)
+        # Known modal exits precede generic opening dismissal. Their independent
+        # title and button patches prevent a dim backdrop authorizing a click.
+        returned = self.returns.inspect(image)
+        if returned and returned['next_action'] in ('cancel_panel','close_panel'):
+            return {**returned, 'opening':opening}
         if opening["state"] == "main_menu":
             return {"state": "main_menu", "next_action": "done", "opening": opening}
+        if opening['state'] == 'loading_or_unknown_overlay':
+            return {'state':opening['state'],'next_action':'wait','opening':opening}
+        if returned:
+            return {**returned, 'opening':opening}
         if opening["next_action"] == "click_blank":
             return {"state": opening["state"], "next_action": "dismiss_opening", "opening": opening}
+        if opening['state'] == 'pass_panel':
+            return {'state':opening['state'],'next_action':'wait','opening':opening}
         settings = self.find_settings(image)
         if settings:
             return {"state": "settings_house_present", "next_action": "wait",
@@ -90,61 +103,87 @@ class PageDiagnosis:
 
 
 def ensure_main_menu(window, output, execute=False, timeout=20):
-    """Called when a module needs the menu; not a permanent background loop."""
+    """Bounded, observed return navigation; no reward or battle submissions."""
+    from game_window import check_requested_stop
     output = Path(output).resolve()
     output.mkdir(parents=True, exist_ok=True)
-    report_path = output / "run.json"
     diagnosis = PageDiagnosis()
     report = {"execute": execute, "completed": False, "actions": [], "observations": []}
     deadline = time.monotonic() + timeout
-    home_attempts = 0
+    previous = None
+    stable = home_stable = attempts = 0
+    attempts_by_control = {}
+    recovered = False
     last_input = 0.0
+    clickable = ('click_home','dismiss_opening','click_back','close_panel','cancel_panel')
 
     def save():
-        report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        (output/'run.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+
+    def capture():
+        check_requested_stop()
+        image, geometry = window.capture()
+        frame = cv2.cvtColor(np.asarray(image),cv2.COLOR_RGB2BGR)
+        started=time.monotonic();result=diagnosis.inspect(frame)
+        result['recognition_ms']=round((time.monotonic()-started)*1000,1)
+        path=output/f"frame_{len(report['observations']):03d}.png";image.save(path)
+        report['observations'].append({'image':str(path),'window':geometry,**result});save()
+        return result,geometry,frame
+
+    def target(result, geometry):
+        if result['next_action']=='click_home':return result['home_button']['client_point']
+        if result['next_action']=='dismiss_opening':
+            x,y=result['opening']['suggested_point_normalized']
+            return [x*geometry['width'],y*geometry['height']]
+        return result['return_button']['client_point']
 
     try:
-        while time.monotonic() < deadline:
-            # F8 is a local stop key while this short operation is running.
-            import win32api
-            if win32api.GetAsyncKeyState(0x77) & 0x8000:
-                report["stopped"] = "F8"
-                break
-            image, geometry = window.capture()
-            frame = cv2.cvtColor(np.asarray(image), cv2.COLOR_RGB2BGR)
-            result = diagnosis.inspect(frame)
-            index = len(report["observations"])
-            path = output / f"frame_{index:03}.png"
-            image.save(path)
-            report["observations"].append({"image": str(path), "window": geometry, **result})
-            save()
-            if result["state"] == "main_menu":
-                report["completed"] = True
-                report["completion"] = "main_menu_observed"
-                break
-            if not execute:
-                break
-            if time.monotonic() - last_input >= max(.8, min(15, timeout / 8)):
-                if result["next_action"] == "click_home" and home_attempts < 3:
-                    point = result["home_button"]["client_point"]
-                    event = window.click_client(point, geometry)
-                    report["actions"].append({"type": "click_home", **event})
-                    home_attempts += 1
-                    last_input = time.monotonic()
-                elif result["next_action"] == "dismiss_opening":
-                    nx, ny = result["opening"]["suggested_point_normalized"]
-                    event = window.click_client((nx * geometry["width"], ny * geometry["height"]), geometry)
-                    report["actions"].append({"type": "click_blank", **event})
-                    last_input = time.monotonic()
-            save()
-            time.sleep(0.3)
-        if execute and not report["completed"] and "stopped" not in report:
-            report["stopped"] = "menu_not_verified_within_timeout"
+        while time.monotonic()<deadline:
+            result,geometry,frame=capture()
+            if result['state']=='main_menu':
+                home_stable+=1
+                if not execute or home_stable>=2:
+                    report.update(completed=True,completion='main_menu_observed_twice' if execute else 'main_menu_observed')
+                    break
+                time.sleep(.25);continue
+            home_stable=0
+            if not execute:break
+            if result['next_action'] not in clickable:
+                stable=0;previous=None;time.sleep(.2);continue
+            point=target(result,geometry)
+            signature=(result['state'],result['next_action'],tuple(round(v) for v in point),geometry)
+            key=(result['state'],result['next_action'],tuple(round(v) for v in point))
+            same=signature==previous
+            stable=stable+1 if same else 1
+            attempts=attempts_by_control.get(key,0)
+            previous=signature
+            if stable<2 or time.monotonic()-last_input<.8:
+                time.sleep(.2);continue
+            if attempts>=3:
+                report['stopped']='同一返回入口尝试3次仍未确认离开；已停止，不继续盲点。';break
+            if len(report['actions'])>=12:
+                report['stopped']='返回导航已达本轮动作上限，停止核对。';break
+            if attempts==2 and not recovered:
+                event=window.recover_input(geometry)
+                report['actions'].append({'type':'recover_window_input',**event});save()
+                recovered=True;stable=0;last_input=time.monotonic();continue
+            window.focus_client(geometry)
+            verified,fresh_geometry,_=capture()
+            if fresh_geometry!=geometry or (verified['state'],verified['next_action'])!=(result['state'],result['next_action']):
+                previous=None;continue
+            fresh_point=target(verified,fresh_geometry)
+            if max(abs(a-b) for a,b in zip(point,fresh_point))>5:
+                previous=None;continue
+            event=window.click_client(fresh_point,fresh_geometry,press_ms=250)
+            attempts+=1;attempts_by_control[key]=attempts;last_input=time.monotonic()
+            report['actions'].append({'type':verified['next_action'],'source_state':verified['state'],'attempt':attempts,**event});save()
+            time.sleep(.4)
+        if execute and not report['completed'] and 'stopped' not in report:
+            report['stopped']='menu_not_verified_within_timeout'
     except Exception as error:
-        report["error"] = str(error)
+        report['error']=str(error)
         raise
-    finally:
-        save()
+    finally:save()
     return report
 
 

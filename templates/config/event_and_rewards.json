@@ -19,10 +19,6 @@
       "enabled": false,
       "status": "waiting_for_unlocked_sample"
     },
-    "rerun_boss": {
-      "enabled": false,
-      "adapter": null
-    },
     "event_scene": {
       "enabled": false,
       "adapter": null

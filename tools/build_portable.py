@@ -53,10 +53,11 @@ def main():
     (target / 'tools').mkdir()
     shutil.copy2(PROJECT / 'tools/windows_ocr.ps1', target / 'tools/windows_ocr.ps1')
     shutil.copy2(PROJECT / 'README.md', target / 'README.md')
+    shutil.copy2(PROJECT / 'LICENSE', target / 'LICENSE')
     if (PROJECT / 'NOTICE.md').is_file():
         shutil.copy2(PROJECT / 'NOTICE.md', target / 'NOTICE.md')
     (target / 'build_info.json').write_text(json.dumps({
-        'application_version':'0.2.4', 'python':sys.version,
+        'application_version':'0.2.13', 'python':sys.version,
         'pyinstaller':importlib.metadata.version('pyinstaller'), 'kind':'portable_onedir',
         'entry':'BD2Assistant.exe', 'data_root':'beside_executable', 'default_mode':'read_only',
         'config_source':'generic_templates', 'personal_fixtures_shipped':False,

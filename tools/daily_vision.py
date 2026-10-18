@@ -135,11 +135,37 @@ def read_mirror_price(image,box,output):
     return (values[0] if values[0] is not None and values[0]==values[1] else None),texts
 
 
+def fixed_map_payload(image, output, resources_only=False):
+        # Never OCR textured world-map areas to infer resource quantities.
+        output=Path(output)
+        normalized=cv2.resize(image,(1280,720),interpolation=cv2.INTER_AREA)
+        lines=[]
+        for name,box,language in (('left',(60,8,390,360),'zh-Hans-CN'),('resources',(1015,0,1275,210),'en-US'),('difficulty',(150,625,335,700),'zh-Hans-CN')):
+            if resources_only and name!='resources':continue
+            a,b,c,d=box;crop=cv2.cvtColor(normalized[b:d,a:c],cv2.COLOR_BGR2GRAY)
+            enlarged=cv2.resize(crop,None,fx=2,fy=2,interpolation=cv2.INTER_CUBIC)
+            encoded=cv2.imencode('.png',enlarged)[1];crop_path=output/f'map_{name}_{hashlib.sha256(encoded.tobytes()).hexdigest()[:16]}.png'
+            output.mkdir(parents=True,exist_ok=True);encoded.tofile(str(crop_path))
+            region=windows_ocr(crop_path,output/'regional_ocr',language=language)
+            for line in region['lines']:
+                words=[{**w,'x':a+w['x']/2,'y':b+w['y']/2,'width':w['width']/2,'height':w['height']/2} for w in line['words']]
+                lines.append({'text':line['text'],'words':words})
+        return {'width':1280,'height':720,'lines':lines}
+
+
 def inspect_frame(path, vision, config, output, payload=None):
     path, output = Path(path), Path(output)
-    payload = payload if payload is not None else windows_ocr(path, output / 'ocr')
     image = read_image(path)
-    result = vision.inspect(image, payload, config)
+    quick=vision.anchor(image,'hunt_map_quick',threshold=.73,foreground=False)
+    map_regions=payload is None and quick and quick['brightness_ratio']>=.80
+    payload=payload if payload is not None else fixed_map_payload(image,output) if map_regions else windows_ocr(path,output/'ocr')
+    result=vision.inspect(image,payload,config)
+    if map_regions:result['ocr_source']='fixed_map_ui_regions'
+    if result['state'] in ('hunt_map','hunt_dialog','hunt_reward'):
+        from hunting_resources import read_fixed_balance
+        balance=read_fixed_balance(image,output,windows_ocr)
+        result.update(balance or {'free_available':None,'free_capacity':None,'owned_extra':None,'extra_display':None,'extra_approximate':False})
+        if result['state']=='hunt_reward':result['free_remaining']=result['free_available']
     if result['state']=='hunt_dialog' and result.get('cost') is None:
         result['cost']=read_amount_crop(image,(712,508,747,537),output,'hunt_price')
         result['price_source']='two_size_numeric_crop' if result['cost'] is not None else None
@@ -254,6 +280,9 @@ class DailyVision:
         difficulty_specs=json.loads((options/'sources.json').read_text(encoding='utf-8')).get('difficulties',{}) if (options/'sources.json').exists() else {}
         self.difficulty_images={name:read_image(options/spec['file']) for name,spec in difficulty_specs.items()}
         self.home_label=read_image(options/'home_hunt_label.png') if (options/'home_hunt_label.png').exists() else None
+        resource_folder=ROOT/'assets/hunting_resources'
+        self.resource_specs=json.loads((resource_folder/'sources.json').read_text(encoding='utf-8'))
+        self.resource_icons={name:read_image(resource_folder/spec['file']) for name,spec in self.resource_specs.items()}
         from goddess_entry_vision import GoddessEntryVision
         self.goddess_entry=GoddessEntryVision()
         from mirror_entry_vision import MirrorEntryVision
@@ -339,6 +368,10 @@ class DailyVision:
         if abs(image.shape[1] / image.shape[0] - 16/9) > 0.035:
             return {'state': 'unknown', 'reason': 'unsupported_aspect_ratio'}
         doc = OcrDocument(payload)
+        settlement_toast=doc.find('可在赛季结算完成后确认',(150,30,1120,420))
+        if settlement_toast and self.anchor(image,'mirror_auto_entry') and self.anchor(image,'mirror_battle',foreground=False):
+            return {'state':'mirror_settlement','reason':'season_settlement',
+                    'settlement_evidence':settlement_toast,'open_auto_point':[1015,649],'back_point':[76,33]}
         collection=self.goddess_entry.library(image,doc)
         if collection:
             collection['mirror_entry_point']=self.mirror_entry.card_point(image,doc)
@@ -356,13 +389,18 @@ class DailyVision:
                      and (m := re.search(r'(\d+)$', l['text']))]
             resource = ('torch' if doc.find('免费火把', (650, 160, 870, 235)) else
                         'rice' if doc.find('免费米饭', (650, 160, 870, 235)) else None)
-            return {'state': 'hunt_dialog', 'stage_text': stage, 'count': count,
+            from hunting_resources import read_balance
+            balance = read_balance(doc) or {}
+            # Reviewed Windows OCR variant from the current goblin dialog.
+            raw_stage=stage
+            if stage:stage=stage.replace('哥布材遗迹','哥布林遗迹').replace('光明洞穴','光之洞穴').replace('黑暗洞穴','暗之洞穴')
+            return {'state': 'hunt_dialog', 'stage_text': stage,'stage_text_raw':raw_stage, 'count': count,
                     'cost': costs[0] if len(costs) == 1 else None, 'resource': resource,
-                    'free_available': doc.extract_int(r'(\d+)/\d+', (1000, 0, 1225, 85)),
+                    'free_available': doc.extract_int(r'(\d+)/\d+', (1000, 0, 1225, 85)), **balance,
                     'free_only': self.toggle(image, tuple(round(v+shift) for v, shift in
                                                           zip((812, 187, 850, 217), (dx, dy, dx, dy)))),
                     'points': {key: [x+dx, y+dy] for key, (x, y) in {
-                        'min': [500, 341], 'plus': [814, 389], 'minus': [463, 389],
+                        'min': [500, 341], 'max':[780,341], 'plus_ten':[690,341], 'plus': [814, 389], 'minus': [463, 389],
                         'submit': [687, 522], 'cancel': [536, 522], 'free_toggle': [830, 204]}.items()}}
         if self.anchor(image, 'mirror_auto_title') and doc.find('鲜血鸡尾酒', (370, 185, 620, 232)):
             count = doc.extract_int(r'^自动战斗(\d+)次$', (555, 430, 740, 485))
@@ -393,7 +431,10 @@ class DailyVision:
         reward = self.anchor(image, 'hunt_reward')
         if reward and doc.find('获得', (535, 225, 755, 285)):
             count = doc.extract_int(r'狩猎(\d+)次', (560, 200, 750, 300))
+            from hunting_resources import read_balance
+            balance=read_balance(doc) or {}
             return {'state': 'hunt_reward', 'completed_runs': count, 'dismiss_point': [770, 656],
+                    **balance,
                     'free_remaining': doc.extract_int(r'(\d+)/\d+', (1000, 0, 1225, 85))}
         ready_auto = self.anchor(image, 'mirror_auto_entry')
         ready_battle = self.anchor(image, 'mirror_battle', foreground=False)
@@ -444,12 +485,18 @@ class DailyVision:
         map_quick = self.anchor(image, 'hunt_map_quick', threshold=0.73, foreground=False)
         if map_quick and map_quick['brightness_ratio'] >= 0.80:
             selected = doc.within((140, 10, 370, 85))
-            categories = {k: m['point'] for k in ('狩猎场', '金币', '史莱姆', '圣石洞穴')
-                          if (m := doc.find(k, (65, 100, 160, 355)))}
+            categories = {name:[116,102+64*index] for index,name in enumerate(('狩猎场','金币','史莱姆','圣石洞穴'))}
             difficulties=[value for value in ('中游','困难','极难') if doc.find(value,(155,620,290,690))]
             stone_points=[line for line in doc.within((150,65,295,320))
                           if line['text'] in ('火之洞穴','水之洞穴','风之洞穴','光之洞穴','暗之洞穴')]
-            stone_map=bool(doc.find('圣石洞穴',(140,10,375,85)))
+            normalized=cv2.resize(image,(1280,720),interpolation=cv2.INTER_AREA)
+            resource_scores={}
+            for name,spec in self.resource_specs.items():
+                a,b,c,d=spec['box'];patch=normalized[b:d,a:c]
+                resource_scores[name]=float(cv2.matchTemplate(patch,self.resource_icons[name],cv2.TM_CCOEFF_NORMED)[0,0])
+            ranked=sorted(resource_scores,key=resource_scores.get,reverse=True)
+            resource=ranked[0] if resource_scores[ranked[0]]>=.85 and resource_scores[ranked[0]]-resource_scores[ranked[1]]>=.08 else None
+            stone_map=resource=='torch'
             inventory={}
             if stone_map:
                 for index,name in enumerate(('火之洞穴','水之洞穴','风之洞穴','光之洞穴','暗之洞穴')):
@@ -472,7 +519,9 @@ class DailyVision:
                             continue
                     if len(values)==1 and self.stone_icon(image,name):
                         inventory[name]=values[0]
-            return {'state': 'hunt_map', 'selected_text': selected[0]['text'] if selected else None,
+            from hunting_resources import read_balance
+            balance = read_balance(doc) or {}
+            return {'state': 'hunt_map', 'resource':resource,'resource_icon_scores':resource_scores, **balance, 'selected_text': selected[0]['text'] if selected else None,
                     'difficulty': difficulties[0] if len(difficulties)==1 else self.hunt_difficulty(image),
                     'difficulty_points':{'previous':[165,659],'next':[317,659]},
                     'stone_map':stone_map,'stone_stage_points':stone_points,

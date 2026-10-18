@@ -25,7 +25,7 @@ def load_config(path):
             raise ValueError('Expected boolean setting')
     if event['buy_ap'] or not event['keep_existing_team']:
         raise ValueError('AP purchases and team edits are outside this adapter')
-    if any(event[key]['enabled'] for key in ('story','quick_battle','rerun_boss','event_scene')):
+    if any(event[key]['enabled'] for key in ('story','quick_battle','event_scene')):
         raise ValueError('This extension has no verified execution adapter yet')
     if config['rewards']['buy_pass_or_levels'] or config['rewards']['mailbox']['enabled']:
         raise ValueError('Pass purchases and mailbox collection are not enabled')

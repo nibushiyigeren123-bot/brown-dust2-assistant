@@ -1,0 +1,152 @@
+{
+  "white_back": {
+    "file": "white_back.png",
+    "box": [
+      105,
+      18,
+      125,
+      48
+    ],
+    "sha256": "bdaccf01990ebf2304b52cb985d7a97a8f42a0f21271d30967d8afae9af51893"
+  },
+  "circle_back": {
+    "file": "circle_back.png",
+    "box": [
+      94,
+      10,
+      136,
+      54
+    ],
+    "sha256": "e0e7368ff3d4ec739093fce38c0c366ea57461cb684eda525b22d366297ecae4"
+  },
+  "library_back": {
+    "file": "library_back.png",
+    "box": [
+      94,
+      10,
+      136,
+      54
+    ],
+    "sha256": "792f8b87ded5b0f80c4bb0e2ed2fd611175dc5795fe2d886d899d69fb75ba273"
+  },
+  "narrow_back": {
+    "file": "narrow_back.png",
+    "box": [
+      65,
+      19,
+      86,
+      46
+    ],
+    "sha256": "04af25c22858efed04362e6e4d725f9c56cb548e049d30756b8fdbbc724d1a48"
+  },
+  "management_title": {
+    "file": "management_title.png",
+    "box": [
+      449,
+      433,
+      585,
+      455
+    ],
+    "sha256": "758a6a13b14b739ed15305f6c85c5db408efea067e4f9884d04f6d5e5a4d5f6f"
+  },
+  "management_cancel": {
+    "file": "management_cancel.png",
+    "box": [
+      474,
+      540,
+      634,
+      572
+    ],
+    "sha256": "6b0f6984f14394fd3f2bad866a06e6632d9664efc61a8d63c390f4fd84f27a49"
+  },
+  "talk_title": {
+    "file": "talk_title.png",
+    "box": [
+      340,
+      169,
+      443,
+      190
+    ],
+    "sha256": "0c6de71d4e12c3d01c0998104b14cf8c8772988adbc5601ff97f8e948e2b45cd"
+  },
+  "talk_close": {
+    "file": "talk_close.png",
+    "box": [
+      986,
+      171,
+      1009,
+      193
+    ],
+    "sha256": "6a73f79e5b45b48c6683fd003a9f620206067876338522e567e7101c566139ce"
+  },
+  "equipment_filter_title": {
+    "file": "equipment_filter_title.png",
+    "box": [
+      594,
+      166,
+      688,
+      188
+    ],
+    "sha256": "2c8df33d7feb246f29873bf29b41ab35a04b6af3ad477236bfa6554e361616f0"
+  },
+  "equipment_filter_close": {
+    "file": "equipment_filter_close.png",
+    "box": [
+      961,
+      149,
+      985,
+      172
+    ],
+    "sha256": "ffc929bddc3cf835afb8247f0c1dd74079975bcf227d9fe6e1fd463dac468049"
+  },
+  "equipment_detail_marker": {
+    "file": "equipment_detail_marker.png",
+    "box": [
+      376,
+      311,
+      482,
+      337
+    ],
+    "sha256": "3826e97a912fc846fe3c5b2dd1894dde96bca7f006b596f2be45cbdf8920c770"
+  },
+  "equipment_detail_refine": {
+    "file": "equipment_detail_refine.png",
+    "box": [
+      870,
+      478,
+      943,
+      503
+    ],
+    "sha256": "5b3863f03b33dd1dfc84a3875a3c33dcb66c398934efe1556c202d9a58e11466"
+  },
+  "equipment_detail_close": {
+    "file": "equipment_detail_close.png",
+    "box": [
+      934,
+      205,
+      958,
+      229
+    ],
+    "sha256": "3c5163b8ac35b65dcb246441c3a3fe6a9c1961a85f5d0626b9903a90f895be5b"
+  },
+  "hunt_title": {
+    "file": "hunt_title.png",
+    "box": [
+      430,
+      194,
+      533,
+      214
+    ],
+    "sha256": "f82093f26a4ac84ca0788fde048942aaafabaa155edb5880d23e10b0a8cf435f"
+  },
+  "hunt_cancel": {
+    "file": "hunt_cancel.png",
+    "box": [
+      487,
+      506,
+      586,
+      538
+    ],
+    "sha256": "bb9e7924de64ff27060f6df14747cc6c3a81a745d2ae6402f910ba0d60f0c318"
+  }
+}

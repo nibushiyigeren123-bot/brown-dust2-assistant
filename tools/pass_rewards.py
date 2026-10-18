@@ -122,6 +122,9 @@ class PassRun(TaskRewardRun):
                             covered_levels.add(1)
                             covered_levels.update(obs.get('visible_levels', []))
                         break
+                    if tab=='tasks':
+                        self.report.setdefault('coverage_warnings',[]).append(identity+':任务列表端点内容变化；全局领奖按钮已确认不可领，不推断任务全部完成。')
+                        break
                     raise RuntimeError('通行证列表静止但端点未核实，不标记本组完成。')
                 previous = view
                 self.scroll_pass(direction * (3 if tab == 'levels' and direction < 0 else 12))

@@ -199,5 +199,14 @@
     ],
     "field": "price",
     "value": 40
+  },
+  "lobby_trophy": {
+    "file": "lobby_trophy.png",
+    "box": [
+      216,
+      63,
+      250,
+      96
+    ]
   }
 }

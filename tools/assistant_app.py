@@ -31,7 +31,13 @@ def worker(task_id, arguments):
     sys.stdout = sys.stderr = log
     sys.argv = [sys.argv[0], *task[5], *arguments]
     code = 0
+    worker_day = None
     try:
+        from local_cache import load_local_config
+        worker_day = load_local_config(ROOT / 'config/daily_tasks.json')['cache_date']
+        if '--execute' in arguments:
+            from date_rollover import require_current_cache
+            os.environ['BD2_EXECUTION_GAME_DAY'] = require_current_cache(ROOT)
         module = importlib.import_module(task[4])
         if task[0] in ('navigation','management','free_draw'):
             from daily_tasks import guard_foreign_pending
@@ -40,6 +46,18 @@ def worker(task_id, arguments):
                 if '--execute' in arguments:
                     guard_foreign_pending(ROOT/'runtime',ROOT/'runtime/launcher_nonledger.json')
                 module.main()
+                if task_id == 'navigation' and '--execute' in arguments and '--image' not in arguments:
+                    from hunting_probe import initial_task_audit
+                    from daily_tasks import load_config
+                    report_path=output/'run.json'
+                    report=json.loads(report_path.read_text(encoding='utf-8'))
+                    try:
+                        report['startup_task_audit']=initial_task_audit(load_config(ROOT/'config/daily_tasks.json'), output/'initial_task_check', ROOT)
+                    except Exception as error:
+                        report.update(completed=False,error=str(error))
+                        raise
+                    finally:
+                        report_path.write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
         else:
             module.main()
     except SystemExit as error:
@@ -48,7 +66,7 @@ def worker(task_id, arguments):
         traceback.print_exc()
         code = 1
     finally:
-        (output/'worker_result.json').write_text(json.dumps({'task':task_id, 'exit_code':code,
+        (output/'worker_result.json').write_text(json.dumps({'task':task_id, 'exit_code':code, 'cache_date':worker_day,
             'execute':'--execute' in arguments},ensure_ascii=False,indent=2),encoding='utf-8')
         log.flush()
     return code

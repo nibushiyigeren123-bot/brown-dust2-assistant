@@ -5,6 +5,7 @@ import os
 import shutil
 from datetime import date, datetime
 from pathlib import Path
+from game_calendar import game_day
 
 
 def ensure_local_defaults(root):
@@ -22,7 +23,7 @@ def ensure_local_defaults(root):
 
 
 def cache_date(config):
-    value = config.get('cache_date') or date.today().isoformat()
+    value = config.get('cache_date') or game_day().isoformat()
     date.fromisoformat(value)
     return value
 
