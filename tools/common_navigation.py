@@ -18,6 +18,9 @@ class PageDiagnosis:
         self.returns = ReturnNavigationVision()
         self.assets = ROOT / "assets" / "navigation"
         self.config = json.loads((self.assets / "home_button.json").read_text(encoding="utf-8"))
+        source_width = self.config.get('source_client_width')
+        if type(source_width) not in (int, float) or not np.isfinite(source_width) or source_width <= 0:
+            raise ValueError('导航资源配置缺少有效的 source_client_width，请完整解压新版程序。')
         self.glyph = read_image(self.assets / self.config["template"])
         self.glyph_mask = foreground_mask(self.glyph)
         self.settings_glyph = read_image(self.assets / "settings_house.png")

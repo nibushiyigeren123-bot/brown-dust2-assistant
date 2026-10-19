@@ -84,6 +84,9 @@ def self_check(output):
     from event_reward_rules import load_config as load_event
     for cls in (PageDiagnosis, ManagementRecognizer, FreeDrawRecognizer, DailyVision, Phase08Vision):
         cls()
+    import numpy as np
+    # Execute the calibration-dependent branch on a synthetic image, without game input.
+    PageDiagnosis().find_home(np.zeros((720, 1280, 3), dtype=np.uint8))
     hunt_config=copy.deepcopy(load_config(ROOT/'config/daily_tasks.json'))
     load_event(ROOT/'config/event_and_rewards.json')
     assert (ROOT/'tools/windows_ocr.ps1').is_file()
@@ -102,7 +105,7 @@ def self_check(output):
         card = {'quality':'R', 'locked':False, 'equipped':False}
         assert decompose_candidate_allowed(card, ['R']) and not decompose_candidate_allowed(card, ['N', 'R'])
         report = {'frozen': bool(getattr(sys, 'frozen', False)), 'template_loaders': 9,
-                  'workbench_registry_loaded': True, 'config_validated': True,
+                  'workbench_registry_loaded': True, 'config_validated': True, 'navigation_calibration_probe': 'synthetic_black_frame',
                   'equipment_rules_single_quality': True, 'personal_fixtures_shipped': False,
                   'saved_image_acceptance_run': False, 'game_input': False}
         (output/'self_check.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')

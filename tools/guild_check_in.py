@@ -79,8 +79,15 @@ def run(args):
     config=load_config(args.config)
     output=args.output.resolve()
     output.mkdir(parents=True,exist_ok=True)
+    report={'execute':args.execute,'completed':False,'actions':[],'observations':[],
+            'cache_date':config['cache_date']}
+    from event_reward_rules import guild_disabled_reason
+    reason=guild_disabled_reason(config, ['guild'], args.execute)
+    if reason:
+        report['stopped']=reason
+        save_json(output/'run.json',report)
+        return report
     vision=Phase08Vision()
-    report={'execute':args.execute,'completed':False,'actions':[],'observations':[]}
     if args.image:
         if args.execute:
             raise ValueError('An image inspection cannot execute')
@@ -95,8 +102,6 @@ def run(args):
         save_json(output/'run.json',report)
     with exclusive_ledger(ROOT/'runtime/game_control'):
         if args.execute:
-            if not config['guild']['enabled']:
-                raise RuntimeError('Guild module is disabled')
             guard_foreign_pending(ROOT/'runtime',ledger)
         data=json.loads(ledger.read_text(encoding='utf-8')) if args.execute and ledger.exists() else {
             'schema_version':1,'cache_date':config['cache_date'],

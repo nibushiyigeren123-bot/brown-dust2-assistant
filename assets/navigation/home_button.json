@@ -1,5 +1,12 @@
 {
   "template": "home_glyph.png",
+  "source_box": [
+    20,
+    9,
+    56,
+    43
+  ],
+  "source_client_width": 1668,
   "search_roi_normalized": [
     0.78,
     0,

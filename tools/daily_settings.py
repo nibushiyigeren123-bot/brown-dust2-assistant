@@ -23,6 +23,9 @@ class SettingsWindow:
         self.root, self.path = root, Path(path).resolve()
         self.original = self.path.read_bytes()
         self.config = load_config(self.path)
+        self.event_path = self.path.with_name('event_and_rewards.json')
+        self.event_original = self.event_path.read_bytes() if self.event_path.exists() else None
+        self.event_config = json.loads(self.event_original) if self.event_original else None
         self.fields = {}
         root.title('棕色尘埃2 · 日常设置')
         root.geometry('820x780')
@@ -32,7 +35,7 @@ class SettingsWindow:
         frame = ttk.Frame(root, padding=18)
         frame.pack(fill='both', expand=True)
         ttk.Label(frame, text='日常设置', font=('Microsoft YaHei UI', 18, 'bold')).pack(anchor='w')
-        ttk.Label(frame, text='保存后用于下一次运行。三个模块分别配置、逐项测试。').pack(anchor='w', pady=(4, 10))
+        ttk.Label(frame, text='保存后用于下一次运行；加入队列与启用模块分别设置。').pack(anchor='w', pady=(4, 10))
         identity = ttk.Frame(frame)
         identity.pack(fill='x')
         self.entry(identity, 'cache_date', '数据缓存日期', self.config['cache_date'], 0)
@@ -47,6 +50,14 @@ class SettingsWindow:
         self.build_hunt(hunt)
         self.build_goddess(goddess)
         self.build_mirror(mirror)
+        self.guild_tab = ttk.Frame(notebook, padding=15)
+        notebook.add(self.guild_tab, text='公会签到')
+        self.check(self.guild_tab, 'guild_enabled', '启用公会签到',
+                   bool(self.event_config and self.event_config['guild']['enabled']), 0)
+        if self.event_config is None:
+            self.fields['guild_enabled'].set(False)
+        ttk.Label(self.guild_tab, text='启用后，还需在主界面勾选加入队列。每个游戏日只进入一次，核对签到回执后返回主页。\n保存不会启动游戏操作；公会奖励邮箱仍由你手动领取。',
+                  wraplength=650, justify='left').grid(row=1, column=0, columnspan=2, sticky='w', pady=16)
         bottom = ttk.Frame(frame)
         bottom.pack(side='bottom', fill='x', before=notebook, pady=(14, 0))
         self.saved = tk.StringVar(value='未启动游戏操作')
@@ -352,7 +363,13 @@ class SettingsWindow:
                     raise RuntimeError('设置文件已被其他窗口修改，请重新打开此窗口。')
                 event_path = self.path.with_name('event_and_rewards.json')
                 event_before = event_path.read_bytes() if event_path.exists() else None
+                if event_before != self.event_original:
+                    raise RuntimeError('公会或活动设置已被其他窗口修改，请重新打开设置。')
                 event_config = load_local_config(event_path) if event_before else None
+                if event_config:
+                    event_config['guild']['enabled'] = bool(self.fields['guild_enabled'].get())
+                elif self.fields['guild_enabled'].get():
+                    raise RuntimeError('缺少公会配置，请完整解压新版程序。')
                 old_date = self.config['cache_date']
                 if old_date != config['cache_date']:
                     for path in (self.path.parent.parent / 'runtime').glob('*.json'):
@@ -369,6 +386,8 @@ class SettingsWindow:
                         event_path.write_bytes(event_before)
                     raise
             self.original, self.config = encoded, config
+            self.event_original = event_path.read_bytes() if event_path.exists() else None
+            self.event_config = event_config
             self.saved.set('已保存 · 未启动游戏操作')
         except (OSError, ValueError, KeyError, RuntimeError) as error:
             messagebox.showerror('设置未保存', str(error), parent=self.root)

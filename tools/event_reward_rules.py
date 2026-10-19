@@ -34,6 +34,12 @@ def load_config(path):
     return config
 
 
+def guild_disabled_reason(config, task_ids, execute):
+    if execute and 'guild' in task_ids and not config['guild']['enabled']:
+        return '公会签到尚未启用。请打开“日常设置 → 公会签到”，勾选启用并保存后再执行；加入队列不等于启用模块。'
+    return None
+
+
 def event_ledger_path(data_root, config):
     # Normal and challenge share one activity AP pool. Mode is not an identity key.
     return cache_path(data_root, config, 'event:' + config['event']['event_id'])

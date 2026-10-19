@@ -88,6 +88,12 @@ def run(args):
 
     save(state_path, state)
     try:
+        from event_reward_rules import guild_disabled_reason
+        remaining = [item['id'] for item in state['tasks'][state['cursor']:]]
+        if args.execute and 'guild' in remaining:
+            reason = guild_disabled_reason(load_local_config(ROOT/'config/event_and_rewards.json'), remaining, True)
+            if reason:
+                raise RuntimeError(reason)
         verify_day()
         with exclusive_ledger(ROOT / 'runtime/workflow_control'):
             for index in range(state['cursor'], len(state['tasks'])):
@@ -193,6 +199,9 @@ def run(args):
                 state['completed'] = args.execute
                 report['completed'] = args.execute
     except Exception as error:
+        for item in state['tasks']:
+            if item['status'] == 'running':
+                item.update(status='needs_review', ended_at=time.time(), reason=str(error))
         state.update(status='needs_review', reason=str(error))
         report['error'] = str(error)
     finally:

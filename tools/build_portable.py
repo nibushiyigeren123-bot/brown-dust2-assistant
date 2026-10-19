@@ -57,7 +57,7 @@ def main():
     if (PROJECT / 'NOTICE.md').is_file():
         shutil.copy2(PROJECT / 'NOTICE.md', target / 'NOTICE.md')
     (target / 'build_info.json').write_text(json.dumps({
-        'application_version':'0.2.13', 'python':sys.version,
+        'application_version':'0.2.14', 'python':sys.version,
         'pyinstaller':importlib.metadata.version('pyinstaller'), 'kind':'portable_onedir',
         'entry':'BD2Assistant.exe', 'data_root':'beside_executable', 'default_mode':'read_only',
         'config_source':'generic_templates', 'personal_fixtures_shipped':False,

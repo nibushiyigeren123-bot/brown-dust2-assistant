@@ -43,7 +43,7 @@ class WorkbenchApp:
         self.auto_cleanup = tk.BooleanVar(value=automatic_cleanup_enabled(ROOT))
         self.cleanup_day = None
         self.queue_summary = tk.StringVar()
-        root.title('棕色尘埃2辅助 · 日常作战台 0.2.13')
+        root.title('棕色尘埃2辅助 · 日常作战台 0.2.14')
         root.geometry('1360x900'); root.minsize(1150, 800); root.configure(bg=BG)
         style = ttk.Style(root); style.theme_use('clam')
         style.configure('.', font=('Microsoft YaHei UI', 10), background=BG, foreground=TEXT)
@@ -307,6 +307,9 @@ class WorkbenchApp:
                 self.scope.set('停用入口 · 按后续样本扩展')
             elif module.id == 'navigation':
                 self.scope.set('只读：仅识别当前画面，不会关闭弹窗。\n实机：返回主页后顺查并领取每日／每周可领奖励；不启动其他日常段。')
+            elif module.id == 'guild':
+                enabled = self.event.get('guild', {}).get('enabled', False)
+                self.scope.set(('配置已启用' if enabled else '配置未启用 · 日常设置 → 公会签到') + '\n加入队列与启用分别设置；本游戏日只进入一次，邮箱手动。')
             elif module.id == 'mirror':
                 cfg = self.daily.get('mirror', {})
                 self.scope.set(f"本周期最多 {cfg.get('max_battles', '—')} 场 · 总额度 {cfg.get('resource_budget', '—')}\n保持当前阵容；实测自动战斗入口，赛季末跳过并返回主页。")
@@ -436,6 +439,16 @@ class WorkbenchApp:
         self.load_context()
         if self.execute.get() and not self.date_ready:
             return
+        if self.execute.get():
+            from event_reward_rules import guild_disabled_reason
+            from module_catalog import validate_plan
+            tasks = validate_plan(plan or self.plan) if task_id == 'workflow' else [task_id]
+            reason = guild_disabled_reason(self.event, tasks, True)
+            if reason:
+                self.status.set(reason)
+                self.settings()
+                self.settings_editor.notebook.select(self.settings_editor.guild_tab)
+                return
         if not resume:
             stamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
             self.output = ROOT / 'evidence/workbench_runs' / f'{stamp}_{task_id}'

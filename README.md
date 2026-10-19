@@ -1,8 +1,8 @@
 # 棕色尘埃2 日常作战台
 
-0.2.13 开源预览版 · Windows 本地视觉辅助 · MIT 代码许可
+0.2.14 开源预览版 · Windows 本地视觉辅助 · MIT 代码许可
 
-[下载便携程序与源码](https://github.com/nibushiyigeren123-bot/brown-dust2-assistant/releases/tag/v0.2.13)
+[下载便携程序与源码](https://github.com/nibushiyigeren123-bot/brown-dust2-assistant/releases/tag/v0.2.14)
 
 Windows 本地视觉辅助工具。读取游戏画面、日期和本地进度缓存，不获取游戏账号、账号ID、密码或登录凭据。源码包不包含个人配置、runtime、完整实测截图、历史交接及本机维护脚本。
 
@@ -18,4 +18,4 @@ Python 3.14，安装 requirements.txt 后执行 `python -X utf8 tools/assistant_
 
 `--self-check <目录>` 在公开包中只验证模板加载、配置与规则，不代表实机战斗或领奖验收。项目原创代码采用 [MIT License](LICENSE)。游戏素材及第三方依赖的权利单独见 [NOTICE.md](NOTICE.md)。
 
-本版改动与实测范围见 [0.2.13 发布说明](docs/RELEASE_0.2.13.md)。
+本版修复与范围见 [0.2.14 发布说明](docs/RELEASE_0.2.14.md)。
