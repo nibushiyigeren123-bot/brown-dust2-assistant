@@ -20,6 +20,10 @@ STATES = {
     'mirror_multiplier_dialog':'鲜血鸡尾酒倍率设置', 'mirror_result':'镜中之战结算',
     'goddess_collection':'游戏卡珍藏集','goddess_scene':'女神像场景',
     'goddess_options':'女神像互动选项',
+    'event_hub':'活动中心', 'event_preparation':'活动战斗准备页',
+    'event_auto_dialog':'活动连续战斗设置', 'event_quick_dialog':'活动快速战斗设置',
+    'event_auto_running':'活动连续战斗进行中', 'event_victory':'活动战斗胜利',
+    'event_reward':'活动快速战斗奖励', 'event_defeat':'活动战斗失败',
 }
 REASONS = {
     'Hunting daily task was not automatically verified':'每日狩猎任务尚未自动核对，不提交。',
@@ -72,6 +76,10 @@ def readable_reason(value):
 
 
 def summarize_report(report, task_id):
+    if task_id == 'workflow' and report.get('summary'):
+        summary = report['summary']
+        title = '执行结束，有错误' if report.get('status') == 'complete_with_errors' else '队列已遍历' if report.get('traversed') else '队列已中断'
+        return (f"{title}：成功 {summary['success']}，失败 {summary['failed']}，受阻 {summary['blocked']}，跳过 {summary['skipped']}，未运行 {summary['remaining']}。详情见执行过程。")
     observations = report.get('observations', [])
     last = observations[-1] if observations else {}
     state = last.get('state') or last.get('observation', {}).get('state')

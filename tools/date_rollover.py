@@ -22,10 +22,12 @@ def read_journal(root):
 
 def require_current_cache(root):
     if read_journal(root).get('status') == 'prepared':
-        raise RuntimeError('日期切换尚未对账，暂不执行游戏操作。')
+        from execution_control import stop_execution
+        stop_execution('日期切换尚未对账，暂不执行游戏操作。', 'configuration')
     daily, event = [load_local_config(Path(root) / 'config' / name) for name in NAMES]
     if daily['cache_date'] != event['cache_date']:
-        raise RuntimeError('日常和活动缓存日期不一致，暂不执行。')
+        from execution_control import stop_execution
+        stop_execution('日常和活动缓存日期不一致，暂不执行。', 'configuration')
     check_execution_day(daily['cache_date'])
     return daily['cache_date']
 

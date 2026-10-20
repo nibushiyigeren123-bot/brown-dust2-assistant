@@ -31,9 +31,11 @@ def check_requested_stop():
         check_execution_day(expected_day)
     signal = os.environ.get('BD2_STOP_FILE')
     if signal and Path(signal).is_file():
-        raise RuntimeError('用户已停止当前任务')
+        from execution_control import stop_execution
+        stop_execution('用户已停止当前任务', 'stopped')
     if win32api.GetAsyncKeyState(0x77)&0x8000:
-        raise RuntimeError('用户已按F8停止当前任务')
+        from execution_control import stop_execution
+        stop_execution('用户已按F8停止当前任务', 'stopped')
 
 
 @dataclass
@@ -69,6 +71,26 @@ class GameWindow:
                 "width": width, "height": height, "origin": list(origin)}
 
     def capture(self):
+        # A render transition can briefly return a black PrintWindow bitmap.
+        # Retry observation only; never repeat a click or battle submission.
+        expected = None
+        for attempt in range(5):
+            check_requested_stop()
+            try:
+                return self._capture_once()
+            except RuntimeError as error:
+                if 'capture is black' not in str(error).lower() or attempt == 4:
+                    raise
+                current = self.geometry()
+                if expected is not None and current != expected:
+                    raise RuntimeError('Window changed during black-frame observation; capture stopped') from error
+                expected = current
+                time.sleep(.25)
+                check_requested_stop()
+                if self.geometry() != expected:
+                    raise RuntimeError('Window changed during black-frame observation; capture stopped')
+
+    def _capture_once(self):
         check_requested_stop()
         if os.environ.get('BD2_EXECUTION_GAME_DAY'):
             # Background GPU frames can be stale. Execution observations must

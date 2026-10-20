@@ -148,5 +148,45 @@
       538
     ],
     "sha256": "bb9e7924de64ff27060f6df14747cc6c3a81a745d2ae6402f910ba0d60f0c318"
+  },
+  "event_quick_title": {
+    "file": "event_quick_title.png",
+    "box": [
+      598,
+      180,
+      680,
+      204
+    ],
+    "sha256": "932272e06f9f79e01502fd32816f03608209b3ce03cdc0ed681402fa7ec6e464"
+  },
+  "event_quick_cancel": {
+    "file": "event_quick_cancel.png",
+    "box": [
+      487,
+      529,
+      586,
+      553
+    ],
+    "sha256": "7702e9e242cf49c22a2ecf855eb548facab0341db7eac0bcbc16df338082ea30"
+  },
+  "event_auto_title": {
+    "file": "event_auto_title.png",
+    "box": [
+      598,
+      169,
+      680,
+      192
+    ],
+    "sha256": "b547ca46a0613321f8527a7153f18826e43a40b1de7c671c73660878b1e69dde"
+  },
+  "event_auto_cancel": {
+    "file": "event_auto_cancel.png",
+    "box": [
+      487,
+      537,
+      586,
+      561
+    ],
+    "sha256": "3b4a6d3c0b7904695df3e06d919b31410e74243e63405d38dacbe36764544aae"
   }
 }

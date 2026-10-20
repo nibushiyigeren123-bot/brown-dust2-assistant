@@ -43,7 +43,7 @@ class WorkbenchApp:
         self.auto_cleanup = tk.BooleanVar(value=automatic_cleanup_enabled(ROOT))
         self.cleanup_day = None
         self.queue_summary = tk.StringVar()
-        root.title('棕色尘埃2辅助 · 日常作战台 0.2.14')
+        root.title('棕色尘埃2辅助 · 日常作战台 0.2.15')
         root.geometry('1360x900'); root.minsize(1150, 800); root.configure(bg=BG)
         style = ttk.Style(root); style.theme_use('clam')
         style.configure('.', font=('Microsoft YaHei UI', 10), background=BG, foreground=TEXT)
@@ -149,6 +149,7 @@ class WorkbenchApp:
         self.table.tag_configure('reserved', foreground='#778292')
         self.table.tag_configure('verified', foreground=GREEN)
         self.table.tag_configure('needs_review', foreground=RED)
+        self.table.tag_configure('blocked', foreground=AMBER)
         self.table.tag_configure('completed', foreground=GREEN)
         self.table.tag_configure('incomplete', foreground=AMBER)
         self.table.bind('<<TreeviewSelect>>', self.update_selection)
@@ -184,6 +185,8 @@ class WorkbenchApp:
         self.stop_button = ttk.Button(row, text='停止  F8', style='Stop.TButton', state='disabled', command=self.stop); self.stop_button.pack(side='left', padx=(0, 10))
         self.pause_button = ttk.Button(row, text='本段结束后暂停', state='disabled', command=self.pause); self.pause_button.pack(side='left')
         self.resume_button = ttk.Button(row, text='恢复本轮', state='disabled', command=self.resume); self.resume_button.pack(side='left', padx=10)
+        self.continue_button = ttk.Button(row, text='继续未运行项', state='disabled', command=self.continue_remaining)
+        self.continue_button.pack(side='left', padx=4)
         self.process_button = ttk.Button(row, text='过程窗口', command=self.open_process_window)
         self.process_button.pack(side='left')
 
@@ -315,7 +318,9 @@ class WorkbenchApp:
                 self.scope.set(f"本周期最多 {cfg.get('max_battles', '—')} 场 · 总额度 {cfg.get('resource_budget', '—')}\n保持当前阵容；实测自动战斗入口，赛季末跳过并返回主页。")
             elif module.id == 'event':
                 cfg = self.event.get('event', {})
-                self.scope.set(f"配置 {'启用' if cfg.get('enabled') else '停用'} · {cfg.get('runs', '—')} 次 / 额度 {cfg.get('ap_budget', '—')}\n普通与挑战共用AP。通用开战/快速战斗适配待接入；已完成账本保留。")
+                method = '快速战斗' if cfg.get('battle_method') == 'quick' else '连续战斗'
+                mode = '挑战' if cfg.get('mode') == 'challenge' else '普通'
+                self.scope.set(f"配置 {'启用' if cfg.get('enabled') else '停用'} · {mode} / {method} · {cfg.get('runs', 0)} 次\n普通与挑战共享AP总额度 {cfg.get('ap_budget', 0)}；日常设置 → 活动战斗。")
             elif module.id == 'hunting':
                 from hunting_resources import resource_text
                 self.scope.set('自动读取每日任务进度；固定1次只用免费体力。\n米饭：'+resource_text(ROOT,'rice')+'\n火把：'+resource_text(ROOT,'torch'))
@@ -437,9 +442,8 @@ class WorkbenchApp:
         if self.settings_window is not None and self.settings_window.winfo_exists():
             self.status.set('请先保存或关闭日常设置，再启动任务。'); return
         self.load_context()
-        if self.execute.get() and not self.date_ready:
-            return
-        if self.execute.get():
+        # Execute workers first return home, then enforce the current cache date.
+        if self.execute.get() and task_id == 'guild':
             from event_reward_rules import guild_disabled_reason
             from module_catalog import validate_plan
             tasks = validate_plan(plan or self.plan) if task_id == 'workflow' else [task_id]
@@ -481,7 +485,8 @@ class WorkbenchApp:
             self.process = subprocess.Popen(base + args, cwd=str(ROOT), env=env, stdout=log, stderr=log, creationflags=subprocess.CREATE_NO_WINDOW)
         self.status.set('正在逐段核对队列…' if task_id == 'workflow' else '正在运行：' + BY_ID[task_id].name)
         self.stop_button.configure(state='normal'); self.pause_button.configure(state='normal' if task_id == 'workflow' else 'disabled')
-        self.resume_button.configure(state='disabled'); self.update_selection(); self.root.after(200, self.poll)
+        self.resume_button.configure(state='disabled'); self.continue_button.configure(state='disabled')
+        self.update_selection(); self.root.after(200, self.poll)
 
     def append_log(self, text):
         if text == self.last_log:
@@ -502,11 +507,11 @@ class WorkbenchApp:
         if path.exists():
             try:
                 snapshot = json.loads(path.read_text(encoding='utf-8'))
-                labels = {'queued': '待运行', 'running': '正在核对', 'verified': '已核实', 'inspected': '已识别', 'needs_review': '待核对','skipped':'已跳过'}
+                labels = {'queued': '待运行', 'running': '正在核对', 'verified': '已核实', 'inspected': '已识别', 'needs_review': '待核对','skipped':'已跳过', 'blocked':'受阻，未执行'}
                 for item in snapshot['tasks']:
                     if self.table.exists(item['id']):
                         if item.get('output'):
-                            self.capture_task_report(item['id'], item['output'], item['status'] == 'needs_review')
+                            self.capture_task_report(item['id'], item['output'], item['status'] in ('needs_review', 'blocked'))
                         values = list(self.table.item(item['id'], 'values')); values[2] = labels.get(item['status'], item['status'])
                         self.table.item(item['id'], values=values, tags=(item['status'],))
                         self.row_status[item['id']] = values[2]
@@ -527,7 +532,8 @@ class WorkbenchApp:
                 report_path = Path(current['output']) / 'run.json' if current else self.output / 'run.json'
                 waiting = json.loads(report_path.read_text(encoding='utf-8')).get('waiting')
                 if waiting:
-                    self.status.set(waiting['message']); self.append_log(waiting['message'])
+                    message = waiting.get('message', str(waiting)) if isinstance(waiting, dict) else str(waiting)
+                    self.status.set(message); self.append_log(message)
             except (OSError, ValueError, KeyError):
                 pass
             self.root.after(250, self.poll); return
@@ -569,9 +575,15 @@ class WorkbenchApp:
             elif state == 'complete':
                 skipped = [BY_ID[item['id']].name for item in snapshot['tasks'] if item['status'] == 'skipped']
                 self.status.set('本轮队列已结束，已返回主菜单。' + ('赛季末跳过：' + '、'.join(skipped) + '。' if skipped else '各段结果已核实。'))
+            elif state == 'complete_with_errors':
+                summary = snapshot['summary']
+                self.status.set(f"执行结束，有错误：成功 {summary['success']}，失败 {summary['failed']}，受阻 {summary['blocked']}，跳过 {summary['skipped']}。详情见执行过程。")
+            elif state == 'stopped':
+                self.status.set(snapshot.get('reason') or '已停止，未继续后续项目。')
             elif state == 'needs_review' and snapshot.get('reason'):
                 self.status.set(snapshot['reason'])
-            self.resume_button.configure(state='normal' if state in ('paused', 'stopped', 'needs_review') else 'disabled')
+            self.resume_button.configure(state='normal' if state in ('paused', 'stopped', 'needs_review') and not snapshot.get('traversed') else 'disabled')
+            self.continue_button.configure(state='normal' if state in ('paused', 'stopped', 'needs_review') and any(item['status'] == 'queued' for item in snapshot['tasks']) else 'disabled')
         self.append_log(self.status.get()); self.stop_button.configure(state='disabled'); self.pause_button.configure(state='disabled')
         missing_report = not any((self.output / name).is_file() for name in ('run.json', 'inspection.json'))
         level = 'error' if code or missing_report else 'warning' if snapshot and snapshot.get('status') in ('needs_review', 'stopped') else 'info'
@@ -586,6 +598,18 @@ class WorkbenchApp:
             self.status.set('已请求暂停，当前段结束后停止交接下一段。')
             self.record_event(LogEvent('作战台', 'wait', self.status.get()))
 
+    def continue_remaining(self):
+        if self.process or not self.output:
+            return
+        from workflow_runner import continuation_plan
+        try:
+            plan = continuation_plan(self.output / 'workflow.json')
+            if plan['continuation']['execute'] != self.execute.get():
+                raise RuntimeError('继续未运行项需选择原执行模式。')
+        except (OSError, ValueError, KeyError, RuntimeError) as error:
+            self.status.set(str(error)); return
+        self.launch('workflow', plan=plan)
+
     def resume(self):
         if not self.process and self.output and (self.output / 'workflow.json').exists():
             previous = json.loads((self.output / 'workflow.json').read_text(encoding='utf-8'))
@@ -594,6 +618,10 @@ class WorkbenchApp:
             if previous['execute'] != self.execute.get():
                 self.status.set('恢复本轮需选择原来的' + ('实机执行' if previous['execute'] else '只读检查') + '模式。')
                 return
+            from workflow_runner import config_identity
+            identity, hashes = config_identity(ROOT)
+            if previous['identity'] != identity or previous['config_hashes'] != hashes:
+                self.status.set('配置已改变；原队列保持。请点“继续未运行项”建立新队列，原失败项不会重试。'); return
             self.launch('workflow', resume=True)
 
     def restore_last_run(self):
@@ -609,7 +637,8 @@ class WorkbenchApp:
             if state['status'] in ('paused', 'stopped', 'needs_review'):
                 self.output = output
                 self.resume_button.configure(state='normal')
-                self.status.set('发现可恢复队列：' + str(state.get('reason') or '在模块边界暂停') + '。请核对原执行模式。')
+                self.continue_button.configure(state='normal' if any(item['status'] == 'queued' for item in state['tasks']) else 'disabled')
+                self.status.set('发现中断队列：' + str(state.get('reason') or '在模块边界暂停') + '。配置改变时可点“继续未运行项”，原失败项不重试。')
         except (OSError, ValueError, KeyError):
             self.status.set('上次队列记录无法恢复，请在运行记录中核对。')
 

@@ -1,15 +1,19 @@
 {
-  "version": "0.2.14",
+  "version": "0.2.15",
   "source_only": true,
   "private_state_included": false,
   "files": [
+    {
+      "path": ".gitattributes",
+      "sha256": "c53b65665fb118a933282745278d936a805efe450884feffcce561dc97bc14ec"
+    },
     {
       "path": ".gitignore",
       "sha256": "fa87bd2db9d0f04ecb4348867d993eba0b372c1a5bb5303cb016f737392cae46"
     },
     {
       "path": "assets/daily_pending/config.json",
-      "sha256": "4191e0cd57825dda18e8a328bc88bdc0f2c8a6b590b660120b476acc8559ca8f"
+      "sha256": "52ec54911b546d011078f351b33cb993350a76a8e4b59783e129400f92c18a1d"
     },
     {
       "path": "assets/daily_pending/goddess_hand.png",
@@ -168,6 +172,10 @@
       "sha256": "41d12f0df864da750f2af4493b32e587d29f7ddd46239beaf36ffa8a09377b53"
     },
     {
+      "path": "assets/equipment/filter_n_only.png",
+      "sha256": "b68cba7029b7f4240e0ef2133dbd01755d076b50d627c0807f337359c22f1c54"
+    },
+    {
       "path": "assets/equipment/filter_other_default.png",
       "sha256": "707fe8cf4734adb0f1e5abfe44a2ce45fb6be3e84a8f32ac16ff43269224bbe1"
     },
@@ -196,6 +204,10 @@
       "sha256": "47a8e631e4db0cb79b408cbb0e17507b0ffd870012c795f6adadb4fbeb9118e8"
     },
     {
+      "path": "assets/equipment/grid_empty.png",
+      "sha256": "7c1c44072bdf0e7653d430ef429ecd0b93f92a336ca6468c119e59fd080887c1"
+    },
+    {
       "path": "assets/equipment/grid_quick_filter_default.png",
       "sha256": "c0c36528c568048b922b22eff70a9a28706517423a8838385c79878b00447148"
     },
@@ -206,6 +218,10 @@
     {
       "path": "assets/equipment/quality_R.png",
       "sha256": "fa2a56449038a33a270441c4d37911017689204dfb4ffc95cb24e06f78bb97c4"
+    },
+    {
+      "path": "assets/equipment/quality_R_plain.png",
+      "sha256": "ff3bad2d86679b838bf8cb4b720d79d2c9c81021aeb600ce2a87356a5ecd13d7"
     },
     {
       "path": "assets/equipment/quality_UR.png",
@@ -241,7 +257,23 @@
     },
     {
       "path": "assets/equipment/sources.json",
-      "sha256": "500ae8666cb350c124f964c36cb1c72bddc02774eed02671fbeef9f52df16248"
+      "sha256": "c88e4c9a13b8240092b032f6ca928b4dc7bbb6ca12ff83c5ac8b9aded6c731e0"
+    },
+    {
+      "path": "assets/event_battle/auto_off.png",
+      "sha256": "e7f1831269603f8dee5289f4072e9a1a9f38418eb5e72b104f364e1a47d9f2ca"
+    },
+    {
+      "path": "assets/event_battle/config.json",
+      "sha256": "fd8f815351a956c1d8b1d8f290767a224c9d16c555539055da2f6d8ccd47f94c"
+    },
+    {
+      "path": "assets/event_battle/unit_1_continuous.png",
+      "sha256": "4a554fe6f2ae1ac9efacacc015a1748e4f7947d5df19d44e902f34d7e393f4a8"
+    },
+    {
+      "path": "assets/event_battle/unit_1_quick.png",
+      "sha256": "9f1b189c81c62311520d793d7fd356e290ebbfb9c6993c0f2c91c714c5011b53"
     },
     {
       "path": "assets/event_prepare/home_loyal_maid.png",
@@ -265,7 +297,7 @@
     },
     {
       "path": "assets/event_prepare/sources.json",
-      "sha256": "3924e5d348bc9ebf967c9590a64ba3ae2b4649cd4a90f86b1b725a785eeee974"
+      "sha256": "dabfa94b4b5f40737ed2843ff2f209ee698ed47a4a63357a540618db7d6a66b6"
     },
     {
       "path": "assets/free_draw/animation_loop_dark.png",
@@ -289,7 +321,7 @@
     },
     {
       "path": "assets/free_draw/config.json",
-      "sha256": "821f2a8e81da1beb60f1d4b94848fc6d40d9f4c128484fd8d806b7d8b5a288ab"
+      "sha256": "122ea4b66bb0ce93366437c69ffde6de0474df52288cdb973e1c3eae3a2bd1d1"
     },
     {
       "path": "assets/free_draw/confirm_button.png",
@@ -361,7 +393,7 @@
     },
     {
       "path": "assets/goddess_entry/sources.json",
-      "sha256": "74c444beb0aed99fb5cbe32c2b15efcb6ecafe605d4d8316423474d0c06b0086"
+      "sha256": "554a6de77d6febc6085c48de3c96a4b0382814da3b87d47abeb236711417d25d"
     },
     {
       "path": "assets/goddess_entry/square_logo.png",
@@ -393,7 +425,7 @@
     },
     {
       "path": "assets/hunting_options/sources.json",
-      "sha256": "8ad7f54db229b6ef13446a80bbb6943c0afa5111285238e661d17943b2231896"
+      "sha256": "06459aeedeb979b5870d658b75725f77b8586e2ce611bf29af7ee9d4ddab6980"
     },
     {
       "path": "assets/hunting_options/stone_0.png",
@@ -421,7 +453,7 @@
     },
     {
       "path": "assets/hunting_resources/sources.json",
-      "sha256": "61742c98d34c1f419a94647c77363c51b603b79a9681512c648ed44a98c51eb3"
+      "sha256": "8d0701840eadb2011ed811bdd0d853a51964f42a645f98091caec78034d71368"
     },
     {
       "path": "assets/hunting_resources/torch.png",
@@ -441,7 +473,7 @@
     },
     {
       "path": "assets/icon/icon.json",
-      "sha256": "4a6b71a06b42573c910096b1a9bb68f3a87d2c164458565a37c8dd0a3d69e703"
+      "sha256": "2bc02d95cb1186129a5fb89aada2bdd7f5066c45e4f2e382ec95f9510b7715d2"
     },
     {
       "path": "assets/m00/signin_event.png",
@@ -453,11 +485,11 @@
     },
     {
       "path": "assets/m00/templates.json",
-      "sha256": "b8bfadc3c4089354dfb0c0f6bc4c3e72abd1c32c4a3e5102c5c93b5bf57545e9"
+      "sha256": "ffbbbcb72f55a3672b996d9a4fe6536a21a387d627787dd530b1d87edb91dd9c"
     },
     {
       "path": "assets/management/config.json",
-      "sha256": "5c32f7df07cdd5b5440087c60e6161a974dac16bcc344069b18efbcb37be3614"
+      "sha256": "cfcc042c8d1d428f22b087c574494e8c2da6df521474412d7c008729f41d9385"
     },
     {
       "path": "assets/management/entry_label.png",
@@ -553,11 +585,11 @@
     },
     {
       "path": "assets/mirror_entry/sources.json",
-      "sha256": "4a0d9a01c3789615295a9d564151718158a1a207105e1e2920bb94b108fd8e6c"
+      "sha256": "455745fab5a44e55cf4d61a526bdd8cadca20e4782f04dc14e2c944b609696f7"
     },
     {
       "path": "assets/navigation/home_button.json",
-      "sha256": "b9862a0775d81e02fb904244904d9aa83bf9f3547336a26dd34b00a552140744"
+      "sha256": "a21f778ebc3a85aaa3c72ee05aadc465c3f51f33347bd9f1faf14aa3aa8abb63"
     },
     {
       "path": "assets/navigation/home_glyph.png",
@@ -577,7 +609,7 @@
     },
     {
       "path": "assets/navigation/square_home_sources.json",
-      "sha256": "480dff5bddcf033d6fcc7eb195a45e32c7165968d0de10841e1ad035deaef645"
+      "sha256": "75163f835a9389348af0e313feaeab54015d11b68cbdce3d8e441c1841854002"
     },
     {
       "path": "assets/pass_rewards/identity_season.png",
@@ -589,7 +621,7 @@
     },
     {
       "path": "assets/pass_rewards/sources.json",
-      "sha256": "c2986743c9422010848557861959928a2b0d66222fa59e8777a0a13ba9231767"
+      "sha256": "bda03e27ebc7daec22163490e34a1e0a8008971e1b287ee65f69ed4bbdd7e5c2"
     },
     {
       "path": "assets/pass_rewards/tab_season_levels.png",
@@ -673,7 +705,7 @@
     },
     {
       "path": "assets/phase08/sources.json",
-      "sha256": "2610c1643b1fd9450f5ca718ddfab9da799c028aeaa336a902c767e8ea5e32de"
+      "sha256": "a92c8a33b9940823d10994d39abba71c6ec303aede27776d64fac1f55b4f722f"
     },
     {
       "path": "assets/phase08/task_claim_ready.png",
@@ -716,6 +748,22 @@
       "sha256": "2c8df33d7feb246f29873bf29b41ab35a04b6af3ad477236bfa6554e361616f0"
     },
     {
+      "path": "assets/return_navigation/event_auto_cancel.png",
+      "sha256": "3b4a6d3c0b7904695df3e06d919b31410e74243e63405d38dacbe36764544aae"
+    },
+    {
+      "path": "assets/return_navigation/event_auto_title.png",
+      "sha256": "b547ca46a0613321f8527a7153f18826e43a40b1de7c671c73660878b1e69dde"
+    },
+    {
+      "path": "assets/return_navigation/event_quick_cancel.png",
+      "sha256": "7702e9e242cf49c22a2ecf855eb548facab0341db7eac0bcbc16df338082ea30"
+    },
+    {
+      "path": "assets/return_navigation/event_quick_title.png",
+      "sha256": "932272e06f9f79e01502fd32816f03608209b3ce03cdc0ed681402fa7ec6e464"
+    },
+    {
       "path": "assets/return_navigation/hunt_cancel.png",
       "sha256": "bb9e7924de64ff27060f6df14747cc6c3a81a745d2ae6402f910ba0d60f0c318"
     },
@@ -741,7 +789,7 @@
     },
     {
       "path": "assets/return_navigation/sources.json",
-      "sha256": "600103a299320a52d448d65289546f6c4d327a23cf76908f909a3e5452b7f324"
+      "sha256": "821b16095057ce79e74a829f8997a5fc40fe61df1ae94a40af0485eabcb61046"
     },
     {
       "path": "assets/return_navigation/talk_close.png",
@@ -781,7 +829,7 @@
     },
     {
       "path": "assets/reward_endpoints/sources.json",
-      "sha256": "e87b3fc07b3289747a887be06638e62e51720b172c77fb11771f5c7073f653c6"
+      "sha256": "cad0ee3738979e073d2a2cb3690aaee54d5271ec301f6f780127424a2e416618"
     },
     {
       "path": "assets/reward_endpoints/special_levels_bottom.png",
@@ -817,7 +865,7 @@
     },
     {
       "path": "assets/task_rewards/sources.json",
-      "sha256": "629047d8e17361dd5c9d85c457b3f86b96ee8ad5e634710f021aa34d85d684fb"
+      "sha256": "03aa885b90960dd262212596d880adead5aa36b0f6133fb4c3c137da9a61c05d"
     },
     {
       "path": "assets/task_rewards/weekly.png",
@@ -829,7 +877,7 @@
     },
     {
       "path": "assets/ui_foreground/config.json",
-      "sha256": "be39d4e5f4c305f2b9854ea4cac770937a08f82c74fc7e5b8e80ee958bc99757"
+      "sha256": "b2482a44a77561adfa605dc4f094e3d40809b69c69f2fa5002a53aa8c74f3f2d"
     },
     {
       "path": "assets/ui_foreground/friends.png",
@@ -845,15 +893,23 @@
     },
     {
       "path": "assets/workbench/sources.json",
-      "sha256": "1cc5423da4addfbd0f7e52805d87058181f0b3e3ed45be81860f7ca5fd0edb2e"
+      "sha256": "a788c261f98d5ad235bd0471eff6281ba8999d068cf3af2be2d61adf1c3d3b1f"
     },
     {
       "path": "build-requirements.txt",
       "sha256": "9080493853cdeeea28b3168faf43655480519487893915f99512f366d3a04b4a"
     },
     {
+      "path": "docs/RELEASE_0.2.13.md",
+      "sha256": "bccce9a483d63aae4d20a6ea9c640e0957388a21d99da4ce3a5462187b89f82e"
+    },
+    {
       "path": "docs/RELEASE_0.2.14.md",
       "sha256": "10f05a53e3b25549ead69d90fb6d9c4eb5944f18d66be2fa01b38a163ce30cd1"
+    },
+    {
+      "path": "docs/RELEASE_0.2.15.md",
+      "sha256": "b3829db27fffda760cc8cae7eac3e1f2e788bd53a1f64ae242bc60768d63822d"
     },
     {
       "path": "LICENSE",
@@ -865,7 +921,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "4e55019a908a20403818e74e292d9e39636c5b396fdb2931a044b143768d7b70"
+      "sha256": "74f28b7bd4b201e5bfebf630eed71b25ce187d69ba616292c91bf9700db3dc17"
     },
     {
       "path": "requirements.txt",
@@ -881,7 +937,7 @@
     },
     {
       "path": "templates/config/event_and_rewards.json",
-      "sha256": "3238cab3608f3715c0014149aee6c30c502cb8197c538650254a4cc1965ee49c"
+      "sha256": "b8c1743586995a61652cc5eda739fe0a3ae7fe7fd7795e940345f2e771c6608c"
     },
     {
       "path": "templates/config/reserved_reward_entries.json",
@@ -897,7 +953,11 @@
     },
     {
       "path": "tools/assistant_app.py",
-      "sha256": "eb1bc02b3260e7a29d8b75f1ba4407d7473f31d62cb3ea6c01ffffa09e85feda"
+      "sha256": "d0c703db68022e66054035e9175dd1e45a1ee9eb005ebb71a4687d0a8d288e65"
+    },
+    {
+      "path": "tools/atomic_json.py",
+      "sha256": "842eadaf0086e47e12814bc10f53241268b7835512b8c6138e2bcb86cb287def"
     },
     {
       "path": "tools/build_desktop.py",
@@ -905,7 +965,7 @@
     },
     {
       "path": "tools/build_portable.py",
-      "sha256": "3b7639ed7f114367370b52bcae2ea024902098b042779cac3dd975718a8d2e48"
+      "sha256": "1923aef93321d31436596ca4c252ddbba9f0f76f3cfa260613dc0a1b3af60310"
     },
     {
       "path": "tools/cache_cleanup.py",
@@ -917,11 +977,11 @@
     },
     {
       "path": "tools/daily_settings.py",
-      "sha256": "b96ef16d5112cae3a990a68e665cfd16c9627d867a6440502e3c1c907b3495d1"
+      "sha256": "7dfe919cb177a0769ac83b7b36843c90dfbec251bd69f7c236898cbcf5b6f547"
     },
     {
       "path": "tools/daily_tasks.py",
-      "sha256": "51b61be710526192ccb986de9d7794060b5bb32c6b2089c5664c87ef7593cc4e"
+      "sha256": "13cb07b020cf4fa7ad338c1ac8e5d1e31c2f3237040af4c8d757dc0f077a4b33"
     },
     {
       "path": "tools/daily_vision.py",
@@ -929,7 +989,7 @@
     },
     {
       "path": "tools/date_rollover.py",
-      "sha256": "6d753ac6046f7b9bd20850a81e7fcb5c064db061d355404ebcfff643e84e96e6"
+      "sha256": "322eca7ca743b42119f10777b9b74950185c530f2a35c94d370f83541d884c92"
     },
     {
       "path": "tools/equipment_rules.py",
@@ -937,39 +997,59 @@
     },
     {
       "path": "tools/equipment_tasks.py",
-      "sha256": "40599e147e52e02ba549a12e851a1b4525efbc706b18c93776c2eefcf657177b"
+      "sha256": "d445a35772141d41ca518bdc3a8d7c83f173fd416b597dcedaf1a669fb64bdb5"
     },
     {
       "path": "tools/equipment_vision.py",
-      "sha256": "46477c3747618726cdc68b03dfd23b3d12d81ad2993646e7f63b9c9c7a345be5"
+      "sha256": "c3772ac25d908f8c100a7b59bdb56391f6de4b7841cf876cc885d46651fddb21"
     },
     {
       "path": "tools/equipment_workflow.py",
-      "sha256": "0327e22c1cf61b1ab191edc76825abda4433fe9f1719117f79ef8298fb8dff0c"
+      "sha256": "e721912746abeddfbbf0cabe02a79c78d2bf5ff25f38c1559eb71108b42825b8"
+    },
+    {
+      "path": "tools/event_battle_flow.py",
+      "sha256": "21f855d238f44c9075993d257e75acd4685863233e25608c8ee0c9014a17e969"
+    },
+    {
+      "path": "tools/event_battle_runtime.py",
+      "sha256": "0c4d5feeb16e4784534dfb54b49f0eddd1b49d9b0c5848eb90d3de80b56ec01e"
+    },
+    {
+      "path": "tools/event_battle_vision.py",
+      "sha256": "98f388909a66259b95e99adc282bf92affdb90235970562a37f6891bc73a5b1c"
     },
     {
       "path": "tools/event_prepare_vision.py",
       "sha256": "c083879ebd6dab4063ffb33d17e52415870112dae866e9586e1e29925a13292d"
     },
     {
+      "path": "tools/event_resources.py",
+      "sha256": "9587bce95ae95995fe73dce6dd3a2c99569570639031583542f41a2f462d96de"
+    },
+    {
       "path": "tools/event_reward_rules.py",
-      "sha256": "827661adee8875771d8ae8ecb74609f7482e535e0c00863b85604137b9444bea"
+      "sha256": "5a86bee0e6dc94bc7fec0474c7801628ba93e378d54adba2fa2afc0e7a05311a"
     },
     {
       "path": "tools/event_tasks.py",
-      "sha256": "b7c1bcee5f2d0339cc44f03f62b15798ace33195c07f4e5ce69f166125920679"
+      "sha256": "c27237158599e25337d9b35a29bffee3bb89013b5c712dc1a840b067104aa6b0"
+    },
+    {
+      "path": "tools/execution_control.py",
+      "sha256": "a46fb8c2399f027e0b0af888ed3e95dedaa739825c6c539490a76350b01ad62c"
     },
     {
       "path": "tools/execution_log.py",
-      "sha256": "5f33cd7577a981b7877de4d0245688c784d6d1c384c2edb504e2bc16a3c22eeb"
+      "sha256": "64d725fbd2fb29adf267ac2d153bd55ecd0cab2938785c86cb67aa59d0740006"
     },
     {
       "path": "tools/game_calendar.py",
-      "sha256": "2be4c77485ab0e385b8368e59ebf6fc20616821c5ecc575853ddfe3dc071d99d"
+      "sha256": "d4e26e89cb866e49bdfd5b7ca2567e94bcfe4e1d9061766ed731614919e05f40"
     },
     {
       "path": "tools/game_window.py",
-      "sha256": "db0bf23717f2a183809cef77d414bf50a798bf88400d5203c98d1ff27ccb83c3"
+      "sha256": "27427c16852de28d6bcbbfa822b22cd829d51cc3ca61225b94be9ad71adb23db"
     },
     {
       "path": "tools/goddess_entry_vision.py",
@@ -977,7 +1057,7 @@
     },
     {
       "path": "tools/guild_check_in.py",
-      "sha256": "03a90644b46b5e4af85d88807bbfbd6ba745fea730e1c536ee4f32b8285a092e"
+      "sha256": "cebb98e019fccbc0480bd108e66fbc51c31160f2682e5a1a2ae1d49613fb6b21"
     },
     {
       "path": "tools/hunting_probe.py",
@@ -1017,11 +1097,15 @@
     },
     {
       "path": "tools/module_catalog.py",
-      "sha256": "0a1180385415626cc66d2b6b29f0fedb8330f546ae0dcdec8b29295b0d6ce086"
+      "sha256": "d09d17b8a78c4e0264ff6903bc779ad7441068fee17c6e8a15593a0bfda79400"
     },
     {
       "path": "tools/navigation_input.py",
-      "sha256": "150d02071652cec400a06f9e03b9fd1802c70797e66e6e04bdad6346aee71f6c"
+      "sha256": "ff9379ab07a20118792998d75681d90b04d04faf667d56eb80cc1b0e505f8d95"
+    },
+    {
+      "path": "tools/navigation_startup.py",
+      "sha256": "daa267d81b1a96f35c4215e54612e57f8b1928be0f707139e4c1d9302a23522c"
     },
     {
       "path": "tools/panel_identity.py",
@@ -1033,11 +1117,11 @@
     },
     {
       "path": "tools/pass_rewards.py",
-      "sha256": "23f3aaaa256237587476496b93ab2785b87d7814f3a67da4b9279bf2aef7db5a"
+      "sha256": "7d6f4ed375989025f6cf1d5551f6d5b14babcae76af40fa56f01db828d53fd63"
     },
     {
       "path": "tools/pending_daily.py",
-      "sha256": "1ab178bf548bd76ff3c15e0e0bea9188f61e6bb12abd3d72d29447564fcaa199"
+      "sha256": "e586245460f598b27fd9e6e405046a0116f4c0257b833efe3757fd4bf838dae7"
     },
     {
       "path": "tools/phase08_vision.py",
@@ -1057,7 +1141,7 @@
     },
     {
       "path": "tools/return_navigation_vision.py",
-      "sha256": "643833d1a7dfc7882c587c20fefae8e3fa3322065757e6ce17f5ec08cb157469"
+      "sha256": "3d150104c521c6a7ae602a2a60872430655b820555f40c274d7de22796a03c72"
     },
     {
       "path": "tools/reward_endpoints.py",
@@ -1073,11 +1157,11 @@
     },
     {
       "path": "tools/task_feedback.py",
-      "sha256": "d4a4150c072884221ce019f4044c1d1ac39af880ca50b87d8fd30734297f9610"
+      "sha256": "010237c30b5c9439abf8c340fdb75173b3c98f89ab2f877ec5cddf4b1b5f6032"
     },
     {
       "path": "tools/task_progress.py",
-      "sha256": "7014facc78c014f922416183410d34cb93fef22ee71e6560e6de0a560d7741f1"
+      "sha256": "6e8357d9378ab005856cb7598d6815c1a2954187a2501b6aec1a421a3400b3be"
     },
     {
       "path": "tools/task_reward_vision.py",
@@ -1085,11 +1169,23 @@
     },
     {
       "path": "tools/task_rewards.py",
-      "sha256": "9ce66f1b92021bd20bde868f665b8486feb3d81b835cc95e10b4320685e48a44"
+      "sha256": "6dadfb5b7fd9eb366a782d788fd0cad15059766c22a36295b2348c7cc62e593f"
     },
     {
       "path": "tools/ui_foreground.py",
       "sha256": "ebb5b15e9380ace53dcb6fac248b8b373bacc1b360b166cf1e48329e5df8d651"
+    },
+    {
+      "path": "tools/verify_event_battle_flow.py",
+      "sha256": "4dac7f20fdb2920cdb24ba28bf6fe14e6c943ec7e1697d094c50c25791fcbb9b"
+    },
+    {
+      "path": "tools/verify_event_pending_recovery.py",
+      "sha256": "b948867842ddf010968c11fa13c225efb088156de9e91fccde4f45402a0e4aab"
+    },
+    {
+      "path": "tools/verify_workflow_continue.py",
+      "sha256": "700f948ea161e7681b10481f47f1d4ca8c976269127e99c12999b212926ef98b"
     },
     {
       "path": "tools/windows_ocr.ps1",
@@ -1101,11 +1197,15 @@
     },
     {
       "path": "tools/workbench_ui.py",
-      "sha256": "6439988493686b04871f2b4d4080fc51d042befc2c74deed771073022c410c03"
+      "sha256": "5ae3bf4b683499c38ba7d2c405b971eada6310d043365ca2f9c845919426d422"
     },
     {
       "path": "tools/workflow_runner.py",
-      "sha256": "2eaf54157331fe1fbbbf775d77e0ef406c97d93b872c33e3eb219405f3c1c64e"
+      "sha256": "be5d2f5c4636379c0c4a68780bf4968cc32ec2cc3bd2c16a90c0b169e9aa92b7"
+    },
+    {
+      "path": "verification_0.2.15.json",
+      "sha256": "50c01aa40f46e1cc7eeb8d658d73df64b86345d66ac7042b91cc37cb1d3e61e6"
     }
   ]
 }

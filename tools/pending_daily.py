@@ -31,7 +31,8 @@ def exclusive_ledger(path):
         try:
             msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
         except OSError as error:
-            raise RuntimeError('This local cache is already controlled by another runner') from error
+            from execution_control import stop_execution
+            stop_execution('This local cache is already controlled by another runner', 'lock_conflict')
         try:
             yield
         finally:
@@ -118,7 +119,7 @@ def run(args):
 
     with exclusive_ledger(ROOT / 'runtime/game_control'):
         if args.execute:
-            guard_foreign_pending(ROOT / 'runtime', ledger_path)
+            guard_foreign_pending(ROOT / 'runtime', ledger_path, module=args.module)
         ledger = DailyLedger(ledger_path if args.execute else None, config)
         controller = DailyController(config, ledger, args.module, args.checkpoint)
         from runtime_policy import network_wait_seconds

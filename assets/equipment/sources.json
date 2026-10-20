@@ -443,5 +443,37 @@
       82
     ],
     "kind": "anchor"
+  },
+  "quality_R_plain": {
+    "file": "quality_R_plain.png",
+    "box": [
+      540,
+      101,
+      553,
+      116
+    ],
+    "kind": "quality",
+    "value": "R",
+    "sha256": "ff3bad2d86679b838bf8cb4b720d79d2c9c81021aeb600ce2a87356a5ecd13d7"
+  },
+  "filter_n_only": {
+    "file": "filter_n_only.png",
+    "box": [
+      316,
+      389,
+      622,
+      424
+    ],
+    "kind": "anchor"
+  },
+  "grid_empty": {
+    "file": "grid_empty.png",
+    "box": [
+      775,
+      437,
+      901,
+      463
+    ],
+    "kind": "anchor"
   }
 }

@@ -1,9 +1,9 @@
-"""Shared event journal adapter; unsupported consuming branches stop explicitly."""
+"""Event battle entry point with shared AP accounting and isolated execution."""
 import argparse
 import json
 from pathlib import Path
 from daily_tasks import guard_foreign_pending, load_config as load_daily
-from event_prepare_vision import EventPreparationVision
+from event_battle_vision import EventBattleVision
 from event_reward_rules import event_ledger_path, load_config
 from game_window import GameWindow
 from pending_daily import exclusive_ledger
@@ -21,7 +21,7 @@ def inspect_cycle(config, ledger, observation):
                 'spent_total': ledger.get('spent_total'), 'resource_pool': 'shared_event_ap'}
     if not config['event']['enabled']:
         return {'completed': True, 'returned_to_main_menu': True, 'skipped': True, 'skip_reason': '活动战斗在配置中停用；本次未消费。'}
-    return {'completed': False, 'stopped': '活动正常战斗与快速战斗通用执行链待接入；本次未消费。'}
+    return {'completed': False, 'ready': True}
 
 
 def main():
@@ -29,35 +29,34 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--execute', action='store_true')
     parser.add_argument('--image', type=Path)
+    parser.add_argument('--data-root', type=Path, default=ROOT)
+    parser.add_argument('--prepare-only', action='store_true', help='只核对设置并取消返回，不提交战斗')
+    parser.add_argument('--reconcile-pending', action='store_true', help='只回收已提交批次的结果，不重新开战')
     args = parser.parse_args()
     if args.image and args.execute:
         parser.error('保存的截图仅允许只读检查')
+    if args.prepare_only and not args.execute:
+        parser.error('设置预览包含导航，请显式使用 --execute --prepare-only')
+    if args.reconcile_pending and (not args.execute or args.prepare_only):
+        parser.error('回执恢复需要 --execute，且不能与设置预览同时使用')
     args.output.mkdir(parents=True, exist_ok=True)
-    config = load_config(ROOT / 'config/event_and_rewards.json')
-    daily = load_daily(ROOT / 'config/daily_tasks.json')
-    if any(config[key] != daily[key] for key in ('cache_date',)):
-        raise RuntimeError('活动缓存日期与日常配置不一致。')
-    path = event_ledger_path(ROOT, config)
-    report = {'execute': args.execute, 'completed': False, 'actions': [], 'observations': [],
-              'cache_date': config['cache_date'], 'ledger': str(path)}
-    with exclusive_ledger(ROOT / 'runtime/game_control'):
-        ledger = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
+    if args.execute:
+        from event_battle_runtime import run
+        report = run(args)
+    else:
         image_path = args.image
         if image_path is None:
             image, _ = GameWindow.find().capture()
-            image_path = args.output / 'current.png'; image.save(image_path)
-        observation = EventPreparationVision().inspect_file(image_path, args.output / 'recognition')
-        report['observations'].append({'image': str(image_path), 'observation': observation})
-        report['pending'] = ledger.get('pending')
-        if args.execute:
-            try:
-                guard_foreign_pending(ROOT / 'runtime', path)
-                report.update(inspect_cycle(config, ledger, observation))
-            except Exception as error:
-                report['stopped'] = str(error)
+            image_path = args.output / 'current.png'
+            image.save(image_path)
+        observation = EventBattleVision().inspect_file(image_path, args.output / 'recognition')
+        report = {'execute': False, 'completed': False, 'actions': [],
+                  'observations': [{'image': str(image_path), 'observation': observation}]}
         save(args.output / 'run.json', report)
-    if args.execute and not report['completed']:
+    print(json.dumps({key: report.get(key) for key in ('execute', 'completed', 'prepared', 'error')}, ensure_ascii=False))
+    if args.execute and not report['completed'] and not report.get('prepared'):
         raise SystemExit(1)
+
 
 
 if __name__ == '__main__':

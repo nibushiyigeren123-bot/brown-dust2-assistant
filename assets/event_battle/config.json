@@ -1,0 +1,37 @@
+{
+  "auto_entry": {
+    "file": "auto_off.png",
+    "box": [
+      1100,
+      638,
+      1176,
+      674
+    ],
+    "point": [
+      1137,
+      656
+    ]
+  },
+  "unit_prices": [
+    {
+      "file": "unit_1_continuous.png",
+      "box": [
+        894,
+        650,
+        909,
+        669
+      ],
+      "value": 1
+    },
+    {
+      "file": "unit_1_quick.png",
+      "box": [
+        1058,
+        650,
+        1073,
+        669
+      ],
+      "value": 1
+    }
+  ]
+}

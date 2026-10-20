@@ -12,6 +12,8 @@ from game_window import check_requested_stop
 
 
 def visible_cards(frame,vision,quality,badge=None):
+    if 'quality_'+quality not in vision.images:
+        raise RuntimeError(quality+'品质字形尚未实机校准，保留筛选证据，不选择或分解装备。')
     image=cv2.resize(frame,(1280,720),interpolation=cv2.INTER_AREA)
     def match(template,box):
         a,b,c,d=box
@@ -21,6 +23,9 @@ def visible_cards(frame,vision,quality,badge=None):
         for col in range(8):
             x,y=480+84*col,97+84*row
             q=match(vision.images['quality_'+quality],(x+48,y-2,x+82,y+25))
+            plain=vision.images.get('quality_'+quality+'_plain')
+            if plain is not None:
+                q=max(q,match(plain,(x+48,y-2,x+82,y+25)))
             score=match(vision.images['badge_'+str(badge)],(x+46,y+36,x+82,y+71)) if badge is not None else None
             if q>=.93 and (score is None or score>=.94):
                 cards.append({'quality':quality,'badge':badge,'point':[x+40,y+40],'row':row,'column':col,
@@ -44,9 +49,9 @@ class EquipmentRun:
         if obs['state']=='unknown':
             returned=self.returns.inspect(frame)
             if returned and returned['state']=='equipment_detail':
-                obs={'state':'equipment_detail','unlocked':self.vision.anchor(frame,'detail_unlocked',.97),
-                     'not_equipped':self.vision.anchor(frame,'detail_wear_available',.97),
-                     'score20':self.vision.anchor(frame,'detail_score20',.97)}
+                from daily_vision import OcrDocument,windows_ocr
+                doc=OcrDocument(windows_ocr(path,self.output/'ocr'))
+                obs={'state':'equipment_detail',**self.vision.detail_flags(frame,doc)}
             else:
                 from daily_vision import OcrDocument,windows_ocr
                 doc=OcrDocument(windows_ocr(path,self.output/'ocr'))
@@ -59,12 +64,11 @@ class EquipmentRun:
     def go(self,point,source,accept,label,validate=None):
         def capture():
             obs,geo,frame,path=self.capture()
-            if obs['state']==source and not accept(obs) and validate is not None and not validate(obs,frame):
-                raise RuntimeError('装备导航目标重新核对未通过：'+label)
             return obs,geo,path
         def action(event,path,attempt):
             self.report['actions'].append({'type':label,'image':str(path),'attempt':attempt,**event});self.save()
-        return navigate(self.window,capture,point,source,accept,self.timeout,action)
+        return navigate(self.window,capture,point,source,accept,self.timeout,action,
+                        validate=(lambda o,g,p:validate(o,read_image(p))) if validate is not None else None)
 
     def wait(self,predicate):
         deadline=time.monotonic()+self.timeout
@@ -118,48 +122,90 @@ class EquipmentRun:
         self.go([113,33],'equipment_refine',lambda o:o['state']=='equipment_grid','return_from_refinement')
 
     def filter_r(self):
+        return self.filter_quality('R')
+
+    def filter_quality(self, quality):
+        if quality not in ('R','N'):
+            raise RuntimeError('分解仅允许R或已核实无R后的N单选。')
         self.go([1141,67],'equipment_grid',lambda o:o['state']=='equipment_filter','open_equipment_filter')
         obs,_,frame,_=self.capture()
-        if obs.get('selected_qualities')==[]:
-            self.go([431,404],'equipment_filter',lambda o:o.get('selected_qualities')==['R'],'select_R_only',
+        changed=False
+        points={'N':[353,404],'R':[431,404]}
+        selected=obs.get('selected_qualities')
+        if selected not in ([],['R'],['N']):
+            raise RuntimeError('原品质筛选未读清，不进行N/R双选。')
+        if selected and selected!=[quality]:
+            self.go(points[selected[0]],'equipment_filter',lambda o:o.get('selected_qualities')==[],
+                    'clear_previous_single_quality',lambda o,f:o.get('selected_qualities')==selected)
+            changed=True
+            selected=[]
+        if selected==[]:
+            self.go(points[quality],'equipment_filter',lambda o:o.get('selected_qualities')==[quality],'select_'+quality+'_only',
                     lambda o,f:o.get('selected_qualities')==[])
-        elif obs.get('selected_qualities')!=['R']:
-            raise RuntimeError('原品质筛选未读清，未切换为N/R双选。')
+            changed=True
         obs,_,frame,_=self.capture()
         if not obs.get('worn_hidden'):
             self.go([606,523],'equipment_filter',lambda o:o.get('worn_hidden') is True,'hide_equipped_items',
                     lambda o,f:self.vision.anchor(f,'filter_worn_default',.97))
-        self.go([917,540],'equipment_filter',lambda o:o['state']=='equipment_grid','save_R_filter',
-                lambda o,f:o.get('selected_qualities')==['R'] and o.get('worn_hidden') is True)
-        self.go([1141,67],'equipment_grid',lambda o:o['state']=='equipment_filter','verify_saved_R_filter')
+            changed=True
+        if changed:
+            self.go([917,540],'equipment_filter',lambda o:o['state']=='equipment_grid','save_'+quality+'_filter',
+                    lambda o,f:o.get('selected_qualities')==[quality] and o.get('worn_hidden') is True)
+        else:
+            # Save is disabled when the persisted filter already matches.
+            self.go([973,160],'equipment_filter',lambda o:o['state']=='equipment_grid','close_unchanged_'+quality+'_filter')
+        self.go([1141,67],'equipment_grid',lambda o:o['state']=='equipment_filter','verify_saved_'+quality+'_filter')
         obs,_,_,path=self.capture()
-        if obs.get('selected_qualities')!=['R'] or obs.get('worn_hidden') is not True:
-            raise RuntimeError('重新打开后未确认R单选和隐藏已穿戴。')
-        self.ledger.record_filter(['R'],path,saved=True,worn_hidden=True)
+        if obs.get('selected_qualities')!=[quality] or obs.get('worn_hidden') is not True:
+            raise RuntimeError('重新打开后未确认品质单选和隐藏已穿戴。')
+        self.ledger.record_filter([quality],path,saved=True,worn_hidden=True)
         self.go([973,160],'equipment_filter',lambda o:o['state']=='equipment_grid','close_saved_filter')
 
     def decompose(self):
-        self.filter_r();obs,_,frame,_=self.capture()
+        self.filter_r();obs,grid_geo,frame,path=self.capture()
+        quality='R';r_unavailable=False
         inventory=obs.get('inventory',{}).get('value')
         if type(inventory) is not int:raise RuntimeError('R装备总数未读清，不分解。')
-        candidates=visible_cards(frame,self.vision,'R');chosen=None
+        if inventory==0:
+            # The counter changes with the active filter (909 total / 269 R /
+            # 0 N in live evidence). Require the saved R-only filter AND an
+            # explicit empty-grid anchor across two observations.
+            proof=self.ledger.data.get('filter_evidence',{})
+            fresh,fresh_geo,_,fresh_path=self.capture()
+            if (proof.get('qualities')!=['R'] or proof.get('saved') is not True
+                    or proof.get('worn_hidden') is not True
+                    or obs.get('empty_filtered_grid') is not True
+                    or fresh.get('state')!='equipment_grid'
+                    or fresh.get('inventory',{}).get('value')!=0
+                    or fresh.get('empty_filtered_grid') is not True
+                    or fresh_geo!=grid_geo):
+                raise RuntimeError('R空列表未连续确认或单选筛选缺少保存回执，不降级N。')
+            self.ledger.data['r_unavailable_evidence']={'filtered_count':0,
+                'images':[str(path),str(fresh_path)],'filter':proof,'empty_grid_verified':True}
+            self.ledger.save()
+            quality='N';r_unavailable=True
+            self.filter_quality('N');obs,_,frame,path=self.capture()
+            inventory=obs.get('inventory',{}).get('value')
+            if type(inventory) is not int or inventory<=0:
+                raise RuntimeError('R已确认为0，但N数量未读清或也为0，未分解。')
+        candidates=visible_cards(frame,self.vision,quality);chosen=None
         for card in candidates:
-            def same_card(o,f):return any(c['point']==card['point'] for c in visible_cards(f,self.vision,'R'))
-            self.go(card['point'],'equipment_grid',lambda o:o['state'] in ('equipment_detail','equipment_reviewed_R_detail'),'inspect_R_candidate',same_card)
+            def same_card(o,f):return any(c['point']==card['point'] for c in visible_cards(f,self.vision,quality))
+            self.go(card['point'],'equipment_grid',lambda o:o['state'] in ('equipment_detail','equipment_reviewed_R_detail'),'inspect_'+quality+'_candidate',same_card)
             obs,_,frame,path=self.capture()
             if obs.get('unlocked') and obs.get('not_equipped'):
                 chosen={**card,'detail_evidence':str(path)}
             self.go([946,217],obs['state'],lambda o:o['state']=='equipment_grid','close_R_detail')
             if chosen:break
-        if not chosen:raise RuntimeError('当前可见R未发现已核对的未锁且未穿戴项；尚未查完R，不启用N后备。')
+        if not chosen:raise RuntimeError('当前可见'+quality+'未发现已核对的未锁且未穿戴项；不能凭单屏无候选改用其他品质。')
         self.go([1135,670],'equipment_grid',lambda o:o['state']=='equipment_decompose_selection','open_single_decompose')
         obs,_,_,_=self.capture()
         if obs.get('matches_reviewed_one_item_selection'):raise RuntimeError('分解模式已经有选中项，不追加选择。')
-        self.go(chosen['point'],'equipment_decompose_selection',lambda o:o.get('matches_reviewed_one_item_selection') is True,'select_one_R')
+        self.go(chosen['point'],'equipment_decompose_selection',lambda o:o.get('matches_reviewed_one_item_selection') is True,'select_one_'+quality)
         obs,geo,frame,path=self.capture()
         if not self.vision.anchor(frame,'selected_count_one',.97):raise RuntimeError('未核对恰好选中1件，不打开确认。')
-        self.ledger.submit_decompose({'card':{'quality':'R','locked':False,'equipped':False,'detail_evidence':chosen['detail_evidence']},
-            'selected_qualities':['R'],'selected_count':1,'inventory_count':inventory},path)
+        self.ledger.submit_decompose({'card':{'quality':quality,'locked':False,'equipped':False,'detail_evidence':chosen['detail_evidence']},
+            'selected_qualities':[quality],'selected_count':1,'inventory_count':inventory,'r_unavailable':r_unavailable},path)
         self.go([1185,670],'equipment_decompose_selection',lambda o:o['state']=='equipment_decompose_confirmation','open_one_item_confirmation')
         obs,geo,frame,path=self.capture();fresh,fresh_geo,fresh_frame,fresh_path=self.capture()
         if (any(o.get('state') != 'equipment_decompose_confirmation' for o in (obs, fresh))
@@ -178,9 +224,10 @@ class EquipmentRun:
     def initialize(self):
         self.go([1141,67],'equipment_grid',lambda o:o['state']=='equipment_filter','open_filter_for_initialization')
         obs,geo,frame,path=self.capture()
-        if obs.get('selected_qualities')!=['R']:raise RuntimeError('初始化前不是已核对的R单选。')
+        expected=[self.ledger.data.get('selected_quality')]
+        if expected not in (['R'],['N']) or obs.get('selected_qualities')!=expected:raise RuntimeError('初始化前不是已核对的品质单选。')
         fresh,fresh_geo,_,fresh_path=self.capture()
-        if fresh_geo!=geo or fresh.get('selected_qualities')!=['R'] or fresh.get('worn_hidden') is not True:
+        if fresh_geo!=geo or fresh.get('selected_qualities')!=expected or fresh.get('worn_hidden') is not True:
             raise RuntimeError('初始化前筛选状态变化，未提交初始化。')
         geo,path=fresh_geo,fresh_path
         self.ledger.data['pending']={'module':'equipment','stage':'initialize','evidence':str(path),'actions':[{'type':'initialize','status':'intent'}]};self.ledger.save()

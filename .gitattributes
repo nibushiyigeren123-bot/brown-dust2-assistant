@@ -1,2 +1,2 @@
-# Preserve the bytes verified by source_manifest.json.
+# Preserve source_manifest.json bytes.
 * -text

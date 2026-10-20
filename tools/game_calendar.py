@@ -11,4 +11,5 @@ def game_day(now=None):
 
 def check_execution_day(expected):
     if expected != game_day().isoformat():
-        raise RuntimeError('北京时间08:00游戏日已切换；本轮已停步，保留原日期回执和未决记录，请重新核对。')
+        from execution_control import stop_execution
+        stop_execution('北京时间08:00游戏日已切换；本轮已停步，保留原日期回执和未决记录，请重新核对。', 'day_changed')

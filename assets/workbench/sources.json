@@ -2,8 +2,6 @@
   "comfy_frame.png": {
     "sha256": "568c2fe1557eb6d4e8bbcafa6d803f9753ea5f13fb3d12ee21fb729bef6ea219",
     "seed": 20261019,
-    "job_id": "7141731a2e284d62",
-    "role": "decorative_banner_only",
-    "visual_review": "accepted_by_codex_not_user"
+    "role": "decorative_banner_only"
   }
 }

@@ -18,10 +18,8 @@ from task_reward_vision import TaskRewardVision
 
 
 def save(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix('.tmp')
-    temporary.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
-    temporary.replace(path)
+    from atomic_json import write_json
+    write_json(path, data)
 
 
 def ledger_path(data_root, config):
@@ -257,6 +255,73 @@ class TaskRewardRun:
             save(self.args.output / 'run.json', self.report)
 
 
+def reconcile_pending_claim(data_root, output):
+    """Reconcile only idempotent daily/weekly claims from their current task page.
+
+    Caller owns the game lock. Never handles currency consumption or another
+    module's pending intent. Keep the original intent until a terminal UI check.
+    """
+    from game_calendar import game_day
+    root, output = Path(data_root), Path(output)
+    config = load_local_config(root / 'config/daily_tasks.json')
+    path = ledger_path(root, config)
+    if not path.exists():
+        return None
+    ledger = json.loads(path.read_text(encoding='utf-8'))
+    original = ledger.get('pending')
+    if not original:
+        return None
+    if (config.get('cache_date') != game_day().isoformat()
+            or ledger.get('cache_date') != config['cache_date']
+            or original.get('module') != 'task_rewards'
+            or original.get('type') not in ('claim_daily', 'claim_weekly')):
+        raise RuntimeError('领奖未决身份或日期不符，保留原记录。')
+    mode = original['type'].split('_', 1)[1]
+    if original.get('state') != mode + '_tasks':
+        raise RuntimeError('领奖未决页面与领取类型不符，保留原记录。')
+    guard_foreign_pending(root / 'runtime', path, module='task_rewards')
+    output.mkdir(parents=True, exist_ok=True)
+    run = TaskRewardRun(argparse.Namespace(output=output, data_root=root), config, ledger, path)
+    run.enter(mode)
+    first, _, _, _ = run.capture()
+    second, _, _, current_path = run.capture()
+    if (first['state'] != mode + '_tasks' or second['state'] != first['state']
+            or type(second.get('claimable')) is not bool
+            or first.get('claimable') != second.get('claimable')):
+        raise RuntimeError('领奖恢复尚未连续确认任务页与可领取状态，保留未决。')
+    recovery = {'original_intent': original, 'verified_task_image': str(current_path),
+                'available_before': second['claimable'], 'status': 'checking'}
+    ledger.setdefault('claim_recoveries', []).append(recovery)
+    save(path, ledger)
+    if second['claimable']:
+        # Claim-all can grant only currently available rewards. Preserve both
+        # the interrupted intent and this fresh intent if the network drops again.
+        run.click([1120, 673], mode + '_tasks', 'claim_' + mode, claim=True)
+        receipt, _, _, reward_path = run.capture()
+        if receipt['state'] != 'reward_overlay':
+            raise RuntimeError('恢复领取未确认奖励页，保留原记录和本次未决。')
+        run.click([760, 645], 'reward_overlay', 'dismiss_' + mode + '_reward')
+        after, _, _, after_path = run.capture()
+        if after['state'] != mode + '_tasks' or after.get('claimable') is not False:
+            raise RuntimeError('恢复领取后的任务页尚未确认领完，保留未决。')
+        recovery.update(status='available_rewards_claimed', reward_image=str(reward_path),
+                        terminal_image=str(after_path))
+        ledger.setdefault('events', []).append({'mode': mode, 'reward_image': str(reward_path), 'recovered': True})
+    else:
+        # This verifies the terminal task state, not the lost historical receipt.
+        recovery.update(status='no_available_rewards', terminal_image=str(current_path),
+                        historical_award_receipt_verified=False)
+    ledger['pending'] = None
+    ledger['completed'] = False
+    save(path, ledger)
+    from common_navigation import ensure_main_menu
+    home = ensure_main_menu(run.window, output / 'return_home', execute=True, timeout=60)
+    if not home['completed']:
+        raise RuntimeError('领奖已核对，但返回主菜单尚未确认。')
+    save(output / 'recovery.json', recovery)
+    return recovery
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--execute', action='store_true')
@@ -279,7 +344,8 @@ def main():
     config = load_local_config(args.data_root / 'config/daily_tasks.json')
     path = ledger_path(args.data_root, config)
     with exclusive_ledger(args.data_root / 'runtime/game_control'):
-        guard_foreign_pending(args.data_root / 'runtime', path)
+        guard_foreign_pending(args.data_root / 'runtime', path, module='task_rewards')
+        reconcile_pending_claim(args.data_root, args.output / 'pending_recovery')
         ledger = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {
             'schema_version': 1, 'cache_date': config['cache_date'], 'pending': None}
         begin_sweep(ledger)

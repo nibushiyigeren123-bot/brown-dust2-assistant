@@ -52,6 +52,15 @@ class ProgressReader:
 
     def _assess(self, task_id, report=None):
         report = report or {}
+        if task_id == 'navigation' and report.get('navigation_completed') is True:
+            observations = report.get('observations') or []
+            if (report.get('cache_date') == game_day().isoformat() and len(observations) >= 2
+                    and all(item.get('state') == 'main_menu' for item in observations[-2:])):
+                progress = result('ready', '起点主菜单已连续两帧确认；后续命令按核对结果处理。', day=report['cache_date'])
+                if report.get('error') or report.get('stopped'):
+                    progress['label'] = '已回主菜单 · 待核实' if report.get('returned_to_main_menu') else '起点已确认 · 核对中断'
+                    progress['reason'] = report.get('error') or report.get('stopped')
+                return progress
         try:
             daily = load_local_config(self.root / 'config/daily_tasks.json')
             event = load_local_config(self.root / 'config/event_and_rewards.json')
@@ -67,7 +76,17 @@ class ProgressReader:
         if task_id == 'event':
             if event['cache_date'] != day:
                 return result('unknown', '活动和日常缓存日期不一致。', day=day)
-            scope = 'event:' + event['event']['event_id']
+            active_event_id = event['event']['event_id']
+            if active_event_id in ('auto_current', 'configure_current_event'):
+                legacy_id = active_event_id if active_event_id == 'configure_current_event' else None
+                resources = self.read(self.root / 'runtime/event_resources.json') or {}
+                active_event_id = (resources.get('event_id') if resources.get('cache_date') == day else None) or legacy_id
+                report_id = (report.get('progress') or {}).get('event_id')
+                if report_id:
+                    if active_event_id not in (None, 'configure_current_event') and report_id != active_event_id:
+                        return result('unknown', '本轮活动与当前缓存身份冲突，保留待核对。', day=day)
+                    active_event_id = report_id
+            scope = 'event:' + active_event_id if active_event_id else None
         cache = self.read(cache_path(self.root, daily, scope)) if scope else None
         if cache and (cache.get('_unreadable') or cache.get('cache_date') != day):
             return result('unknown', '本地记录暂不可读或日期不符，保留待核对。', day=day)
@@ -108,10 +127,21 @@ class ProgressReader:
             if all(flags.get(key) is True for key in keys):
                 return result('completed', '精炼、单件分解及筛选初始化均已有确认记录。', '本地缓存', day)
             return result('unknown', '尚无三项完整完成证据；不把缺失记录当作游戏未完成。', day=day)
-        if task_id == 'event' and cache and cache.get('completed') is True:
-            if cache.get('event_id') == event['event']['event_id']:
+        if task_id == 'event' and cache:
+            if cache.get('event_id') != active_event_id:
+                return result('unknown', '活动记录身份不符，不能沿用完成状态。', day=day)
+            counts = cache.get('runs_by_mode')
+            if isinstance(counts, dict) and event['event']['enabled']:
+                count = counts.get(event['event']['mode'], 0)
+                target = event['event']['runs']
+                if type(count) is not int or count < 0:
+                    return result('unknown', '活动次数格式异常，保留待核对。', day=day)
+                if target > 0 and count >= target:
+                    return result('completed', f"所选难度已核实 {count}/{target} 次；普通／挑战累计已用 {cache.get('spent_total', '未知')} AP。", '本地缓存', day)
+                if target > count:
+                    return result('incomplete', f"所选难度已核实 {count}/{target} 次；共享AP消耗 {cache.get('spent_total', 0)}。", '本地缓存', day)
+            elif cache.get('completed') is True:
                 return result('completed', f"本活动已有完成批次，累计已用 {cache.get('spent_total', '未知')} AP；不重做。", '本地缓存', day)
-            return result('unknown', '活动记录身份不符，不能沿用完成状态。', day=day)
         if task_id == 'guild' and cache and cache.get('completed') is True and cache.get('issued') is True:
             return result('completed', '本缓存日期已有签到成功及返回回执。', '本地缓存', day)
         if task_id in ('goddess_check_in','goddess_daily_reward'):
@@ -152,12 +182,22 @@ class ProgressReader:
                     from daily_tasks import hunt_target_key
                     for plan in sweeps:
                         check=hunting.get('free_sweep_checks',{}).get(plan['id'],{})
+                        expected_target=hunt_target_key(plan)
+                        if plan.get('target_mode')=='lowest_stock':
+                            from daily_tasks import STONE_STAGES
+                            resolved=hunting.get('resolved_targets',{}).get(plan['id'],{})
+                            inventory=resolved.get('inventory') or {}
+                            if (set(inventory)!=set(STONE_STAGES)
+                                    or any(type(v) is not int or v<0 for v in inventory.values())
+                                    or resolved.get('stage')!=min(STONE_STAGES,key=lambda s:inventory[s])):
+                                return result('unknown','自动最少圣石缺少完整库存与选关依据，保留待核对。',day=day)
+                            expected_target=hunt_target_key({**plan,'stage':resolved['stage']})
                         free,unit=check.get('free_available'),check.get('unit_cost')
                         resource='torch' if plan['category']=='圣石洞穴' else 'rice'
                         current=pools.get(resource,{})
                         if current.get('observed_at','')>check.get('observed_at','') and type(current.get('free_available')) is int:
                             free=current['free_available']
-                        if check.get('target')!=hunt_target_key(plan) or check.get('cache_date')!=day or type(free) is not int or type(unit) is not int or unit<=0:
+                        if check.get('target')!=expected_target or check.get('cache_date')!=day or type(free) is not int or type(unit) is not int or unit<=0:
                             return result('unknown','每日固定已完成；用完免费计划仍需进入页面核对余额。',day=day)
                         if free>=unit:return result('incomplete','每日固定已完成；页面显示仍有可用于所选计划的免费体力。',day=day)
                     remaining=sum(max(0,p['runs']-hunting.get('runs',{}).get(p['id'],0)) for p in plans if p.get('runs_mode')!='all_free')

@@ -102,7 +102,7 @@ def run(args):
         save_json(output/'run.json',report)
     with exclusive_ledger(ROOT/'runtime/game_control'):
         if args.execute:
-            guard_foreign_pending(ROOT/'runtime',ledger)
+            guard_foreign_pending(ROOT/'runtime',ledger, module='guild')
         data=json.loads(ledger.read_text(encoding='utf-8')) if args.execute and ledger.exists() else {
             'schema_version':1,'cache_date':config['cache_date'],
             'pending':None,'issued':False,'completed':False}

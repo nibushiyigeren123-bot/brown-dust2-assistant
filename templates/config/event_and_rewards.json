@@ -22,7 +22,8 @@
     "event_scene": {
       "enabled": false,
       "adapter": null
-    }
+    },
+    "battle_method": "continuous"
   },
   "guild": {
     "enabled": false,

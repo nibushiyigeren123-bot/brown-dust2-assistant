@@ -10,12 +10,12 @@ PROJECT = Path(__file__).resolve().parents[1]
 BUILD_ROOT = PROJECT.parent / (PROJECT.name + '_build')
 
 
-def main():
+def main(target=None):
     deps = BUILD_ROOT / 'deps'
     if deps.is_dir():
         sys.path.insert(0, str(deps))
     import PyInstaller.__main__
-    target = PROJECT / '发布/BD2Assistant'
+    target = Path(target).resolve() if target is not None else PROJECT / '发布/BD2Assistant'
     if target.exists():
         raise RuntimeError('Release directory exists; preserve it before rebuilding')
     icon = PROJECT / 'assets/icon/bd2_assistant.ico'
@@ -57,7 +57,7 @@ def main():
     if (PROJECT / 'NOTICE.md').is_file():
         shutil.copy2(PROJECT / 'NOTICE.md', target / 'NOTICE.md')
     (target / 'build_info.json').write_text(json.dumps({
-        'application_version':'0.2.14', 'python':sys.version,
+        'application_version':'0.2.15', 'python':sys.version,
         'pyinstaller':importlib.metadata.version('pyinstaller'), 'kind':'portable_onedir',
         'entry':'BD2Assistant.exe', 'data_root':'beside_executable', 'default_mode':'read_only',
         'config_source':'generic_templates', 'personal_fixtures_shipped':False,

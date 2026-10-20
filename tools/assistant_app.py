@@ -32,39 +32,71 @@ def worker(task_id, arguments):
     sys.argv = [sys.argv[0], *task[5], *arguments]
     code = 0
     worker_day = None
+    os.environ.setdefault('BD2_CONTROL_FILE', str(output / 'control.json'))
+    os.environ.setdefault('BD2_ITEM_PROBLEM_FILE', str(output / 'item_problem.json'))
     try:
         from local_cache import load_local_config
-        worker_day = load_local_config(ROOT / 'config/daily_tasks.json')['cache_date']
+        from game_calendar import game_day
+        navigation_first = task_id in ('navigation', 'workflow')
+        worker_day = game_day().isoformat() if navigation_first else load_local_config(ROOT / 'config/daily_tasks.json')['cache_date']
         if '--execute' in arguments:
+            # Every single-module entry, including a resumed queue item, gets a
+            # fresh home check before cache/pending/config or module decisions.
+            os.environ['BD2_EXECUTION_GAME_DAY'] = game_day().isoformat()
+            if task_id == 'event':
+                from event_battle_runtime import reconcile_visible_pending
+                recovered = reconcile_visible_pending(ROOT, output / 'pending_recovery')
+                if recovered is not None:
+                    # Continue the already submitted command's receipt before
+                    # any new task. The recovery can only settle and return home.
+                    (output / 'run.json').write_text(json.dumps(recovered, ensure_ascii=False, indent=2), encoding='utf-8')
+                    code = 0 if recovered.get('completed') else 1
+                    return code
+            if not navigation_first:
+                from common_navigation import ensure_main_menu
+                from game_window import GameWindow
+                from pending_daily import exclusive_ledger
+                from runtime_policy import network_wait_seconds
+                with exclusive_ledger(ROOT / 'runtime/game_control'):
+                    home = ensure_main_menu(GameWindow.find(), output / 'launch_home', execute=True,
+                                            timeout=network_wait_seconds(ROOT))
+                if not home['completed']:
+                    (output / 'run.json').write_text(json.dumps({
+                        'execute': True, 'completed': False, 'actions': [], 'blocked': True,
+                        'stopped': '当前模块启动前尚未连续确认主菜单。',
+                        'navigation': home}, ensure_ascii=False, indent=2), encoding='utf-8')
+                    raise RuntimeError('当前模块启动前尚未连续确认主菜单。')
             from date_rollover import require_current_cache
-            os.environ['BD2_EXECUTION_GAME_DAY'] = require_current_cache(ROOT)
+            os.environ['BD2_EXECUTION_GAME_DAY'] = worker_day if navigation_first else require_current_cache(ROOT)
         module = importlib.import_module(task[4])
         if task[0] in ('navigation','management','free_draw'):
             from daily_tasks import guard_foreign_pending
             from pending_daily import exclusive_ledger
             with exclusive_ledger(ROOT/'runtime/game_control'):
-                if '--execute' in arguments:
-                    guard_foreign_pending(ROOT/'runtime',ROOT/'runtime/launcher_nonledger.json')
+                if '--execute' in arguments and task_id != 'navigation':
+                    guard_foreign_pending(ROOT/'runtime',ROOT/'runtime/launcher_nonledger.json', module=task_id)
                 module.main()
                 if task_id == 'navigation' and '--execute' in arguments and '--image' not in arguments:
-                    from hunting_probe import initial_task_audit
-                    from daily_tasks import load_config
-                    report_path=output/'run.json'
-                    report=json.loads(report_path.read_text(encoding='utf-8'))
-                    try:
-                        report['startup_task_audit']=initial_task_audit(load_config(ROOT/'config/daily_tasks.json'), output/'initial_task_check', ROOT)
-                    except Exception as error:
-                        report.update(completed=False,error=str(error))
-                        raise
-                    finally:
-                        report_path.write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+                    from navigation_startup import finish_at_main_menu
+                    finish_at_main_menu(ROOT, output)
         else:
             module.main()
     except SystemExit as error:
         code = error.code if isinstance(error.code, int) else 1
-    except Exception:
+    except Exception as error:
         traceback.print_exc()
         code = 1
+        from atomic_json import write_json
+        path = output / 'worker_failure.json'
+        report = {}
+        report.update(execute='--execute' in arguments, completed=False,
+                      cache_date=worker_day, error=str(error))
+        if getattr(error, 'kind', None):
+            report['control_kind'] = error.kind
+        from daily_tasks import PendingConflictError
+        if isinstance(error, PendingConflictError):
+            report['blocked'] = True
+        write_json(path, report)
     finally:
         (output/'worker_result.json').write_text(json.dumps({'task':task_id, 'exit_code':code, 'cache_date':worker_day,
             'execute':'--execute' in arguments},ensure_ascii=False,indent=2),encoding='utf-8')
@@ -96,17 +128,20 @@ def self_check(output):
         from equipment_vision import EquipmentVision
         from task_reward_vision import TaskRewardVision
         from pass_reward_vision import PassRewardVision
-        from event_prepare_vision import EventPreparationVision
+        from event_battle_vision import EventBattleVision
+        from event_battle_flow import EventBattleController
         from module_catalog import default_plan, validate_plan
         from equipment_rules import decompose_candidate_allowed
-        for cls in (EquipmentVision, TaskRewardVision, PassRewardVision, EventPreparationVision):
+        for cls in (EquipmentVision, TaskRewardVision, PassRewardVision, EventBattleVision):
             cls()
+        assert callable(EventBattleController.step) and callable(EventBattleController.commit)
         assert len(validate_plan(default_plan())) == 12
         card = {'quality':'R', 'locked':False, 'equipped':False}
         assert decompose_candidate_allowed(card, ['R']) and not decompose_candidate_allowed(card, ['N', 'R'])
         report = {'frozen': bool(getattr(sys, 'frozen', False)), 'template_loaders': 9,
                   'workbench_registry_loaded': True, 'config_validated': True, 'navigation_calibration_probe': 'synthetic_black_frame',
                   'equipment_rules_single_quality': True, 'personal_fixtures_shipped': False,
+                  'event_battle_templates_and_controller': True,
                   'saved_image_acceptance_run': False, 'game_input': False}
         (output/'self_check.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
         return

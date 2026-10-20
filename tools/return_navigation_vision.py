@@ -35,6 +35,8 @@ class ReturnNavigationVision:
                 'client_point':[point[0]*w/1280,point[1]*h/720],
                 'normalized_point':point,'scores':scores}}
         panels=[
+            ('event_quick_dialog','cancel_panel',[536,541],('event_quick_title','event_quick_cancel')),
+            ('event_auto_dialog','cancel_panel',[536,549],('event_auto_title','event_auto_cancel')),
             ('management_panel','cancel_panel',[554,555],('management_title','management_cancel')),
             ('talk_panel','close_panel',[998,182],('talk_title','talk_close')),
             ('equipment_filter','close_panel',[973,160],('equipment_filter_title','equipment_filter_close')),

@@ -185,7 +185,7 @@ def main():
     import hashlib
     path = cache_path(data_root, config, 'pass_rewards')
     with exclusive_ledger(data_root / 'runtime/game_control'):
-        guard_foreign_pending(data_root / 'runtime', path)
+        guard_foreign_pending(data_root / 'runtime', path, module='rewards')
         ledger = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {'cache_date': config['cache_date'], 'pending': None, 'events': []}
         if ledger.get('pending'):
             raise RuntimeError('通行证存在未决领取，须核对原回执，不重放。')

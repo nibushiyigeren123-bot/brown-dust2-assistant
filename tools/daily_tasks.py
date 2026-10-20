@@ -98,15 +98,63 @@ def validate_config(config):
     return config
 
 
-def guard_foreign_pending(directory, selected_path):
-    """One visible game client cannot be reset by selecting a different ledger."""
+class PendingConflictError(RuntimeError):
+    pass
+
+
+# Only event AP isolation is established here. Other pending families retain
+# the existing conservative guard; sharing a ledger is never an exemption.
+EVENT_INDEPENDENT = frozenset(('navigation', 'management', 'free_draw', 'guild',
+    'hunting', 'goddess', 'mirror', 'equipment', 'rewards', 'task_rewards'))
+
+
+def guard_foreign_pending(directory, selected_path, *, module=None):
+    """Keep foreign receipts intact; allow proven independent event-AP work."""
+    from execution_control import stop_execution
+    from game_calendar import game_day
     selected_path = Path(selected_path).resolve()
+    retained = []
     for path in Path(directory).glob('*.json'):
         if path.resolve() == selected_path:
             continue
-        data = json.loads(path.read_text(encoding='utf-8'))
-        if data.get('schema_version') == 1 and data.get('pending'):
-            raise RuntimeError(f'An unresolved action exists in another local progress cache: {path}')
+        try:
+            data = json.loads(path.read_text(encoding='utf-8'))
+            if not isinstance(data, dict):
+                raise ValueError('账本不是对象')
+        except (OSError, ValueError) as error:
+            stop_execution(f'本地记录无法核对，保留现场：{path}；{error}', 'ledger_invalid')
+        pending = data.get('pending')
+        if not pending:
+            continue
+        if not isinstance(pending, dict) or not pending.get('module'):
+            stop_execution(f'未决身份不完整，保留原记录：{path}', 'ledger_invalid')
+        owner = pending['module']
+        independent = (owner == 'event' and module in EVENT_INDEPENDENT
+            and data.get('schema_version') == 1
+            and data.get('cache_date') == pending.get('cache_date') == game_day().isoformat()
+            and data.get('event_id') == pending.get('event_id') and bool(data.get('event_id'))
+            and pending.get('mode') in ('normal', 'challenge')
+            and pending.get('method') in ('quick', 'continuous')
+            and pending.get('status') == 'submitted_pending_result'
+            and bool(pending.get('op_id')) and bool(pending.get('evidence'))
+            and isinstance(pending.get('input_receipt'), dict) and bool(pending['input_receipt'])
+            and type(pending.get('quantity')) is int and pending['quantity'] > 0
+            and type(pending.get('cost')) is int and pending['cost'] > 0)
+        if independent:
+            retained.append({'module': owner, 'ledger': str(path), 'op_id': pending['op_id']})
+            continue
+        label = {'task_rewards':'每日／每周领奖', 'pass_rewards':'通行证领奖',
+                 'guild':'公会签到', 'event':'活动战斗', 'equipment':'装备',
+                 'hunting':'狩猎', 'goddess':'女神像', 'mirror':'镜中之战'}.get(owner, owner)
+        reason = f'{label}存在待核实操作，本项受阻；保留原回执，不重发；缓存：{path}'
+        # Nested executors may catch RuntimeError; retain the classification too.
+        import os
+        problem = os.environ.get('BD2_ITEM_PROBLEM_FILE')
+        if problem:
+            from atomic_json import write_json
+            write_json(Path(problem), {'blocked': True, 'reason': reason})
+        raise PendingConflictError(reason)
+    return retained
 
 
 class DailyLedger:

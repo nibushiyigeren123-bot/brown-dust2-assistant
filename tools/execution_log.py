@@ -12,7 +12,8 @@ from task_feedback import STATES, REASONS
 LABELS = {'queued': '待运行', 'running': '正在核对', 'verified': '已核实',
           'inspected': '只读检查结束', 'needs_review': '需要核对', 'paused': '已暂停',
           'stopped': '已停止', 'complete': '队列完成', 'completed': '已完成',
-          'needs_configuration': '需要设置', 'skipped': '已跳过'}
+          'needs_configuration': '需要设置', 'skipped': '已跳过',
+          'blocked': '受阻，未执行', 'complete_with_errors': '执行结束，有错误'}
 PAGES = dict(STATES, daily_tasks='每日任务', weekly_tasks='每周任务',
              pass_tasks='通行证任务', pass_levels='通行证等级奖励', reward_overlay='获得奖励')
 
@@ -184,7 +185,7 @@ class ReceiptLog:
                 state = item.get('status')
                 key = ('task', module, item.get('output'))
                 if state != 'queued' and self.changed(key, state):
-                    self.emit(module, 'warning' if state == 'needs_review' else 'success' if state in ('verified', 'inspected') else 'info', LABELS.get(state, str(state)))
+                    self.emit(module, 'warning' if state in ('needs_review', 'blocked') else 'success' if state in ('verified', 'inspected') else 'info', LABELS.get(state, str(state)))
                 if item.get('output'):
                     self.paths[Path(item['output'])] = module
             self.scalar(self.output, '队列', 'status', workflow.get('status'), 'info', '队列状态：')
@@ -195,9 +196,28 @@ class ReceiptLog:
         for directory, module in self.paths.items():
             self.report(directory / 'run.json', module)
             self.report(directory / 'inspection.json', module)
+            self.report(directory / 'worker_failure.json', module)
             for name in ('worker.log', 'process.log'):
                 self.tail(directory / name, module, final)
             result = self.read_json(directory / 'worker_result.json')
             if result and result.get('exit_code'):
                 self.scalar(directory, module, 'exit', result['exit_code'], 'error', '执行器退出码：')
+        if workflow and workflow.get('summary') and workflow.get('status') != 'running':
+            summary = workflow['summary']
+            token = json.dumps(summary, sort_keys=True, ensure_ascii=False)
+            if self.changed(('workflow', 'final_summary'), token):
+                title = '执行结束，有错误' if summary['failed'] or summary['blocked'] else '执行结果汇总'
+                if not summary['traversed']:
+                    title = '队列已中断 · 当前结果汇总'
+                self.emit('队列', 'warning' if summary['failed'] or summary['blocked'] or not summary['traversed'] else 'success',
+                    f"{title}：成功 {summary['success']}，失败 {summary['failed']}，受阻 {summary['blocked']}，跳过 {summary['skipped']}，未运行 {summary['remaining']}。")
+                if summary.get('control_reason'):
+                    self.emit('队列', 'warning', '整轮中断原因：' + readable(summary['control_reason']))
+                for error in summary['errors']:
+                    self.emit(error['module'], 'error', readable(error['reason']))
+                    self.emit(error['module'], 'warning', ('尚有未决：' + '；'.join(
+                        f"{entry['module']} / {entry.get('op_id') or '无操作ID'} / {entry['ledger']}" for entry in error['pending']))
+                        if error['pending'] else '本项回执未列出未决；请结合运行记录核对。')
+                    self.emit(error['module'], 'info', '运行记录：' + str(error.get('output') or self.output))
+                    self.emit(error['module'], 'warning', error['action'])
         return self.events

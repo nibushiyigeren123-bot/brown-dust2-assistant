@@ -58,6 +58,9 @@ class SettingsWindow:
             self.fields['guild_enabled'].set(False)
         ttk.Label(self.guild_tab, text='启用后，还需在主界面勾选加入队列。每个游戏日只进入一次，核对签到回执后返回主页。\n保存不会启动游戏操作；公会奖励邮箱仍由你手动领取。',
                   wraplength=650, justify='left').grid(row=1, column=0, columnspan=2, sticky='w', pady=16)
+        self.activity_tab = ttk.Frame(notebook, padding=15)
+        notebook.add(self.activity_tab, text='活动战斗')
+        self.build_activity(self.activity_tab)
         bottom = ttk.Frame(frame)
         bottom.pack(side='bottom', fill='x', before=notebook, pady=(14, 0))
         self.saved = tk.StringVar(value='未启动游戏操作')
@@ -69,7 +72,7 @@ class SettingsWindow:
         var = tk.StringVar(value='' if value is None else str(value))
         self.fields[key] = var
         widget = ttk.Combobox(parent, textvariable=var, values=choices) if choices else ttk.Entry(parent, textvariable=var)
-        if key in ('hunt_difficulty','hunt_category','daily_status','cache_date'):
+        if key in ('hunt_difficulty','hunt_category','daily_status','cache_date','event_mode','event_method'):
             widget.configure(state='readonly')
         widget.grid(row=row, column=1, sticky='ew', pady=6)
         parent.columnconfigure(1, weight=1)
@@ -144,6 +147,47 @@ class SettingsWindow:
                                '每次开1场，结算后累计次数和额度；完成后返回主菜单。\n'
                                '录像的 40 倍不作为默认值；首次预填 1 场、1 额度、1 倍。'),
                   wraplength=650, justify='left').grid(row=6, column=0, columnspan=2, sticky='nw', pady=20)
+
+    def build_activity(self, parent):
+        c = (self.event_config or {}).get('event', {})
+        self.check(parent, 'event_enabled', '启用活动战斗', c.get('enabled', False), 0)
+        self.entry(parent, 'event_mode', '难度', '普通' if c.get('mode', 'normal') == 'normal' else '挑战', 1, ['普通', '挑战'])
+        method = c.get('battle_method', 'quick' if c.get('quick_battle', {}).get('enabled') else 'continuous')
+        self.entry(parent, 'event_method', '战斗方式', '快速战斗' if method == 'quick' else '连续战斗', 2, ['连续战斗', '快速战斗'])
+        self.entry(parent, 'event_runs', '本日该难度目标总次数', c.get('runs', 0), 3)
+        self.entry(parent, 'event_budget', '普通／挑战共享AP总额度', c.get('ap_budget', 0), 4)
+        self.check(parent, 'event_free', '仅使用免费活动AP（关闭可使用已有额外体力）', not c.get('use_owned_extra_ap', False), 5)
+        ttk.Label(parent, text='实际AP余额由画面自动读取，不手动填写；总额度是你允许本日活动消耗的上限。\n普通与挑战共用AP和累计额度；更换方式不会重复已核实的战斗次数。\n快速战斗需要游戏已解锁；未找到对应按钮时会停步提示。\n保持原阵容，不购买体力；保存设置不会启动战斗。', wraplength=650, justify='left').grid(row=6, column=0, columnspan=2, sticky='w', pady=16)
+        self.activity_balance = tk.StringVar()
+        ttk.Label(parent, textvariable=self.activity_balance, wraplength=650).grid(row=7, column=0, columnspan=2, sticky='w', pady=8)
+        def refresh():
+            from event_resources import balance_text
+            self.activity_balance.set(balance_text(self.path.parent.parent))
+            self.activity_refresh_job = self.root.after(1000, refresh)
+        refresh()
+        def cancel(event):
+            if event.widget is self.root:
+                try: self.root.after_cancel(self.activity_refresh_job)
+                except (tk.TclError, AttributeError): pass
+        self.root.bind('<Destroy>', cancel, add='+')
+
+    def collect_event(self, config):
+        from event_reward_rules import validate_config
+        c = copy.deepcopy(config)
+        c['guild']['enabled'] = bool(self.fields['guild_enabled'].get())
+        e = c['event']
+        values = dict(enabled=bool(self.fields['event_enabled'].get()),
+                 mode={'普通':'normal', '挑战':'challenge'}[self.fields['event_mode'].get()],
+                 battle_method={'连续战斗':'continuous', '快速战斗':'quick'}[self.fields['event_method'].get()],
+                 runs=int(self.fields['event_runs'].get()), ap_budget=int(self.fields['event_budget'].get()),
+                 use_owned_extra_ap=not bool(self.fields['event_free'].get()))
+        baseline = {key: e.get(key, 'quick' if e.get('quick_battle', {}).get('enabled') else 'continuous')
+                    if key == 'battle_method' else e.get(key) for key in values}
+        if values != baseline:
+            e.update(values)
+        if e['enabled'] and e.get('event_id') == 'configure_current_event':
+            e['event_id'] = 'auto_current'
+        return validate_config(c)
 
     def extra_plans(self):
         existing = getattr(self, 'plan_editor', {}).get('window')
@@ -367,8 +411,8 @@ class SettingsWindow:
                     raise RuntimeError('公会或活动设置已被其他窗口修改，请重新打开设置。')
                 event_config = load_local_config(event_path) if event_before else None
                 if event_config:
-                    event_config['guild']['enabled'] = bool(self.fields['guild_enabled'].get())
-                elif self.fields['guild_enabled'].get():
+                    event_config = self.collect_event(event_config)
+                elif self.fields['guild_enabled'].get() or self.fields['event_enabled'].get():
                     raise RuntimeError('缺少公会配置，请完整解压新版程序。')
                 old_date = self.config['cache_date']
                 if old_date != config['cache_date']:

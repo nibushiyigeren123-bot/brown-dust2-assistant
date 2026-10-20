@@ -11,7 +11,10 @@ from resource_pools import available_for_policy
 
 
 def load_config(path):
-    config = load_local_config(path)
+    return validate_config(load_local_config(path))
+
+
+def validate_config(config):
     if config['schema_version'] != 1:
         raise ValueError('Unsupported schema')
     event=config['event']
@@ -25,7 +28,14 @@ def load_config(path):
             raise ValueError('Expected boolean setting')
     if event['buy_ap'] or not event['keep_existing_team']:
         raise ValueError('AP purchases and team edits are outside this adapter')
-    if any(event[key]['enabled'] for key in ('story','quick_battle','event_scene')):
+    method = event.get('battle_method', 'quick' if event.get('quick_battle', {}).get('enabled') else 'continuous')
+    if method not in ('continuous', 'quick'):
+        raise ValueError('活动方式请选择连续战斗或快速战斗。')
+    if event['enabled'] and (event['runs'] <= 0 or event['ap_budget'] <= 0):
+        raise ValueError('启用活动战斗前，请设置正数的次数和共享AP总额度。')
+    if event['runs'] > 100:
+        raise ValueError('单个活动计划最多100次。')
+    if any(event[key]['enabled'] for key in ('story','event_scene')):
         raise ValueError('This extension has no verified execution adapter yet')
     if config['rewards']['buy_pass_or_levels'] or config['rewards']['mailbox']['enabled']:
         raise ValueError('Pass purchases and mailbox collection are not enabled')

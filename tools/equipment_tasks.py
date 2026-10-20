@@ -16,13 +16,8 @@ from pending_daily import exclusive_ledger
 
 
 def save_json(path, data):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + '.tmp')
-    with temporary.open('w', encoding='utf-8', newline='\n') as handle:
-        json.dump(data, handle, ensure_ascii=False, indent=2)
-        handle.flush()
-        os.fsync(handle.fileno())
-    os.replace(temporary, path)
+    from atomic_json import write_json
+    write_json(path, data, fsync=True, newline='\n')
 
 
 class EquipmentLedger:
@@ -117,7 +112,7 @@ def probe_refine_once(output, data_root):
     window = GameWindow.find()
     with exclusive_ledger(data_root / 'runtime/game_control'):
         ledger = EquipmentLedger(data_root)
-        guard_foreign_pending(data_root / 'runtime', ledger.path)
+        guard_foreign_pending(data_root / 'runtime', ledger.path, module='equipment')
         report['ledger'] = str(ledger.path)
         try:
             for _ in range(2):
@@ -191,7 +186,7 @@ def main():
                                               'cache_date': report['cache_date']})
         if args.execute:
             try:
-                guard_foreign_pending(data_root / 'runtime', ledger.path)
+                guard_foreign_pending(data_root / 'runtime', ledger.path, module='equipment')
                 if ledger.data['pending']:
                     report['stopped'] = {'status': 'needs_review',
                                          'reason': 'Equipment has a pending action; reconcile it without retrying'}

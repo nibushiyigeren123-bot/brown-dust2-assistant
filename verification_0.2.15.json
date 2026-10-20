@@ -1,0 +1,23 @@
+{
+  "version": "0.2.15",
+  "status": "preview",
+  "date": "2026-10-20",
+  "hotfix": "continue_on_error_20261020",
+  "exe_sha256": "996cbd4575b2943eafba27c6204882faf5baf739eec8c6128743c8d76de344b0",
+  "offline_checks": {
+    "continue_on_error": 15,
+    "existing_workflow_policy": 7
+  },
+  "frozen_package_self_check": {
+    "template_loaders": 9,
+    "config_and_rules": true
+  },
+  "full_live_daily_run_with_new_error_policy": "pending_future_game_day",
+  "live_game_actions_for_this_publication": false,
+  "private_config_runtime_and_full_screenshots_included": false,
+  "limits": [
+    "Daily live acceptance cannot be repeated by replaying consumption.",
+    "N-card live glyph and wider resolution coverage remain incomplete.",
+    "First-environment calibration/frame retention deduplication is not integrated."
+  ]
+}
