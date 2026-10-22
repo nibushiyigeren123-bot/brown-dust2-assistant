@@ -310,7 +310,7 @@ class WorkbenchApp:
             if not module.worker:
                 self.scope.set('停用入口 · 按后续样本扩展')
             elif module.id == 'navigation':
-                self.scope.set('只读：仅识别当前画面，不会关闭弹窗。\n实机：返回主页后顺查并领取每日／每周可领奖励；不启动其他日常段。')
+                self.scope.set('只读：仅识别当前画面，不会关闭弹窗。\n实机：连续确认主页后即完成导航；领奖与任务核对由所选模块负责。')
             elif module.id == 'guild':
                 enabled = self.event.get('guild', {}).get('enabled', False)
                 self.scope.set(('配置已启用' if enabled else '配置未启用 · 日常设置 → 公会签到') + '\n加入队列与启用分别设置；本游戏日只进入一次，邮箱手动。')

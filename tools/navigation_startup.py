@@ -1,4 +1,4 @@
-"""After verified navigation, inspect cache/pending work before any task action."""
+"""Finish at the verified menu; never append another module to navigation."""
 import json
 from pathlib import Path
 
@@ -21,40 +21,9 @@ def finish_at_main_menu(root, output):
         from atomic_json import write_json
         write_json(path, report)
     save()
-    print('阶段1完成：已连续两帧确认主菜单。现在核对日期、缓存和待核实命令。', flush=True)
-    audit_started = False
-    try:
-        from date_rollover import require_current_cache
-        from daily_tasks import guard_foreign_pending, load_config
-        require_current_cache(root)
-        from task_rewards import ledger_path, reconcile_pending_claim
-        from local_cache import load_local_config
-        rewards_path = ledger_path(root, load_local_config(root / 'config/daily_tasks.json'))
-        report['retained_pending'] = guard_foreign_pending(root / 'runtime', rewards_path, module='navigation')
-        rewards = json.loads(rewards_path.read_text(encoding='utf-8')) if rewards_path.exists() else {}
-        pending = rewards.get('pending')
-        if pending and not (pending.get('module') == 'task_rewards'
-                and pending.get('type') in ('claim_daily', 'claim_weekly')
-                and pending.get('state') == pending['type'].split('_', 1)[1] + '_tasks'):
-            guard_foreign_pending(root / 'runtime', root / 'runtime/launcher_nonledger.json', module='navigation')
-        audit_started = True
-        report.update(returned_to_main_menu=False, startup_stage='reconciling_rewards')
-        save()
-        recovery = reconcile_pending_claim(root, output / 'pending_recovery')
-        if recovery:
-            report['reward_pending_recovery'] = recovery
-        guard_foreign_pending(root / 'runtime', root / 'runtime/launcher_nonledger.json', module='navigation')
-        from hunting_probe import initial_task_audit
-        audit_started = True
-        report.update(returned_to_main_menu=False, startup_stage='checking_tasks')
-        save()
-        report['startup_task_audit'] = initial_task_audit(
-            load_config(root / 'config/daily_tasks.json'), output / 'initial_task_check', root)
-        report.update(returned_to_main_menu=True, startup_stage='ready')
-    except Exception as error:
-        prefix = '已回到主菜单；' if not audit_started else '已先确认主菜单；后续任务核对中断：'
-        report.update(completed=False, error=prefix + str(error),
-                      returned_to_main_menu=not audit_started, startup_stage='needs_review')
-        raise RuntimeError(report['error']) from error
-    finally:
-        save()
+    # Navigation ends at its verified visual goal. Module entry points own
+    # date/pending checks, progress scans and explicit reward recovery.
+    report.update(startup_stage='ready', startup_actions=[],
+                  startup_scope='main_menu_only', returned_to_main_menu=True)
+    save()
+    print('已连续两帧确认主菜单；导航完成，推进下一队列目标。', flush=True)

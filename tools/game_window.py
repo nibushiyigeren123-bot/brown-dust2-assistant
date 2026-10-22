@@ -192,9 +192,11 @@ class GameWindow:
         self.focus_client(restored)
         return {'hwnd':self.hwnd,'pid':self.pid,'method':'native_minimize_restore','geometry':restored}
 
-    def click_client(self, point, expected_geometry, *, press_ms=100):
+    def click_client(self, point, expected_geometry, *, press_ms=100, native_motion=False):
         if type(press_ms) is not int or not 100<=press_ms<=350:
             raise ValueError('Supported mouse press is 100 to 350 milliseconds')
+        if type(native_motion) is not bool:
+            raise ValueError("native_motion must be boolean")
         check_requested_stop()
         if self.geometry() != expected_geometry:
             raise RuntimeError("Window changed since recognition; capture again")
@@ -207,8 +209,15 @@ class GameWindow:
         if hit != self.hwnd and win32gui.GetAncestor(hit, win32con.GA_ROOT) != self.hwnd:
             raise RuntimeError("Game click target is covered")
         old_position = win32api.GetCursorPos()
+        accepted = []
+        native_pressed = False
+        if native_motion:
+            from native_mouse_input import send_mouse
         try:
-            win32api.SetCursorPos(position)
+            if native_motion:
+                accepted.append(send_mouse(position))
+            else:
+                win32api.SetCursorPos(position)
             time.sleep(0.10)
             actual_position = win32api.GetCursorPos()
             if actual_position != position:
@@ -216,15 +225,38 @@ class GameWindow:
             if win32gui.GetForegroundWindow() != self.hwnd or self.geometry() != expected_geometry:
                 raise RuntimeError("Game changed before mouse press")
             check_requested_stop()
-            win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
+            if native_motion:
+                hit = win32gui.WindowFromPoint(position)
+                if hit != self.hwnd and win32gui.GetAncestor(hit, win32con.GA_ROOT) != self.hwnd:
+                    raise RuntimeError("Game click target became covered before mouse press")
+                accepted.append(send_mouse(position, 2))
+                native_pressed = True
+            else:
+                win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
             try:
                 # Keep a short press visible to a game's frame-based input loop.
                 ctypes.windll.kernel32.Sleep(press_ms)
             finally:
-                win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+                if native_motion:
+                    try:
+                        accepted.append(send_mouse(None, 4))
+                    except Exception as release_error:
+                        # Release-only cleanup cannot submit another click. Never
+                        # move the pointer if the accepted down may still be held.
+                        try:
+                            win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+                        except Exception:
+                            raise RuntimeError('Native mouse release and release-only cleanup failed; stopped') from release_error
+                        raise RuntimeError('Native mouse release failed; release-only cleanup sent; stopped') from release_error
+                else:
+                    win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
             # Let the game consume mouse-up at the target before restoring the cursor.
             time.sleep(0.10)
         finally:
-            if win32api.GetCursorPos() == position:
+            if (not native_motion or not native_pressed) and win32api.GetCursorPos() == position:
                 win32api.SetCursorPos(old_position)
-        return {"client_point": [x, y], "screen_point": list(position),'input_kind':'left_click','press_ms':press_ms}
+        event = {"client_point": [x, y], "screen_point": list(position), 'input_kind': 'left_click', 'press_ms': press_ms}
+        if native_motion:
+            event.update(input_backend='SendInput_absolute_virtual_desktop',
+                         input_packets_accepted=accepted, cursor_restored=False)
+        return event

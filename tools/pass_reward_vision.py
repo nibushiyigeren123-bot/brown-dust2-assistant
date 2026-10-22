@@ -2,6 +2,7 @@
 import json
 import re
 import cv2
+from reward_overlay_vision import RewardOverlayVision
 from common_navigation import PageDiagnosis
 from daily_vision import OcrDocument, windows_ocr
 from m00_recognize import read_image
@@ -10,6 +11,7 @@ from project_paths import ROOT
 
 class PassRewardVision:
     def __init__(self):
+        self.reward_overlay = RewardOverlayVision()
         self.folder = ROOT / 'assets/pass_rewards'
         self.specs = json.loads((self.folder / 'sources.json').read_text(encoding='utf-8'))
         self.templates = {key: read_image(self.folder / spec['file']) for key, spec in self.specs.items()}
@@ -19,6 +21,9 @@ class PassRewardVision:
     def inspect(self, image, payload):
         if abs(image.shape[1] / image.shape[0] - 16 / 9) > .025:
             return {'state': 'unknown', 'reason': 'unsupported_aspect_ratio'}
+        overlay = self.reward_overlay.inspect(image)
+        if overlay:
+            return overlay
         doc = OcrDocument(payload)
         startup=self.opening.recognize(image)
         if startup['state'] in ('signin_event','signin_pass','loading_or_unknown_overlay'):
@@ -61,4 +66,8 @@ class PassRewardVision:
                 'button_bright_fraction': bright, 'button_dark_fraction': dark, 'scores': scores}
 
     def inspect_file(self, path, output):
-        return self.inspect(read_image(path), windows_ocr(path, output))
+        image = read_image(path)
+        overlay = self.reward_overlay.inspect(image)
+        if overlay:
+            return overlay
+        return self.inspect(image, windows_ocr(path, output))

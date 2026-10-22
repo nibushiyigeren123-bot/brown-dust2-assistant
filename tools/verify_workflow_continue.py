@@ -46,7 +46,7 @@ class QueueTests(unittest.TestCase):
                 child = {'execute': '--execute' in command, 'completed': True,
                          'observations': [{'state': 'main_menu'}]}
                 if key == 'navigation':
-                    child['startup_task_audit'] = dict(owner.identity, completed=True, audit_id='test-audit')
+                    child.update(owner.identity, navigation_completed=True, completion='main_menu_observed_twice', startup_scope='main_menu_only', observations=[{'state':'main_menu'}]*2)
                 if key in owner.failures:
                     child.update(completed=False, error=owner.failures[key])
                 if key not in owner.missing:
@@ -80,6 +80,14 @@ class QueueTests(unittest.TestCase):
         self.assertTrue(state['traversed'])
         self.assertEqual(state['summary']['failed'], 1)
         self.assertEqual(state['tasks'][1]['status'], 'needs_review')
+
+    def test_home_navigation_advances_without_task_audit_or_reward_claims(self):
+        state = self.run_queue('navigation_only_contract')
+        self.assertEqual(state['tasks'][0]['status'], 'verified')
+        self.assertEqual(self.calls, self.keys)
+        self.assertNotIn('daily_audit_id', state)
+        report = json.loads((self.root/'evidence/workbench_runs/navigation_only_contract/00_navigation/run.json').read_text(encoding='utf-8'))
+        self.assertNotIn('startup_task_audit', report)
 
     def test_repeated_readonly_reuses_inspection_directories(self):
         output = self.root / 'evidence/inspections' / self.identity['cache_date'] / 'workflow'

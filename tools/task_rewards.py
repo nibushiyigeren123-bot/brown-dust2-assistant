@@ -122,9 +122,10 @@ class TaskRewardRun:
         save(self.args.output / 'run.json', self.report)
         # Use the shared game input path, including focus, occlusion, geometry
         # and user mouse movement checks. Page response is observed below.
+        click_options = {'native_motion': True} if state == 'reward_overlay' and not claim else {}
         event = self.window.click_client(
             [point[0] * geo['width'] / 1280, point[1] * geo['height'] / 720],
-            geo, press_ms=250)
+            geo, press_ms=250, **click_options)
         self.report['actions'].append({**intent, **event})
         self.report.pop('pending_input', None)
         self.expect_after(label)

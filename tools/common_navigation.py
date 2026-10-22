@@ -14,6 +14,8 @@ from ui_foreground import foreground_mask, masked_shape_match
 
 class PageDiagnosis:
     def __init__(self):
+        from reward_overlay_vision import RewardOverlayVision
+        self.reward_overlay = RewardOverlayVision()
         self.opening = OpeningRecognizer()
         from return_navigation_vision import ReturnNavigationVision
         self.returns = ReturnNavigationVision()
@@ -80,6 +82,12 @@ class PageDiagnosis:
         return self._find_glyph(image, self.settings_mask, 1668, 0.70)
 
     def inspect(self, image):
+        overlay = self.reward_overlay.inspect(image)
+        if overlay:
+            h, w = image.shape[:2]
+            return {**overlay, 'next_action': 'close_panel', 'return_button': {
+                'client_point': [50 * w / 1280, 360 * h / 720],
+                'normalized_point': [50, 360], 'scores': overlay['visual_scores']}}
         opening = self.opening.recognize(image)
         # Known modal exits precede generic opening dismissal. Their independent
         # title and button patches prevent a dim backdrop authorizing a click.
@@ -185,7 +193,8 @@ def ensure_main_menu(window, output, execute=False, timeout=20):
             fresh_point=target(verified,fresh_geometry)
             if max(abs(a-b) for a,b in zip(point,fresh_point))>5:
                 previous=None;continue
-            event=window.click_client(fresh_point,fresh_geometry,press_ms=250)
+            click_options = {'native_motion': True} if verified['state'] == 'reward_overlay' else {}
+            event=window.click_client(fresh_point,fresh_geometry,press_ms=250,**click_options)
             if not is_opening:
                 non_opening_actions += 1
             attempts+=1;attempts_by_control[key]=attempts;last_input=time.monotonic()

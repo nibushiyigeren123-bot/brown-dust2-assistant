@@ -1,5 +1,5 @@
 {
-  "version": "0.2.15-hotfix.20261022",
+  "version": "0.2.15-hotfix.20261022.2",
   "source_only": true,
   "private_state_included": false,
   "files": [
@@ -1140,6 +1140,10 @@
       "sha256": "10f05a53e3b25549ead69d90fb6d9c4eb5944f18d66be2fa01b38a163ce30cd1"
     },
     {
+      "path": "docs/RELEASE_0.2.15-hotfix.20261022.2.md",
+      "sha256": "d10a3c133f38faf4fed808631840457f2b489125e7f5af29edefa2427863587f"
+    },
+    {
       "path": "docs/RELEASE_0.2.15-hotfix.20261022.md",
       "sha256": "7f10a14120a9a4b16b93f3e275a40aa373d0147071e8f508e50a54cabda2e458"
     },
@@ -1173,7 +1177,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "1d99faf7a563b473c417fa64a156f6511560bac460637130eec7245a7a8e42a3"
+      "sha256": "12025576aba83d0b5a17ed9cdb80ad84f2187ec35264a50b157cbb022fc02810"
     },
     {
       "path": "requirements.txt",
@@ -1233,7 +1237,7 @@
     },
     {
       "path": "tools/common_navigation.py",
-      "sha256": "24969308cf088ecf85066f52591ade3840915690353b23cfaf521b0e0546e7fa"
+      "sha256": "815b383590f96db7efa4822a94ece7c16090816ae49823fd45b7d8b41373a5e8"
     },
     {
       "path": "tools/daily_settings.py",
@@ -1317,7 +1321,7 @@
     },
     {
       "path": "tools/game_window.py",
-      "sha256": "5e0ca0e2e23bb68bd1cece10ab5de1a776ed4c7d88e53df860f2389b499cf74b"
+      "sha256": "af425a405f1327c49785e24a7cb32bc700028f2d5ee1c3699ea8e02dff4a8a44"
     },
     {
       "path": "tools/gamevision_runtime.py",
@@ -1377,7 +1381,11 @@
     },
     {
       "path": "tools/module_catalog.py",
-      "sha256": "d09d17b8a78c4e0264ff6903bc779ad7441068fee17c6e8a15593a0bfda79400"
+      "sha256": "7939e2d897f328822ab2108e2bd85c8d33ffcd337c17ee498d6cc074c6a98af8"
+    },
+    {
+      "path": "tools/native_mouse_input.py",
+      "sha256": "249edabdd8859b3bf60f5e8191d3f9e6f16eb5ffc234005b772c6f8310d11185"
     },
     {
       "path": "tools/navigation_input.py",
@@ -1385,7 +1393,7 @@
     },
     {
       "path": "tools/navigation_startup.py",
-      "sha256": "daa267d81b1a96f35c4215e54612e57f8b1928be0f707139e4c1d9302a23522c"
+      "sha256": "2ffe8e4185582a6051bfc0e34efecdbefee79afebc5c643c339d6e978d9976e2"
     },
     {
       "path": "tools/panel_identity.py",
@@ -1393,7 +1401,7 @@
     },
     {
       "path": "tools/pass_reward_vision.py",
-      "sha256": "26d4c6844e30e4beadb6215091a47765acb40c0d75a46dfde2a995073025d500"
+      "sha256": "69f8a8e1682e4195f102debfeab0b5add3a322fb5bebd754d54cd64b59cf06ac"
     },
     {
       "path": "tools/pass_rewards.py",
@@ -1432,6 +1440,10 @@
       "sha256": "87a679d286636ec39af864a4c12c71f652da59d98ae18acb5210305a8aadf2c4"
     },
     {
+      "path": "tools/reward_overlay_vision.py",
+      "sha256": "c937de00658faed0b60d9536c06af78ceb41efb82c41d779bf3d941d5bfe686a"
+    },
+    {
       "path": "tools/runtime_policy.py",
       "sha256": "3a215b30dddb63d42da7e2a3585199ca46ddca0bcc760982feae784b011514f0"
     },
@@ -1449,11 +1461,11 @@
     },
     {
       "path": "tools/task_reward_vision.py",
-      "sha256": "244af0b907989e315eb4408cf14cadf1fc0b0efca07e62c7bf251500ecab7163"
+      "sha256": "dacab1b70d6bdadb9d3e5f232115e5e34629cf99ce87974b5c2bf4f22fc6cd35"
     },
     {
       "path": "tools/task_rewards.py",
-      "sha256": "01b361ec0ff67e7034a6d3e61ecf9eec4b2f6c10a095a0047ac02a4b8fb2d0a4"
+      "sha256": "f649beb302feaaaea258d759b333a5a038443ebcc228355951db8195feeb09b1"
     },
     {
       "path": "tools/ui_foreground.py",
@@ -1469,7 +1481,7 @@
     },
     {
       "path": "tools/verify_workflow_continue.py",
-      "sha256": "8fc156a19679331892ad6d04260fc4c8e06e1689651e26b9714ed4d8d4d92cc2"
+      "sha256": "8743961c03b73234aeffeddbec1f4d87614ca9995e2fca3057a320dc25aa74fe"
     },
     {
       "path": "tools/windows_ocr.ps1",
@@ -1481,15 +1493,15 @@
     },
     {
       "path": "tools/workbench_ui.py",
-      "sha256": "66b7eeef9e2191c0fe28860a80449a34c821eb03d9e137a3079c8c745f345021"
+      "sha256": "51416054b35de43112b70135219a4e304758a6935886977bfcb6cd636b97503e"
     },
     {
       "path": "tools/workflow_runner.py",
-      "sha256": "8381f0c6036f6f8dce75d78f50186a017322bbce80f24f684e82b6cb0b7d6137"
+      "sha256": "93bd51d4fbe5a6b23d392ff7c13d4540fdc953993705cd1073c1a2e278a6a3e0"
     },
     {
-      "path": "verification_0.2.15-hotfix.20261022.json",
-      "sha256": "611e19a59792a91eca794afd56e5feb2801eac102d622e397bb65472a8dc9c5e"
+      "path": "verification_0.2.15-hotfix.20261022.2.json",
+      "sha256": "59ecfd5e042f13c325384e4af5d1ac4494a4b01979487ddcfe28a6ba624df5c4"
     }
   ]
 }

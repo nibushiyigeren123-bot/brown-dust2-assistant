@@ -213,7 +213,7 @@ def run(args):
                     env = dict(os.environ, BD2_STOP_FILE=str(stop_path),
                                BD2_CONTROL_FILE=str(control_path), BD2_ITEM_PROBLEM_FILE=str(problem_path),
                                PYTHONUTF8='1', PYTHONIOENCODING='utf-8')
-                    env['BD2_DAILY_AUDIT_ID'] = state.get('daily_audit_id', '')
+                    env.pop('BD2_DAILY_AUDIT_ID', None)
                     with (step_output / 'process.log').open('wb') as log:
                         process = subprocess.Popen(command, cwd=str(ROOT), env=env, stdout=log, stderr=log,
                                                    creationflags=subprocess.CREATE_NO_WINDOW)
@@ -232,12 +232,15 @@ def run(args):
                         raise ValueError('模块回执不是对象。')
                     status = evaluate_result(child, code, args.execute)
                     if status == 'verified' and key == 'navigation':
-                        audit = child.get('startup_task_audit') or {}
-                        if audit.get('cache_date') != identity['cache_date'] or audit.get('completed') is not True or not audit.get('audit_id'):
+                        views = child.get('observations') or []
+                        if (child.get('cache_date') != identity['cache_date']
+                                or child.get('navigation_completed') is not True
+                                or child.get('completion') != 'main_menu_observed_twice'
+                                or child.get('startup_scope') != 'main_menu_only'
+                                or len(views) < 2
+                                or any(view.get('state') != 'main_menu' for view in views[-2:])):
                             status = 'needs_review'
-                            child['stopped'] = '开始任务前的每日任务核对尚未完成。'
-                        else:
-                            state['daily_audit_id'] = audit['audit_id']
+                            child['stopped'] = '主菜单导航回执未完成双帧与目标核对。'
                     reason = child.get('stopped') or child.get('error')
                     if status == 'needs_review' and not reason:
                         reason = child.get('completion_reason') or f'{module.name}执行器退出码：{code}，尚未核实完成。'
