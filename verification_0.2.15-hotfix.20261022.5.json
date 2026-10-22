@@ -1,0 +1,40 @@
+{
+  "version": "0.2.15-hotfix.20261022.5",
+  "exe_sha256": "ba860a74f1be4b5a509858f86b78b18b9f3081583666b6e9a7153701b79ebcc2",
+  "private_state_included": false,
+  "offline_checks": 56,
+  "medium_weights_bytes": 138587816,
+  "upstream_pretrained": true,
+  "new_fine_tuning": false,
+  "development_text_validation": {
+    "medium": 45,
+    "tiny": 45,
+    "n": 46,
+    "reused": true
+  },
+  "failed_balance_sample": {
+    "expected": "0/90",
+    "tiny": "0790",
+    "windows": "0/90",
+    "medium": "0/90"
+  },
+  "model_in_same_process": true,
+  "cpu_only": true,
+  "game_input": false,
+  "full_live_daily_acceptance": false,
+  "reward_point": [
+    640,
+    540
+  ],
+  "reward_retry_points": [
+    [
+      537.6,
+      540
+    ],
+    [
+      742.4,
+      540
+    ]
+  ],
+  "private_state_unchanged": true
+}

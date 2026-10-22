@@ -13,7 +13,7 @@ _engine = None
 _engine_key = None
 _bundle_stamp = None
 _bundle_digest = None
-PROVIDER_VERSION = 'embedded_aligned_v2_1'
+PROVIDER_VERSION = 'embedded_medium_v3_1'
 
 
 def release_model():
@@ -43,6 +43,8 @@ def _settings(root):
 def bundle_identity(bundle):
     global _bundle_stamp, _bundle_digest
     paths = [bundle / name for name in ('ocr.onnx', 'visual.onnx', 'dictionary.txt')]
+    if (bundle / 'medium_dictionary.json').is_file():
+        paths.extend(bundle / name for name in ('medium_rec.onnx', 'medium_det.onnx', 'medium_dictionary.json'))
     stamp = tuple((str(p.resolve()), p.stat().st_size, p.stat().st_mtime_ns) for p in paths)
     if stamp != _bundle_stamp:
         digest = hashlib.sha256()
@@ -119,15 +121,19 @@ def model_ocr(path, output, language, system_ocr):
             global _engine, _engine_key
             engine_key = (identity, config['threads'])
             if _engine is None or _engine_key != engine_key:
-                from gamevision_runtime import GameVision
-                _engine = GameVision(bundle, threads=config['threads'])
+                if (bundle / 'medium_dictionary.json').is_file():
+                    from medium_ocr import MediumOCR
+                    _engine = MediumOCR(bundle, threads=config['threads'])
+                else:
+                    from gamevision_runtime import GameVision
+                    _engine = GameVision(bundle, threads=config['threads'])
                 _engine_key = engine_key
             if height <= 256 and width <= 1600:
                 prediction = _engine.read_text(image)
                 if not _accepted(prediction, config['minimum_score']):
                     return detect()
                 result = {'width':width, 'height':height, 'language':language,
-                    'backend':'gamevision_bd2_aligned_v2', 'model_score':prediction['score'],
+                    'backend':'ppocr_v6_medium_rec' if (bundle / 'medium_dictionary.json').is_file() else 'gamevision_bd2_aligned_v2', 'model_score':prediction['score'],
                     'score_type':'uncalibrated_character_score', 'geometry_kind':'crop_extent',
                     'lines':[{'text':prediction['text'], 'words':[{'text':prediction['text'],
                         'x':0, 'y':0, 'width':width, 'height':height}]}]}
@@ -138,7 +144,14 @@ def model_ocr(path, output, language, system_ocr):
                     return result
                 normalized = _engine.align(image)
                 corrections, failures = [], 0
-                for line in result['lines']:
+                using_medium = (bundle / 'medium_dictionary.json').is_file()
+                if using_medium and not result['lines']:
+                    result = _engine.read_page(image, language)
+                # Windows full-page detections remain primary. The medium model
+                # handles cropped lines and independent recovery after a page
+                # fails its own semantic/visual checks, without overwriting good
+                # system text or running a second recognizer on every line.
+                for line in (() if using_medium else result['lines']):
                     words = line.get('words', [])
                     if not words:
                         continue
@@ -164,7 +177,7 @@ def model_ocr(path, output, language, system_ocr):
                         if old != line['text']:
                             corrections.append({'before':old, 'after':line['text'],
                                 'box_1280':[a,b,c,d], 'score':prediction['score']})
-                result.update(backend='system_detection_with_gamevision_bd2_recognition',
+                result.update(backend=('system_ocr_with_medium_recovery_available' if using_medium else 'system_detection_with_gamevision_bd2_recognition'),
                               model_corrections=corrections, model_line_failures=failures)
                 if failures:
                     return result
@@ -187,3 +200,44 @@ def model_ocr(path, output, language, system_ocr):
             result = copy.deepcopy(system_ocr(path, output, language))
             result['model_fallback_reason'] = type(error).__name__ + ': ' + str(error)
             return result
+
+
+def _recovery_page_ocr(image, language='zh-Hans-CN'):
+    """Try the larger independent OCR after a page failed its normal checks."""
+    from project_paths import ROOT
+    bundle = ROOT / 'models/gamevision_bd2'
+    if not (bundle / 'medium_dictionary.json').is_file():
+        return None
+    config = _settings(ROOT)
+    if config is None:
+        return None
+    from frame_store import private_mask, ocr_get, ocr_put
+    import cv2
+    raw = cv2.imencode('.png', private_mask(image))[1].tobytes()
+    key = ('medium_page_recovery', hashlib.sha256(raw).hexdigest(), language)
+    cached = ocr_get(key) if active() else None
+    if cached is not None:
+        return cached
+    global _engine, _engine_key
+    identity = bundle_identity(bundle)
+    with _lock:
+        if _engine is None or _engine_key != (identity, config['threads']):
+            from medium_ocr import MediumOCR
+            _engine = MediumOCR(bundle, threads=config['threads'])
+            _engine_key = (identity, config['threads'])
+        result = _engine.read_page(image, language)
+    if active():
+        ocr_put(key, result)
+    return result
+
+
+def recovery_page_ocr(image, language='zh-Hans-CN'):
+    try:
+        return _recovery_page_ocr(image, language)
+    except Exception as error:
+        from execution_control import ExecutionControlError
+        if isinstance(error, ExecutionControlError):
+            raise
+        # A failed optional recognizer must not replace the original page
+        # evidence with a new fatal error or grant an unverified click.
+        return None

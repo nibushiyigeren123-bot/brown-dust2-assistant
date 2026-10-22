@@ -1,4 +1,5 @@
 """M01: open the cycling management entry and collect only an enabled button."""
+from reward_overlay_vision import reward_dismiss_point
 from frame_store import next_path, report_write, persist_references
 import argparse
 import json
@@ -179,7 +180,7 @@ def run_management(window, output, execute=False, timeout=20):
                         raise RuntimeError("Reward page did not close after three confirmation attempts")
                     report["reward_observed"] = True
                     # Verified beside the bottom 'click to return' prompt.
-                    action, point = "dismiss_reward", [0.60 * geometry["width"], 0.91 * geometry["height"]]
+                    action, point = "dismiss_reward", reward_dismiss_point(geometry["width"], geometry["height"], sum(a['type'] == 'dismiss_reward' for a in report['actions']))
             elif state == "management_panel":
                 panel = result["panel"]
                 if panel["state"] == "disabled" and not closing:
@@ -213,7 +214,8 @@ def run_management(window, output, execute=False, timeout=20):
                 if not valid:
                     time.sleep(.2)
                     continue
-                event = window.click_client(point, fresh_geometry, press_ms=250)
+                click_options = {'native_motion': True} if action == 'dismiss_reward' else {}
+                event = window.click_client(point, fresh_geometry, press_ms=250, **click_options)
                 report["actions"].append({"type": action, **event})
                 last_action = time.monotonic()
                 last_action_kind = action

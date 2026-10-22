@@ -1,4 +1,5 @@
 """Read-only event, reward and guild recognition. No desktop input here."""
+from reward_overlay_vision import reward_dismiss_point
 from frame_store import write_encoded_png
 import json
 import re
@@ -63,7 +64,7 @@ class Phase08Vision:
             return {'state':'guild_check_in_receipt','reward_destination':'mailbox',
                     'success_anchor':success,'points':{'dismiss':[760,498]}}
         if doc.find('点击画面即可返回',(400,595,900,690)):
-            return {'state':'reward_overlay','points':{'dismiss':[768,645]}}
+            return {'state':'reward_overlay','points':{'dismiss':reward_dismiss_point()}}
         if guild:
             return {'state':'guild_page','check_in_status':'unknown_without_receipt','points':{'back':[113,34]}}
         dialog = doc.find('自动战斗',(550,165,730,205))

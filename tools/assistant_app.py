@@ -61,6 +61,12 @@ def worker(task_id, arguments):
                     (output / 'run.json').write_text(json.dumps(recovered, ensure_ascii=False, indent=2), encoding='utf-8')
                     code = 0 if recovered.get('completed') else 1
                     return code
+            if task_id == 'hunting':
+                from pending_daily import reconcile_visible_hunting_pending
+                reconciled = reconcile_visible_hunting_pending(ROOT, output / 'pending_recovery')
+                if reconciled is not None and not reconciled.get('reconciled'):
+                    (output / 'run.json').write_text(json.dumps(dict(reconciled, blocked=True), ensure_ascii=False, indent=2), encoding='utf-8')
+                    raise RuntimeError(reconciled.get('stopped') or '狩猎未决结果尚未核实。')
             if not navigation_first:
                 from common_navigation import ensure_main_menu
                 from game_window import GameWindow

@@ -1,5 +1,5 @@
 {
-  "version": "0.2.15-hotfix.20261022.4",
+  "version": "0.2.15-hotfix.20261022.5",
   "source_only": true,
   "private_state_included": false,
   "files": [
@@ -1184,8 +1184,20 @@
       "sha256": "b966bdddb16a15e3abea831e37a4603250fe20b073ab26be80c1d5bedc75a15f"
     },
     {
+      "path": "models/gamevision_bd2/medium_det.onnx",
+      "sha256": "eb13b44b25bb36f89528b68720af8a61d9cf381176107f465db1757b65d086e1"
+    },
+    {
+      "path": "models/gamevision_bd2/medium_dictionary.json",
+      "sha256": "46f800890c516f8a4e9e9d690f1ef9dc8d36782333463363d80307d572acb8be"
+    },
+    {
+      "path": "models/gamevision_bd2/medium_rec.onnx",
+      "sha256": "9c09abf0957f7968c7586464b7397b84ad2387a0497a351af40e9acc71b673ba"
+    },
+    {
       "path": "models/gamevision_bd2/model_card.json",
-      "sha256": "f15c4ba79d7261b59f6797bfb74e4773a2e0aab1db50db727f943de422ca9afb"
+      "sha256": "4c7ff4efa5d9ad406b83f5301d3f5f82e51b71427c256bb0a495d802b50cea26"
     },
     {
       "path": "models/gamevision_bd2/ocr.onnx",
@@ -1197,15 +1209,15 @@
     },
     {
       "path": "NOTICE.md",
-      "sha256": "ae524b75cba2aa5da256a8ae70ef99346521e8263e227d082fd521fb2fea0442"
+      "sha256": "283ffc2ea36d49ca071afe3962d8658f829030a7d63ed3a1809ca793dd2fa529"
     },
     {
       "path": "README.md",
-      "sha256": "7ff04b4c00b6fac12c1931bbb0b36b35e15a366bd0f75a4a1bcab8e27d9f3823"
+      "sha256": "5ae8b39464604cd12e5c555be256bb914e3719ce12e4c4aef277c4a4505a4348"
     },
     {
       "path": "requirements.txt",
-      "sha256": "d7dcc5344c68431a5da8a2e63a2a3096183e3e5b0fcc99301e01431ad55b9fa7"
+      "sha256": "ace9b22b04058b18213164162e2f97eb2b396671bf7ee1e1be97cb655ed3fbf5"
     },
     {
       "path": "templates/config/daily_tasks.json",
@@ -1237,7 +1249,7 @@
     },
     {
       "path": "tools/assistant_app.py",
-      "sha256": "473a7978a4ba59bc86bc85aa167fe3176cb1feb1c1390590ed1f8fde16d66d8f"
+      "sha256": "3e2f2dea42be3ebd0de924965fc64186d184d4112e3f66265b92ecd3a0a2a2dc"
     },
     {
       "path": "tools/assistant_lifetime.py",
@@ -1265,7 +1277,7 @@
     },
     {
       "path": "tools/common_navigation.py",
-      "sha256": "815b383590f96db7efa4822a94ece7c16090816ae49823fd45b7d8b41373a5e8"
+      "sha256": "a7d4f83a743afbf1418604aac8f8e710faf0d49eb9137c7be2ed9b9217508662"
     },
     {
       "path": "tools/daily_settings.py",
@@ -1273,11 +1285,11 @@
     },
     {
       "path": "tools/daily_tasks.py",
-      "sha256": "4c77821e8121d7ae3d023a559167521eabf9982b58b8606af578647d5da7929f"
+      "sha256": "39fd46b112313bd9c091b021c0ce8a91b3e14ac1b2b07ad247e9c20131f1b13f"
     },
     {
       "path": "tools/daily_vision.py",
-      "sha256": "4888e80bfdd8518cc40e34b22756200759e5b4649409bde19005893a2050e17f"
+      "sha256": "567583d6a783fe52d6c822403077f39d5cfe731eedd74e9c8b328ba76639ed6c"
     },
     {
       "path": "tools/date_rollover.py",
@@ -1313,7 +1325,7 @@
     },
     {
       "path": "tools/event_battle_vision.py",
-      "sha256": "d43bfdb11375c66ed6c1c705101893552230fa1578ef0390d053111d3f13c167"
+      "sha256": "f155981848165774dfdca2ce69741c34ce706c323e406dfd6f5a15b7cef0986c"
     },
     {
       "path": "tools/event_prepare_vision.py",
@@ -1385,11 +1397,15 @@
     },
     {
       "path": "tools/m01_management.py",
-      "sha256": "ab28389407b31e57126106c1379d0e26e3c65b60728a4bf4adf0cb07b1c63ae2"
+      "sha256": "57d228aff510b4c33ba19fb7363449f6cb164e2e575ce3e86095dfebf386b917"
     },
     {
       "path": "tools/m02_free_draw.py",
       "sha256": "c59055ec5984f7f15e136cd00a8b2ddc9f2d230cda92033d7467256cc3802ce6"
+    },
+    {
+      "path": "tools/medium_ocr.py",
+      "sha256": "c2abcb28ff3ec9958d7ce7d733c9615c5c3736ca0d28010eab6931c334cf382d"
     },
     {
       "path": "tools/mirror_entry_vision.py",
@@ -1401,11 +1417,11 @@
     },
     {
       "path": "tools/model_checks.py",
-      "sha256": "cbbe923f5b5a9c9a1fe84cd9602f5ecba4d779edaab03ce30bb9fd4e9ce4fcaf"
+      "sha256": "e9dfcef79b0d653666fe118b45dafa94fd6a0a1343f7681fcba024e303dd23ed"
     },
     {
       "path": "tools/model_ocr_provider.py",
-      "sha256": "bbdb282bff6d92a45fa6543588b0f74d35ad9d0b6910b809e41866e224038611"
+      "sha256": "eda163e83941b5ac9042541269c452cd174a6bfb1f60198ba3fea5abee2cd3c9"
     },
     {
       "path": "tools/module_catalog.py",
@@ -1429,19 +1445,19 @@
     },
     {
       "path": "tools/pass_reward_vision.py",
-      "sha256": "69f8a8e1682e4195f102debfeab0b5add3a322fb5bebd754d54cd64b59cf06ac"
+      "sha256": "eccff25d5cb480096c26ea7843a913c5e9f2748574cc3d7ae636fe887a2f2d76"
     },
     {
       "path": "tools/pass_rewards.py",
-      "sha256": "7d20eed2d88a3f86829362d9858844e04639eccef5234762ee1cdc09094189fc"
+      "sha256": "f52e747ac8570d2384bf5b095ba7a8108859c1d0978b6d8f48dbbc5614f61e7e"
     },
     {
       "path": "tools/pending_daily.py",
-      "sha256": "b981d065f25d7cbdfe9405055c1a2d7bbb6152275043d67daed9cfda43226b78"
+      "sha256": "78f1d455795e3958c894bfbbbfc39de3f5c178ca5c8f35a3384e8fe5db17deaa"
     },
     {
       "path": "tools/phase08_vision.py",
-      "sha256": "60491476e060f9c11f370e6d1f8d8d4bee870abc4b8ef03279ad70f2ed0747f8"
+      "sha256": "b5f0ab105cb8812da17e34721c81173431d03e3a60b4655a2ea9f54525d9abc2"
     },
     {
       "path": "tools/process_window.py",
@@ -1469,7 +1485,7 @@
     },
     {
       "path": "tools/reward_overlay_vision.py",
-      "sha256": "c937de00658faed0b60d9536c06af78ceb41efb82c41d779bf3d941d5bfe686a"
+      "sha256": "daadae9661a0f11c508de19dd06e2977094ac8809404d114190a87c4d2af4f27"
     },
     {
       "path": "tools/runtime_policy.py",
@@ -1489,11 +1505,11 @@
     },
     {
       "path": "tools/task_reward_vision.py",
-      "sha256": "dacab1b70d6bdadb9d3e5f232115e5e34629cf99ce87974b5c2bf4f22fc6cd35"
+      "sha256": "fdc64d01e859ac4ee79044e85ea7877bf1b46e6a6e3e65f54020830fb593b534"
     },
     {
       "path": "tools/task_rewards.py",
-      "sha256": "f649beb302feaaaea258d759b333a5a038443ebcc228355951db8195feeb09b1"
+      "sha256": "07263b87133b6f02d32ec09e0d06ff9ba2027a2b7138c07b515da40fb86bd150"
     },
     {
       "path": "tools/ui_foreground.py",
@@ -1525,11 +1541,15 @@
     },
     {
       "path": "tools/workflow_runner.py",
-      "sha256": "93bd51d4fbe5a6b23d392ff7c13d4540fdc953993705cd1073c1a2e278a6a3e0"
+      "sha256": "86e357051bd01457f53349565ea0bcdee711ccffd7d33c5499e5755b085ecc5d"
     },
     {
       "path": "verification_0.2.15-hotfix.20261022.4.json",
       "sha256": "dcb378eedf993ec0414d435b827bbe285a32f8bdddafdf996addc8629c121ed7"
+    },
+    {
+      "path": "verification_0.2.15-hotfix.20261022.5.json",
+      "sha256": "b962778144b62d4cf335793534d64484926dba252bf9e75900ecc328595ac0e0"
     }
   ]
 }

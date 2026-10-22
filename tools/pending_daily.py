@@ -94,6 +94,74 @@ def goddess_checkpoint_complete(checkpoint, data, expected_day):
             and checkpoint in data.get('goddess', {}).get('done', []))
 
 
+def reconcile_visible_hunting_pending(root, output):
+    """On explicit hunting execution, reconcile its result before home navigation.
+
+    No submission or cleanup is sent here. Unknown evidence leaves pending intact.
+    This is never called for read-only inspection or another queue command.
+    """
+    root, output = Path(root), Path(output)
+    config = load_config(root / 'config/daily_tasks.json')
+    path = cache_path(root, config)
+    if not path.is_file():
+        return None
+    data = json.loads(path.read_text(encoding='utf-8'))
+    pending = data.get('pending')
+    if not pending or pending.get('module') != 'hunting':
+        return None
+    from game_calendar import check_execution_day
+    from game_window import GameWindow, check_requested_stop
+    check_execution_day(config['cache_date'])
+    output.mkdir(parents=True, exist_ok=True)
+    report = {'execute':True, 'completed':False, 'reconciled':False,
+        'scope':'existing_hunting_receipt_only', 'actions':[], 'observations':[]}
+    def save_report():
+        report_write(output / 'run.json', report)
+    with exclusive_ledger(root / 'runtime/game_control'):
+        guard_foreign_pending(root / 'runtime', path, module='hunting')
+        ledger = DailyLedger(path, config)
+        pending = ledger.data['pending']
+        if (pending.get('type') != 'submit_quick_hunt' or pending.get('consumes') is not True
+                or (pending.get('input_receipt') or {}).get('input_kind') != 'left_click'):
+            report['stopped'] = '狩猎提交回执不完整；保留pending，未点击。'
+            save_report()
+            return report
+        window, vision = GameWindow.find(), DailyVision()
+        controller = DailyController(config, ledger, 'hunting')
+        previous = None
+        for index in range(4):
+            check_requested_stop()
+            check_execution_day(config['cache_date'])
+            image, geometry = window.capture()
+            frame = next_path(output / f'result_{index}.png')
+            image.save(frame)
+            obs = inspect(frame, vision, config, output)
+            obs['image_evidence'] = str(frame)
+            report['observations'].append({'image':str(frame), 'window':geometry, 'observation':obs})
+            if obs['state'] != 'hunt_reward':
+                report['stopped'] = '未看到属于当前提交的狩猎结果；保留pending，未点击。'
+                break
+            signature = (geometry, tuple(obs.get(k) for k in
+                ('completed_runs','free_remaining','owned_extra','extra_approximate')))
+            if signature == previous:
+                decision = controller.step(obs)
+                report['decision'] = decision
+                if ledger.data['pending'] is None:
+                    report.update(reconciled=True, completed=True, pending=None)
+                    break
+                if decision['status'] == 'needs_review':
+                    report['stopped'] = decision['reason']
+                    break
+            previous = signature
+            save_report()
+            time.sleep(.25)
+        if not report['reconciled'] and 'stopped' not in report:
+            report['stopped'] = '狩猎结果复读后仍未核实；保留pending，未点击。'
+        report['pending'] = ledger.data['pending']
+        save_report()
+    return report
+
+
 def run(args):
     config = load_config(args.config.resolve(strict=True))
     output = args.output.resolve()
@@ -260,7 +328,8 @@ def run(args):
                             decision['image_evidence'] = {'before':str(path), 'preclick':str(fresh_path)}
                         ledger.submit_intent(decision)
                     x, y = decision['point']
-                    receipt = window.click_client([x * geometry['width'] / 1280, y * geometry['height'] / 720], geometry)
+                    click_options = {'native_motion': True, 'press_ms': 250} if decision['type'] == 'dismiss_hunt_reward' else {}
+                    receipt = window.click_client([x * geometry['width'] / 1280, y * geometry['height'] / 720], geometry, **click_options)
                     report['actions'].append({**decision, **receipt})
                     controller.after_action(decision)
                     if decision.get('consumes'):

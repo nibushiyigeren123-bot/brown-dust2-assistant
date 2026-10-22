@@ -70,4 +70,12 @@ class PassRewardVision:
         overlay = self.reward_overlay.inspect(image)
         if overlay:
             return overlay
-        return self.inspect(image, windows_ocr(path, output))
+        result = self.inspect(image, windows_ocr(path, output))
+        if result['state'] == 'unknown':
+            from model_ocr_provider import recovery_page_ocr
+            alternate = recovery_page_ocr(image)
+            if alternate:
+                recovered = self.inspect(image, alternate)
+                if recovered['state'] != 'unknown':
+                    return dict(recovered, recognition_recovery='medium_detector_and_recognizer')
+        return result

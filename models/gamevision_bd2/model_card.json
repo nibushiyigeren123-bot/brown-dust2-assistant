@@ -1,6 +1,6 @@
 {
   "name": "GameVision_BD2",
-  "version": "0.2.0-command-scenes",
+  "version": "0.3.0-medium-recovery",
   "tasks": [
     "cropped_text_recognition",
     "reference_image_matching",
@@ -31,6 +31,18 @@
     "guild_anchor.npz": {
       "bytes": 256890,
       "sha256": "b966bdddb16a15e3abea831e37a4603250fe20b073ab26be80c1d5bedc75a15f"
+    },
+    "medium_rec.onnx": {
+      "bytes": 76554979,
+      "sha256": "9c09abf0957f7968c7586464b7397b84ad2387a0497a351af40e9acc71b673ba"
+    },
+    "medium_det.onnx": {
+      "bytes": 62032837,
+      "sha256": "eb13b44b25bb36f89528b68720af8a61d9cf381176107f465db1757b65d086e1"
+    },
+    "medium_dictionary.json": {
+      "bytes": 131073,
+      "sha256": "46f800890c516f8a4e9e9d690f1ef9dc8d36782333463363d80307d572acb8be"
     }
   },
   "training_20261022": {
@@ -52,5 +64,26 @@
     "guild_temporal_holdout_n": 8,
     "guild_foreground_stable_pixels": 1295,
     "guild_live_acceptance": "pending second bounded segment"
-  }
+  },
+  "ocr_model": "PP-OCRv6_medium_rec",
+  "ocr_detection_recovery": "PP-OCRv6_medium_det",
+  "ocr_policy": "Windows full-page text primary; Medium crop recognition and independent page recovery; Windows resource balances",
+  "upstream_medium_weights_bytes": 138587816,
+  "medium_upstream_training": "official pretrained weights; no game-specific fine-tuning in this revision",
+  "upstream_sources": [
+    {
+      "repository": "PaddlePaddle/PP-OCRv6_medium_rec_onnx",
+      "revision": "50c7eacafc52fa7bcf4194e8cd08e46f8558504b",
+      "license": "apache-2.0",
+      "url": "https://huggingface.co/PaddlePaddle/PP-OCRv6_medium_rec_onnx/resolve/50c7eacafc52fa7bcf4194e8cd08e46f8558504b/inference.onnx",
+      "sha256": "9c09abf0957f7968c7586464b7397b84ad2387a0497a351af40e9acc71b673ba"
+    },
+    {
+      "repository": "PaddlePaddle/PP-OCRv6_medium_det_onnx",
+      "revision": "61323801669c338b7891481ec7bac61ce31b576a",
+      "license": "apache-2.0",
+      "url": "https://huggingface.co/PaddlePaddle/PP-OCRv6_medium_det_onnx/resolve/61323801669c338b7891481ec7bac61ce31b576a/inference.onnx",
+      "sha256": "eb13b44b25bb36f89528b68720af8a61d9cf381176107f465db1757b65d086e1"
+    }
+  ]
 }

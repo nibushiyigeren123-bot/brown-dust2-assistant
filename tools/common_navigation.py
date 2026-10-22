@@ -1,4 +1,5 @@
 """Common, explicit return-to-menu diagnosis, independent of daily modules."""
+from reward_overlay_vision import reward_dismiss_point
 from frame_store import next_path, report_write, persist_references
 import argparse
 import json
@@ -86,8 +87,8 @@ class PageDiagnosis:
         if overlay:
             h, w = image.shape[:2]
             return {**overlay, 'next_action': 'close_panel', 'return_button': {
-                'client_point': [50 * w / 1280, 360 * h / 720],
-                'normalized_point': [50, 360], 'scores': overlay['visual_scores']}}
+                'client_point': reward_dismiss_point(w, h),
+                'normalized_point': reward_dismiss_point(), 'scores': overlay['visual_scores']}}
         opening = self.opening.recognize(image)
         # Known modal exits precede generic opening dismissal. Their independent
         # title and button patches prevent a dim backdrop authorizing a click.
@@ -146,7 +147,9 @@ def ensure_main_menu(window, output, execute=False, timeout=20):
         report['observations'].append({'image':str(path),'window':geometry,**result});save()
         return result,geometry,frame
 
-    def target(result, geometry):
+    def target(result, geometry, attempt=0):
+        if result['state'] == 'reward_overlay':
+            return reward_dismiss_point(geometry['width'], geometry['height'], attempt)
         if result['next_action']=='click_home':return result['home_button']['client_point']
         if result['next_action']=='dismiss_opening':
             x,y=result['opening']['suggested_point_normalized']
@@ -186,11 +189,12 @@ def ensure_main_menu(window, output, execute=False, timeout=20):
                 event=window.recover_input(geometry)
                 report['actions'].append({'type':'recover_window_input',**event});save()
                 recovered=True;stable=0;last_input=time.monotonic();continue
+            point=target(result,geometry,attempts)
             window.focus_client(geometry)
             verified,fresh_geometry,_=capture()
             if fresh_geometry!=geometry or (verified['state'],verified['next_action'])!=(result['state'],result['next_action']):
                 previous=None;continue
-            fresh_point=target(verified,fresh_geometry)
+            fresh_point=target(verified,fresh_geometry,attempts)
             if max(abs(a-b) for a,b in zip(point,fresh_point))>5:
                 previous=None;continue
             click_options = {'native_motion': True} if verified['state'] == 'reward_overlay' else {}

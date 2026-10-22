@@ -1,9 +1,14 @@
-# 资源与模型说明
+# 资源说明
 
-本工具是非官方项目，与游戏运营方无隶属关系。识别素材包括游戏按钮、文字和图标的局部裁切，以及 55 张账号区域置黑的 1280×720 页面参考图。参考图来自用户提供的游戏画面，经缩放和确定性遮黑派生；未包含原始账号截图。游戏图像权利仍属于原权利人，参考库不含独立商用授权。脱敏只移除指定账号块，不改变游戏画面的权利归属。
+本工具是非官方辅助项目，与游戏运营方没有隶属关系。识别模板为游戏界面按钮、文字、图标的局部裁切，不包含完整个人游戏截图；游戏相关图像权利属于其权利人。装饰背景及应用图标为项目自制/生成资源，最终采用版本以 assets/icon 与随附清单为准。
 
-装饰背景和应用图标为项目自制／生成素材，来源见 assets 清单。GameVision_BD2 为用户提供的游戏对齐 OCR 与画面参考匹配模型，包含 dictionary.txt、ocr.onnx、visual.onnx；模型卡记录用途及 SHA256，实机验收仍待用户测试。现有交付未提供完整上游训练链和独立模型许可证，不将模型权重声称为 MIT 原创代码或已取得额外商用许可。
+本文件只说明来源，不替权利人授予许可；本项目原创代码采用MIT License（见LICENSE），该许可不重新授予游戏界面素材的权利。第三方 Python 库按各自许可证分发。个人配置、进度缓存、测试证据和账号资料均不属于本源码包的内容。
 
-本文件记录现有来源与授权信息的范围，不替原权利人授予许可。项目原创代码适用随包 MIT LICENSE；MIT 不覆盖游戏图像、模型权重或第三方依赖。ONNX Runtime、NumPy、OpenCV、Pillow、pywin32、PyInstaller 等按其各自许可证分发。个人配置、进度账本和原始账号材料未纳入公开包。
-
-本次新增command_scene.onnx为既有MobileNetV3 Small骨干的监督页面族微调，guild_anchor.npz为稳定UI像素的局部分类权重及裁片。仅公开不含账号块的局部入口参考与权重，不公开私人训练集；原游戏图像与上游模型权利说明继续适用。
+PP-OCRv6 Medium recognition and detection weights are official PaddlePaddle
+pretrained ONNX models, distributed under Apache-2.0. Upstream model cards:
+https://huggingface.co/PaddlePaddle/PP-OCRv6_medium_rec_onnx
+https://huggingface.co/PaddlePaddle/PP-OCRv6_medium_det_onnx
+Their pinned revisions and SHA256 values are recorded in models/gamevision_bd2/model_card.json.
+This update uses upstream pretrained Medium weights without new game-specific training.
+pyclipper is distributed under the MIT license; its included Clipper code is
+copyright Angus Johnson and distributed under the Boost Software License 1.0.

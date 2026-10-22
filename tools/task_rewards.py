@@ -1,4 +1,5 @@
 """Daily claims always include a fresh weekly check; never performs unfinished tasks."""
+from reward_overlay_vision import reward_dismiss_point
 from frame_store import next_path, report_write, persist_references
 import argparse
 import hashlib
@@ -131,6 +132,26 @@ class TaskRewardRun:
         self.expect_after(label)
         time.sleep(.25)
 
+    def dismiss_reward(self, label):
+        for attempt in range(3):
+            # The failed dismiss must not leave capture waiting for the target
+            # page until the full network timeout before it can try another point.
+            self.transition_target = None
+            observed = self.capture()
+            if observed[0]['state'] != 'reward_overlay':
+                return observed
+            if attempt == 2:
+                self.report['actions'].append({'type':'recover_reward_input',
+                    **self.window.recover_input(observed[1])})
+            self.click(reward_dismiss_point(attempt=attempt), 'reward_overlay', label)
+            self.transition_target = None
+            for _ in range(3):
+                time.sleep(.25)
+                observed = self.capture()
+                if observed[0]['state'] != 'reward_overlay':
+                    return observed
+        raise RuntimeError('奖励层三个中心安全点均未关闭，保留pending与回执。')
+
     def confirm_no_rewards(self, state, identity=None, first=None):
         """Two live views of the global claim button, independent of list coverage."""
         first = first if first is not None else self.capture()
@@ -197,7 +218,7 @@ class TaskRewardRun:
                 time.sleep(.7)
             else:
                 raise RuntimeError('领取已发出但未确认奖励页，保留未决记录，不重复领取。')
-            self.click([760, 645], 'reward_overlay', 'dismiss_' + mode + '_reward')
+            self.dismiss_reward('dismiss_' + mode + '_reward')
             obs, _, image, _ = self.capture()
             if obs['state'] != mode + '_tasks' or obs.get('claimable') is not False:
                 raise RuntimeError('奖励关闭后尚未确认领取完毕，保留未决记录。')
@@ -288,7 +309,7 @@ def reconcile_pending_claim(data_root, output):
         receipt, _, _, reward_path = run.capture()
         if receipt['state'] != 'reward_overlay':
             raise RuntimeError('恢复领取未确认奖励页，保留原记录和本次未决。')
-        run.click([760, 645], 'reward_overlay', 'dismiss_' + mode + '_reward')
+        run.dismiss_reward('dismiss_' + mode + '_reward')
         after, _, _, after_path = run.capture()
         if after['state'] != mode + '_tasks' or after.get('claimable') is not False:
             raise RuntimeError('恢复领取后的任务页尚未确认领完，保留未决。')

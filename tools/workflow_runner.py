@@ -267,7 +267,27 @@ def run(args):
                     item['pending'] = pending_receipts(ROOT)
                     state['cursor'] = index + 1
                     save(state_path, state)
-                    # The next real worker owns known navigation + two home frames.
+                    # Recover the visual route now, even for the final failed
+                    # item. This never retries the failed module or settles its
+                    # pending; independent later workers retain their guards.
+                    if args.execute:
+                        from common_navigation import ensure_main_menu
+                        from game_window import GameWindow
+                        from runtime_policy import network_wait_seconds
+                        os.environ['BD2_QUEUE_TASK'] = key
+                        try:
+                            with exclusive_ledger(ROOT / 'runtime/game_control'):
+                                recovery = ensure_main_menu(GameWindow.find(), step_output / 'failure_return',
+                                    execute=True, timeout=network_wait_seconds())
+                            item['recovery_return_verified'] = recovery.get('completed') is True
+                            item['return_verified'] = item['recovery_return_verified']
+                            if not item['recovery_return_verified']:
+                                item['recovery_reason'] = recovery.get('stopped') or '未确认返回主页'
+                        except ExecutionControlError:
+                            raise
+                        except Exception as error:
+                            item['recovery_reason'] = str(error)
+                        save(state_path, state)
                     continue
                 observations = child.get('observations') or []
                 latest = observations[-1] if observations else {}

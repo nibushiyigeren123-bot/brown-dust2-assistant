@@ -10,6 +10,14 @@ import numpy as np
 from project_paths import ROOT
 
 
+def reward_dismiss_point(width=1280, height=720, attempt=0):
+    """Confirmed reward modal only: vary safe central blanks after ignored clicks."""
+    if type(attempt) is not int or not 0 <= attempt < 3:
+        raise ValueError('Reward dismiss attempt must be 0, 1 or 2')
+    x = (.5, .42, .58)[attempt]
+    return [width * x, height * .75]
+
+
 @lru_cache(maxsize=1)
 def reward_anchors():
     folder = ROOT / 'assets/shared_references'

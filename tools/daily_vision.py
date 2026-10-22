@@ -1,4 +1,5 @@
 """Local Windows OCR and small UI anchors. Reads images, never sends input."""
+from reward_overlay_vision import reward_dismiss_point
 import hashlib
 from frame_store import image_bytes, write_encoded_png
 import json
@@ -69,6 +70,19 @@ def windows_ocr(path, output, language='zh-Hans-CN'):
     if active():
         ocr_put(key, result)
     return result
+
+
+def system_windows_ocr(path, output, language='zh-Hans-CN'):
+    """Independent system text for balances; never replace it with model output."""
+    from frame_store import active, ocr_get, ocr_put
+    key = ('system_ocr', hashlib.sha256(image_bytes(path)).hexdigest(), language)
+    cached = ocr_get(key) if active() else None
+    if cached is not None:
+        return cached
+    payload = _system_windows_ocr(path, output, language)
+    if active():
+        ocr_put(key, payload)
+    return payload
 
 
 def _memory_system_ocr(path, language):
@@ -202,10 +216,18 @@ def inspect_frame(path, vision, config, output, payload=None):
     map_regions=payload is None and quick and quick['brightness_ratio']>=.80
     payload=payload if payload is not None else fixed_map_payload(image,output) if map_regions else windows_ocr(path,output/'ocr')
     result=vision.inspect(image,payload,config)
+    if result['state'] == 'unknown':
+        from model_ocr_provider import recovery_page_ocr
+        alternate = recovery_page_ocr(image)
+        if alternate:
+            recovered = vision.inspect(image, alternate, config)
+            if recovered['state'] != 'unknown':
+                result = dict(recovered, recognition_recovery='medium_detector_and_recognizer')
     if map_regions:result['ocr_source']='fixed_map_ui_regions'
     if result['state'] in ('hunt_map','hunt_dialog','hunt_reward'):
         from hunting_resources import read_fixed_balance
-        balance=read_fixed_balance(image,output,windows_ocr)
+        balance=read_fixed_balance(image,output,system_windows_ocr)
+        result['balance_source']='windows_ocr_independent_of_model'
         result.update(balance or {'free_available':None,'free_capacity':None,'owned_extra':None,'extra_display':None,'extra_approximate':False})
         if result['state']=='hunt_reward':result['free_remaining']=result['free_available']
     if result['state']=='hunt_dialog' and result.get('cost') is None:
@@ -475,7 +497,7 @@ class DailyVision:
             count = doc.extract_int(r'狩猎(\d+)次', (560, 200, 750, 300))
             from hunting_resources import read_balance
             balance=read_balance(doc) or {}
-            return {'state': 'hunt_reward', 'completed_runs': count, 'dismiss_point': [770, 656],
+            return {'state': 'hunt_reward', 'completed_runs': count, 'dismiss_point': reward_dismiss_point(),
                     **balance,
                     'free_remaining': doc.extract_int(r'(\d+)/\d+', (1000, 0, 1225, 85))}
         ready_auto = self.anchor(image, 'mirror_auto_entry')

@@ -1,4 +1,5 @@
 """Two current passes: fresh task and level scans with pending-aware claims."""
+from reward_overlay_vision import reward_dismiss_point
 from frame_store import next_path, report_write, persist_references
 import argparse
 import json
@@ -78,8 +79,7 @@ class PassRun(TaskRewardRun):
             receipt, _, _, reward_path = self.capture()
             if receipt['state'] != 'reward_overlay':
                 raise RuntimeError('通行证已提交领取但奖励未核实，保留pending，禁止补点。')
-            self.click([760, 645], 'reward_overlay', 'dismiss_pass_reward')
-            post = self.capture()
+            post = self.dismiss_reward('dismiss_pass_reward')
             if (post[0]['state'] != 'pass_' + tab or post[0].get('pass_id') != identity
                     or post[0].get('claimable') is not False):
                 raise RuntimeError('通行证领取结果未确认，保留pending。')

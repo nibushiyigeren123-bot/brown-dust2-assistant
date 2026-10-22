@@ -1,4 +1,5 @@
 """Event UI observations. Exposing a point never authorizes a submission."""
+from reward_overlay_vision import reward_dismiss_point
 import re
 import json
 from pathlib import Path
@@ -88,7 +89,7 @@ class EventBattleVision:
         reward_heading = any(re.search(r'REWARD|获得\d+种', row['text'], re.I)
                              for row in doc.within((300, 50, 1000, 450)))
         if reward and reward_heading:
-            return {'state': 'event_reward', 'points': {'dismiss': reward['point']}, **balance}
+            return {'state': 'event_reward', 'points': {'dismiss': reward_dismiss_point()}, **balance}
         for text in ('战斗失败', 'DEFEAT', '败北'):
             if doc.find(text, (350, 80, 1000, 500), exact=True):
                 return {'state': 'event_defeat', **balance}

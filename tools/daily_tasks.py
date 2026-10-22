@@ -291,6 +291,7 @@ class DailyController:
         self.adjustments = 0
         self.cleanup_clicks = 0
         self.cleanup_event = None
+        self.hunt_result_read_attempts = 0
         self.selected_hunt_category = None
         self.selected_hunt_stage = None
         self.difficulty_changes = 0
@@ -331,6 +332,9 @@ class DailyController:
             self.cleanup_event, self.cleanup_clicks = event, 0
         if self.cleanup_clicks >= 3:
             return self.stop('Result did not close after three attempts', 'needs_review')
+        if kind == 'dismiss_hunt_reward':
+            from reward_overlay_vision import reward_dismiss_point
+            point = reward_dismiss_point(attempt=self.cleanup_clicks)
         return self.click(kind, point, cleanup=True)
 
     def after_action(self, action):
@@ -384,7 +388,11 @@ class DailyController:
                     if not pending.get('free_only',True) and all(type(value) is int for value in (before,after,extra_before,extra_after)) and not pending.get('extra_approximate') and observation.get('extra_approximate') is False:
                         matched = before>=after and extra_before>=extra_after and before-after+extra_before-extra_after==pending['cost']
                     if not matched:
-                        return self.stop('Hunt result lacks a verified quantity or matching resource deduction', 'needs_review')
+                        self.hunt_result_read_attempts += 1
+                        if self.hunt_result_read_attempts < 3:
+                            return {'status':'wait', 'reason':'Re-read the submitted hunting result; no resubmission',
+                                    'recognition_attempt':self.hunt_result_read_attempts}
+                        return self.stop('Hunt result lacks a verified quantity or matching resource deduction after three observations', 'needs_review')
                 match = True
             elif self.module == 'mirror' and state == 'mirror_result':
                 if observation.get('completed_battles') != pending['quantity']:

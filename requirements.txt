@@ -2,6 +2,5 @@ numpy==2.5.2
 opencv-python==5.0.0.93
 Pillow==12.3.0
 pywin32==312
-
-# Embedded CPU OCR / visual reference runtime
-onnxruntime==1.30.0
+onnxruntime==1.31.0
+pyclipper==1.4.0
