@@ -11,7 +11,7 @@
     80
   ],
   "author": "user-provided retained game captures",
-  "license_status": "Game UI rights retained by original owners; no separate commercial permission supplied; see NOTICE.md",
+  "license_status": "Private reference use; game artwork rights remain with original owners",
   "derivation": "resize then deterministic black account exclusion; no redraw",
   "templates": {
     "main_menu": {

@@ -1,5 +1,5 @@
 {
-  "version": "0.2.15-hotfix.20261022.3",
+  "version": "0.2.15-hotfix.20261022.4",
   "source_only": true,
   "private_state_included": false,
   "files": [
@@ -13,7 +13,7 @@
     },
     {
       "path": "assets/daily_pending/config.json",
-      "sha256": "52ec54911b546d011078f351b33cb993350a76a8e4b59783e129400f92c18a1d"
+      "sha256": "4191e0cd57825dda18e8a328bc88bdc0f2c8a6b590b660120b476acc8559ca8f"
     },
     {
       "path": "assets/daily_pending/goddess_hand.png",
@@ -265,7 +265,7 @@
     },
     {
       "path": "assets/equipment/sources.json",
-      "sha256": "c5bd3232d05606cf5e54bd8c64508c6aef03b60290c681e823069f34823d9f14"
+      "sha256": "c9691a685ca2d9d89deeeb01f9d70a3511dd8a0d5eb62fef54d0854d61d7cf86"
     },
     {
       "path": "assets/event_battle/auto_off.png",
@@ -273,7 +273,7 @@
     },
     {
       "path": "assets/event_battle/config.json",
-      "sha256": "fd8f815351a956c1d8b1d8f290767a224c9d16c555539055da2f6d8ccd47f94c"
+      "sha256": "d2264baf5bb6a9306672e290934ea54b375c3f4e507365e756c1a5b6670e86e0"
     },
     {
       "path": "assets/event_battle/unit_1_continuous.png",
@@ -305,7 +305,7 @@
     },
     {
       "path": "assets/event_prepare/sources.json",
-      "sha256": "dabfa94b4b5f40737ed2843ff2f209ee698ed47a4a63357a540618db7d6a66b6"
+      "sha256": "3924e5d348bc9ebf967c9590a64ba3ae2b4649cd4a90f86b1b725a785eeee974"
     },
     {
       "path": "assets/free_draw/animation_loop_dark.png",
@@ -329,7 +329,7 @@
     },
     {
       "path": "assets/free_draw/config.json",
-      "sha256": "122ea4b66bb0ce93366437c69ffde6de0474df52288cdb973e1c3eae3a2bd1d1"
+      "sha256": "821f2a8e81da1beb60f1d4b94848fc6d40d9f4c128484fd8d806b7d8b5a288ab"
     },
     {
       "path": "assets/free_draw/confirm_button.png",
@@ -401,7 +401,7 @@
     },
     {
       "path": "assets/goddess_entry/sources.json",
-      "sha256": "554a6de77d6febc6085c48de3c96a4b0382814da3b87d47abeb236711417d25d"
+      "sha256": "74c444beb0aed99fb5cbe32c2b15efcb6ecafe605d4d8316423474d0c06b0086"
     },
     {
       "path": "assets/goddess_entry/square_logo.png",
@@ -433,7 +433,7 @@
     },
     {
       "path": "assets/hunting_options/sources.json",
-      "sha256": "06459aeedeb979b5870d658b75725f77b8586e2ce611bf29af7ee9d4ddab6980"
+      "sha256": "8ad7f54db229b6ef13446a80bbb6943c0afa5111285238e661d17943b2231896"
     },
     {
       "path": "assets/hunting_options/stone_0.png",
@@ -461,7 +461,7 @@
     },
     {
       "path": "assets/hunting_resources/sources.json",
-      "sha256": "8d0701840eadb2011ed811bdd0d853a51964f42a645f98091caec78034d71368"
+      "sha256": "61742c98d34c1f419a94647c77363c51b603b79a9681512c648ed44a98c51eb3"
     },
     {
       "path": "assets/hunting_resources/torch.png",
@@ -481,7 +481,7 @@
     },
     {
       "path": "assets/icon/icon.json",
-      "sha256": "2bc02d95cb1186129a5fb89aada2bdd7f5066c45e4f2e382ec95f9510b7715d2"
+      "sha256": "4a6b71a06b42573c910096b1a9bb68f3a87d2c164458565a37c8dd0a3d69e703"
     },
     {
       "path": "assets/m00/signin_event.png",
@@ -493,11 +493,11 @@
     },
     {
       "path": "assets/m00/templates.json",
-      "sha256": "ffbbbcb72f55a3672b996d9a4fe6536a21a387d627787dd530b1d87edb91dd9c"
+      "sha256": "b8bfadc3c4089354dfb0c0f6bc4c3e72abd1c32c4a3e5102c5c93b5bf57545e9"
     },
     {
       "path": "assets/management/config.json",
-      "sha256": "cfcc042c8d1d428f22b087c574494e8c2da6df521474412d7c008729f41d9385"
+      "sha256": "5c32f7df07cdd5b5440087c60e6161a974dac16bcc344069b18efbcb37be3614"
     },
     {
       "path": "assets/management/entry_label.png",
@@ -593,11 +593,11 @@
     },
     {
       "path": "assets/mirror_entry/sources.json",
-      "sha256": "455745fab5a44e55cf4d61a526bdd8cadca20e4782f04dc14e2c944b609696f7"
+      "sha256": "4a0d9a01c3789615295a9d564151718158a1a207105e1e2920bb94b108fd8e6c"
     },
     {
       "path": "assets/navigation/home_button.json",
-      "sha256": "a21f778ebc3a85aaa3c72ee05aadc465c3f51f33347bd9f1faf14aa3aa8abb63"
+      "sha256": "b9862a0775d81e02fb904244904d9aa83bf9f3547336a26dd34b00a552140744"
     },
     {
       "path": "assets/navigation/home_glyph.png",
@@ -617,7 +617,7 @@
     },
     {
       "path": "assets/navigation/square_home_sources.json",
-      "sha256": "75163f835a9389348af0e313feaeab54015d11b68cbdce3d8e441c1841854002"
+      "sha256": "480dff5bddcf033d6fcc7eb195a45e32c7165968d0de10841e1ad035deaef645"
     },
     {
       "path": "assets/pass_rewards/identity_season.png",
@@ -629,7 +629,7 @@
     },
     {
       "path": "assets/pass_rewards/sources.json",
-      "sha256": "bda03e27ebc7daec22163490e34a1e0a8008971e1b287ee65f69ed4bbdd7e5c2"
+      "sha256": "c2986743c9422010848557861959928a2b0d66222fa59e8777a0a13ba9231767"
     },
     {
       "path": "assets/pass_rewards/tab_season_levels.png",
@@ -713,7 +713,7 @@
     },
     {
       "path": "assets/phase08/sources.json",
-      "sha256": "a92c8a33b9940823d10994d39abba71c6ec303aede27776d64fac1f55b4f722f"
+      "sha256": "2610c1643b1fd9450f5ca718ddfab9da799c028aeaa336a902c767e8ea5e32de"
     },
     {
       "path": "assets/phase08/task_claim_ready.png",
@@ -797,7 +797,7 @@
     },
     {
       "path": "assets/return_navigation/sources.json",
-      "sha256": "821b16095057ce79e74a829f8997a5fc40fe61df1ae94a40af0485eabcb61046"
+      "sha256": "7c7beae206686ecf0e33b600aab8efeeb691dcd60e5da984e43926725ce4e8f5"
     },
     {
       "path": "assets/return_navigation/talk_close.png",
@@ -837,7 +837,7 @@
     },
     {
       "path": "assets/reward_endpoints/sources.json",
-      "sha256": "cad0ee3738979e073d2a2cb3690aaee54d5271ec301f6f780127424a2e416618"
+      "sha256": "e87b3fc07b3289747a887be06638e62e51720b172c77fb11771f5c7073f653c6"
     },
     {
       "path": "assets/reward_endpoints/special_levels_bottom.png",
@@ -869,7 +869,7 @@
     },
     {
       "path": "assets/shared_references/index.json",
-      "sha256": "673702f58f10ed6cf3cec1e0487d0c83eb857cc84b91d65f85ae3e5bd49a009b"
+      "sha256": "58cad68d2e4f9a886c9660924acb691f151674af5a811b17725c445015dab1e1"
     },
     {
       "path": "assets/shared_references/scene_00c5e6588656cdae0d98.png",
@@ -1097,7 +1097,7 @@
     },
     {
       "path": "assets/task_rewards/sources.json",
-      "sha256": "03aa885b90960dd262212596d880adead5aa36b0f6133fb4c3c137da9a61c05d"
+      "sha256": "629047d8e17361dd5c9d85c457b3f86b96ee8ad5e634710f021aa34d85d684fb"
     },
     {
       "path": "assets/task_rewards/weekly.png",
@@ -1109,7 +1109,7 @@
     },
     {
       "path": "assets/ui_foreground/config.json",
-      "sha256": "b2482a44a77561adfa605dc4f094e3d40809b69c69f2fa5002a53aa8c74f3f2d"
+      "sha256": "be39d4e5f4c305f2b9854ea4cac770937a08f82c74fc7e5b8e80ee958bc99757"
     },
     {
       "path": "assets/ui_foreground/friends.png",
@@ -1125,7 +1125,7 @@
     },
     {
       "path": "assets/workbench/sources.json",
-      "sha256": "a788c261f98d5ad235bd0471eff6281ba8999d068cf3af2be2d61adf1c3d3b1f"
+      "sha256": "116b649ec8fda33eb8e9285dd5499365be22b4a37b558990efc0566eb39f6906"
     },
     {
       "path": "build-requirements.txt",
@@ -1148,6 +1148,10 @@
       "sha256": "5aed1a2d970890ff3828187155a2b44fc9f27c88fea595f99117f73df4680386"
     },
     {
+      "path": "docs/RELEASE_0.2.15-hotfix.20261022.4.md",
+      "sha256": "fad9dc617646aa1c9142d3d13e8474e8c32cc9aaff2b048c3381f4408c7a4ed8"
+    },
+    {
       "path": "docs/RELEASE_0.2.15-hotfix.20261022.md",
       "sha256": "7f10a14120a9a4b16b93f3e275a40aa373d0147071e8f508e50a54cabda2e458"
     },
@@ -1160,12 +1164,28 @@
       "sha256": "87da6f94ee4f3c31072730f92280ba84a256293b7e249898d8adfef454d4af1b"
     },
     {
+      "path": "models/gamevision_bd2/command_scene.json",
+      "sha256": "48deec8470b2f66650e7a351d826d812cbebbb828c1fa4d0170cbf0fe9e2afeb"
+    },
+    {
+      "path": "models/gamevision_bd2/command_scene.onnx",
+      "sha256": "47df72b9fbe083870118f7037373b38b0cb507654e87948973b05c9ba69b8518"
+    },
+    {
       "path": "models/gamevision_bd2/dictionary.txt",
       "sha256": "2af150bab777d86fa1ce821f6a37eabea90f1bb99ab9c41f031262e892a747bc"
     },
     {
+      "path": "models/gamevision_bd2/guild_anchor.json",
+      "sha256": "4c05f182ea47463e4c123b60fb6453b64a6479c0a33f6844d290e38f43bf07b3"
+    },
+    {
+      "path": "models/gamevision_bd2/guild_anchor.npz",
+      "sha256": "b966bdddb16a15e3abea831e37a4603250fe20b073ab26be80c1d5bedc75a15f"
+    },
+    {
       "path": "models/gamevision_bd2/model_card.json",
-      "sha256": "6bfac339c043ba0dc5f55c6c4b2bc4959eca48109b4b35d990a6a6294c26b71d"
+      "sha256": "f15c4ba79d7261b59f6797bfb74e4773a2e0aab1db50db727f943de422ca9afb"
     },
     {
       "path": "models/gamevision_bd2/ocr.onnx",
@@ -1177,15 +1197,15 @@
     },
     {
       "path": "NOTICE.md",
-      "sha256": "85ee83fcae66495c58335c70ce3e22d1a486ed5dd17475ff587873a74537e320"
+      "sha256": "ae524b75cba2aa5da256a8ae70ef99346521e8263e227d082fd521fb2fea0442"
     },
     {
       "path": "README.md",
-      "sha256": "92b8778a065ffdafee8966f7ad6ef3321eb9915bf7023e634c9ebcc21b18b940"
+      "sha256": "7ff04b4c00b6fac12c1931bbb0b36b35e15a366bd0f75a4a1bcab8e27d9f3823"
     },
     {
       "path": "requirements.txt",
-      "sha256": "5c32f2c9b678f0714c065605497df736e2cb166b785740ab3e71cddc6934189b"
+      "sha256": "d7dcc5344c68431a5da8a2e63a2a3096183e3e5b0fcc99301e01431ad55b9fa7"
     },
     {
       "path": "templates/config/daily_tasks.json",
@@ -1238,6 +1258,10 @@
     {
       "path": "tools/cache_cleanup.py",
       "sha256": "283bf7439691c7eb84d1d48ec7e4ad3ce10e4bcd9b38b8a207f543fbe9d909d8"
+    },
+    {
+      "path": "tools/command_vision.py",
+      "sha256": "490191b829c27305e91ba1605db62b73712cdf7d93eb2bf327e12a15845ccd72"
     },
     {
       "path": "tools/common_navigation.py",
@@ -1417,7 +1441,7 @@
     },
     {
       "path": "tools/phase08_vision.py",
-      "sha256": "b7d02de7621f3af9eaccba60b6d9fbeacc46e2919461f47077571bb8c4f3579a"
+      "sha256": "60491476e060f9c11f370e6d1f8d8d4bee870abc4b8ef03279ad70f2ed0747f8"
     },
     {
       "path": "tools/process_window.py",
@@ -1429,7 +1453,7 @@
     },
     {
       "path": "tools/queue_recognition.py",
-      "sha256": "b39530b8a53c9e07a677a70dc97de06405161741e80b4ad7d3f4f0bf9a30e7d0"
+      "sha256": "0a53d2018d1011ef6a93ddd035a52a804b61b22cb13555589ee76aa5b68024e4"
     },
     {
       "path": "tools/resource_pools.py",
@@ -1504,8 +1528,8 @@
       "sha256": "93bd51d4fbe5a6b23d392ff7c13d4540fdc953993705cd1073c1a2e278a6a3e0"
     },
     {
-      "path": "verification_0.2.15-hotfix.20261022.3.json",
-      "sha256": "90d221d251638ec6ee36aa51f184e3b1aef1e9ca98a9c34c924f885af5d5341e"
+      "path": "verification_0.2.15-hotfix.20261022.4.json",
+      "sha256": "dcb378eedf993ec0414d435b827bbe285a32f8bdddafdf996addc8629c121ed7"
     }
   ]
 }

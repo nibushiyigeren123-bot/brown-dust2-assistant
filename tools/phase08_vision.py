@@ -112,6 +112,12 @@ class Phase08Vision:
         from common_navigation import PageDiagnosis
         if PageDiagnosis().inspect(image)['state']=='main_menu':
             entry = self.anchor(image,'guild_entry',threshold=0.80)
+            if entry is None:
+                # The menu has already been independently confirmed. This narrow
+                # fallback checks a learned glyph AND its label; it never marks
+                # check-in completed. The worker re-captures before committing.
+                from command_vision import guild_entry_hint
+                entry = guild_entry_hint(image)
             return {'state':'main_menu','guild_entry':entry}
         return {'state':'unknown'}
 

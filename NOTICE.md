@@ -5,3 +5,5 @@
 装饰背景和应用图标为项目自制／生成素材，来源见 assets 清单。GameVision_BD2 为用户提供的游戏对齐 OCR 与画面参考匹配模型，包含 dictionary.txt、ocr.onnx、visual.onnx；模型卡记录用途及 SHA256，实机验收仍待用户测试。现有交付未提供完整上游训练链和独立模型许可证，不将模型权重声称为 MIT 原创代码或已取得额外商用许可。
 
 本文件记录现有来源与授权信息的范围，不替原权利人授予许可。项目原创代码适用随包 MIT LICENSE；MIT 不覆盖游戏图像、模型权重或第三方依赖。ONNX Runtime、NumPy、OpenCV、Pillow、pywin32、PyInstaller 等按其各自许可证分发。个人配置、进度账本和原始账号材料未纳入公开包。
+
+本次新增command_scene.onnx为既有MobileNetV3 Small骨干的监督页面族微调，guild_anchor.npz为稳定UI像素的局部分类权重及裁片。仅公开不含账号块的局部入口参考与权重，不公开私人训练集；原游戏图像与上游模型权利说明继续适用。

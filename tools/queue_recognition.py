@@ -56,6 +56,10 @@ class RecognitionContext:
                 references[key] = self.engine.image_vector(frame)
             self.references, self.images = references, images
         result = self.engine.match(private_mask(image), self.references, minimum=.94)
+        # Supervised page families are additional evidence. Existing independent
+        # controls retain all action authority; a hint cannot make a click.
+        from command_vision import scene_hint
+        result['trained_scene'] = scene_hint(image)
         result.update(goal=self.goal, queue_task=self.queue_task, available=True,
                       account_region_excluded=True)
         if result['match']:

@@ -1,9 +1,11 @@
 {
   "name": "GameVision_BD2",
-  "version": "0.1.0-candidate",
+  "version": "0.2.0-command-scenes",
   "tasks": [
     "cropped_text_recognition",
-    "reference_image_matching"
+    "reference_image_matching",
+    "supervised_page_family_candidates",
+    "local_guild_entry_visual_detection"
   ],
   "device": "CPU",
   "threads": 2,
@@ -21,6 +23,34 @@
     "visual.onnx": {
       "bytes": 3717369,
       "sha256": "5cd58dc5d54b63633598e2f45bbc091ba4aa00a7209246d9224488d193ae83a7"
+    },
+    "command_scene.onnx": {
+      "bytes": 3807098,
+      "sha256": "47df72b9fbe083870118f7037373b38b0cb507654e87948973b05c9ba69b8518"
+    },
+    "guild_anchor.npz": {
+      "bytes": 256890,
+      "sha256": "b966bdddb16a15e3abea831e37a4603250fe20b073ab26be80c1d5bedc75a15f"
     }
+  },
+  "training_20261022": {
+    "reviewed_originals": 361,
+    "scene_classes": 39,
+    "scene_train_originals": 216,
+    "augmentation_views_per_epoch": 216,
+    "epochs": 80,
+    "validation_correct": 39,
+    "validation_n": 40,
+    "development_holdout_correct": 21,
+    "development_holdout_n": 22,
+    "holdout_reused": true,
+    "live_acceptance": "not yet verified",
+    "guild_train_positive_originals": 25,
+    "not_all_classes_have_independent_holdout": true,
+    "page_output_action_authority": false,
+    "guild_extra_real_captures": 32,
+    "guild_temporal_holdout_n": 8,
+    "guild_foreground_stable_pixels": 1295,
+    "guild_live_acceptance": "pending second bounded segment"
   }
 }

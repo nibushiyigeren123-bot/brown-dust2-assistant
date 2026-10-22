@@ -1,0 +1,28 @@
+{
+  "version": "0.2.15-hotfix.20261022.4",
+  "exe_sha256": "1cecbc82d4c830fe47e1f421152f5cfbda8db4587879f8cc3eea0f48051b42de",
+  "private_state_included": false,
+  "scene_originals": 361,
+  "scene_classes": 39,
+  "extra_training_captures": 32,
+  "development_holdout_reused": true,
+  "effective_validation": {
+    "correct": 39,
+    "n": 40
+  },
+  "effective_development_test": {
+    "correct": 21,
+    "n": 22
+  },
+  "command_checks": 19,
+  "queue_template_checks": 88,
+  "return_checks": 38,
+  "model_checks": 17,
+  "continue_checks": 17,
+  "live_guild_completed": true,
+  "live_guild_seconds": 17.2226,
+  "full_live_daily_acceptance": false,
+  "original_queues_preserved": 15,
+  "original_pending_preserved": 2,
+  "previous_completed_actions_replayed": false
+}

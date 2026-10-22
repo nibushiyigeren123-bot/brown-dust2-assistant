@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "box": [
+    202,
+    82,
+    280,
+    145
+  ],
+  "point": [
+    240,
+    102
+  ],
+  "sha256": "b966bdddb16a15e3abea831e37a4603250fe20b073ab26be80c1d5bedc75a15f",
+  "threshold": 1.7544212341308594,
+  "training_positive_floor": 5.54019021987915,
+  "training_negative_ceiling": -2.0313477516174316,
+  "minimum_icon_correlation": 0.86,
+  "minimum_label_correlation": 0.9,
+  "minimum_ink_light": 125,
+  "positive_originals": 25,
+  "positive_views": 600,
+  "negative_views": 2616,
+  "split_policy": "current capture plus first 24 bounded training frames only; last 8 temporal frames and archived validation/test excluded from fitting and gallery",
+  "stable_support_method": "foreground lower 5th percentile >180; one pixel contour; temporal gray std <=15; wallpaper pixels ignored",
+  "feature": "normalized_grayscale_over_temporally_stable_UI_pixels",
+  "feature_size": 1295,
+  "score_type": "uncalibrated_L2_logistic_logit",
+  "scope": "reviewed guild/alliance entry appearances; main menu prerequisite; no completion semantics"
+}
