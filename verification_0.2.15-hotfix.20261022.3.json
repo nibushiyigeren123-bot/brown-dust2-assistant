@@ -1,0 +1,31 @@
+{
+  "version": "0.2.15-hotfix.20261022.3",
+  "application_version": "0.2.15",
+  "hotfix": "pending_claim_isolation_20261022",
+  "status": "preview",
+  "date": "2026-10-22",
+  "exe_sha256": "0e89ae5d91cbeb1ba6eb12556ec2a8c1ea8902eef96444dee3b89aeaffbfa026",
+  "offline_checks": {
+    "claim_isolation": 8,
+    "continue_queue": 17,
+    "clock_and_opening": 15,
+    "queue_policy": 7
+  },
+  "total_offline_checks": 47,
+  "frozen_guard_original_runtime_readonly": true,
+  "runtime_json_bytes_preserved": 33,
+  "frozen_saved_image_workers": 4,
+  "live_game_actions_for_publication": false,
+  "full_live_daily_acceptance": "pending_user_debug",
+  "native_dismiss_live_acceptance": "pending_user_debug",
+  "reference_frames": {
+    "count": 55,
+    "account_mask": [
+      0,
+      0,
+      360,
+      80
+    ]
+  },
+  "private_config_runtime_evidence_included": false
+}

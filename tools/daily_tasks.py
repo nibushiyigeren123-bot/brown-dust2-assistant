@@ -102,14 +102,47 @@ class PendingConflictError(RuntimeError):
     pass
 
 
-# Only event AP isolation is established here. Other pending families retain
-# the existing conservative guard; sharing a ledger is never an exemption.
+# Foreign work is isolated only by an explicit, validated pending family.
+# A caller's own ledger and unknown/corrupt pending records keep their guards.
 EVENT_INDEPENDENT = frozenset(('navigation', 'management', 'free_draw', 'guild',
     'hunting', 'goddess', 'mirror', 'equipment', 'rewards', 'task_rewards'))
 
 
+# Claim-all on the daily/weekly reward page grants available rewards only. It
+# does not spend AP, currency or equipment, and its pending intent must not hold
+# unrelated modules hostage. This does not authorize replay or settlement.
+TASK_CLAIM_INDEPENDENT = frozenset(('navigation', 'management', 'free_draw',
+    'guild', 'hunting', 'goddess', 'mirror', 'equipment', 'event', 'rewards'))
+
+
+def isolated_task_claim(data, pending, current_day, *, path, directory):
+    """Recognize only the existing non-consuming daily/weekly claim protocol."""
+    if (type(data.get('schema_version')) is not int or data['schema_version'] != 1
+            or data.get('cache_date') != current_day
+            or pending.get('module') != 'task_rewards'
+            or pending.get('cache_date', current_day) != current_day
+            or set(pending) - {'module', 'type', 'point', 'state', 'evidence', 'cache_date'}):
+        return False
+    from local_cache import cache_path
+    try:
+        canonical = cache_path(Path(directory).resolve().parent,
+                               {'cache_date': current_day}, 'daily_weekly_rewards')
+    except (OSError, RuntimeError):
+        return False
+    if Path(path).resolve() != canonical.resolve():
+        return False
+    state = {'claim_daily': 'daily_tasks', 'claim_weekly': 'weekly_tasks'}.get(pending.get('type'))
+    point = pending.get('point')
+    evidence = pending.get('evidence')
+    return (state is not None and pending.get('state') == state
+            and isinstance(point, list) and len(point) == 2
+            and all(type(value) is int for value in point) and point == [1120, 673]
+            and isinstance(evidence, str) and bool(evidence.strip())
+            and Path(evidence).is_file())
+
+
 def guard_foreign_pending(directory, selected_path, *, module=None):
-    """Keep foreign receipts intact; allow proven independent event-AP work."""
+    """Keep foreign receipts intact; permit only validated independent work."""
     from execution_control import stop_execution
     from game_calendar import game_day
     selected_path = Path(selected_path).resolve()
@@ -141,6 +174,12 @@ def guard_foreign_pending(directory, selected_path, *, module=None):
                 and pending.get('cache_date', record_day) == record_day):
             retained.append({'module': owner, 'ledger': str(path), 'op_id': pending.get('op_id'),
                              'cache_date': record_day, 'historical': True})
+            continue
+        if module in TASK_CLAIM_INDEPENDENT and isolated_task_claim(
+                data, pending, game_day().isoformat(), path=path, directory=directory):
+            retained.append({'module': owner, 'ledger': str(path), 'op_id': pending.get('op_id'),
+                             'cache_date': record_day, 'independent': True,
+                             'reason': 'non_consuming_daily_weekly_claim_retained'})
             continue
         independent = (owner == 'event' and module in EVENT_INDEPENDENT
             and data.get('schema_version') == 1

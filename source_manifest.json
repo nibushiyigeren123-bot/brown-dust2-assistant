@@ -1,5 +1,5 @@
 {
-  "version": "0.2.15-hotfix.20261022.2",
+  "version": "0.2.15-hotfix.20261022.3",
   "source_only": true,
   "private_state_included": false,
   "files": [
@@ -1144,6 +1144,10 @@
       "sha256": "d10a3c133f38faf4fed808631840457f2b489125e7f5af29edefa2427863587f"
     },
     {
+      "path": "docs/RELEASE_0.2.15-hotfix.20261022.3.md",
+      "sha256": "5aed1a2d970890ff3828187155a2b44fc9f27c88fea595f99117f73df4680386"
+    },
+    {
       "path": "docs/RELEASE_0.2.15-hotfix.20261022.md",
       "sha256": "7f10a14120a9a4b16b93f3e275a40aa373d0147071e8f508e50a54cabda2e458"
     },
@@ -1177,7 +1181,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "12025576aba83d0b5a17ed9cdb80ad84f2187ec35264a50b157cbb022fc02810"
+      "sha256": "92b8778a065ffdafee8966f7ad6ef3321eb9915bf7023e634c9ebcc21b18b940"
     },
     {
       "path": "requirements.txt",
@@ -1245,7 +1249,7 @@
     },
     {
       "path": "tools/daily_tasks.py",
-      "sha256": "a987a9853df838c51cfb39ac962353c063c94d734c4067afeab6b404811ef320"
+      "sha256": "4c77821e8121d7ae3d023a559167521eabf9982b58b8606af578647d5da7929f"
     },
     {
       "path": "tools/daily_vision.py",
@@ -1500,8 +1504,8 @@
       "sha256": "93bd51d4fbe5a6b23d392ff7c13d4540fdc953993705cd1073c1a2e278a6a3e0"
     },
     {
-      "path": "verification_0.2.15-hotfix.20261022.2.json",
-      "sha256": "59ecfd5e042f13c325384e4af5d1ac4494a4b01979487ddcfe28a6ba624df5c4"
+      "path": "verification_0.2.15-hotfix.20261022.3.json",
+      "sha256": "90d221d251638ec6ee36aa51f184e3b1aef1e9ca98a9c34c924f885af5d5341e"
     }
   ]
 }
