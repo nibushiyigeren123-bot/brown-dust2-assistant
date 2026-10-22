@@ -1,5 +1,6 @@
 """Local Windows OCR and small UI anchors. Reads images, never sends input."""
 import hashlib
+from frame_store import image_bytes, write_encoded_png
 import json
 import re
 import subprocess
@@ -44,7 +45,7 @@ def read_amount_crop(image, box, output, name):
         path.parent.mkdir(parents=True,exist_ok=True)
         with _numeric_crop_lock:
             if not path.exists():
-                encoded.tofile(str(path))
+                write_encoded_png(path, encoded)
             payload=windows_ocr(path,Path(output)/'ocr',language='en-US')
         text=compact(''.join(line['text'] for line in payload['lines'])).replace(',','')
         text=text[2:] if text.startswith('00') else ''
@@ -58,9 +59,50 @@ def read_amount_crop(image, box, output, name):
 
 
 def windows_ocr(path, output, language='zh-Hans-CN'):
+    from model_ocr_provider import model_ocr
+    from frame_store import active, image_bytes, ocr_get, ocr_put
+    key = ('ocr', hashlib.sha256(image_bytes(path)).hexdigest(), language)
+    cached = ocr_get(key) if active() else None
+    if cached is not None:
+        return cached
+    result = model_ocr(path, output, language, _system_windows_ocr)
+    if active():
+        ocr_put(key, result)
+    return result
+
+
+def _memory_system_ocr(path, language):
+    import base64
+    from frame_store import image_bytes, private_mask
+    raw = image_bytes(path)
+    frame = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR)
+    raw = cv2.imencode('.png', private_mask(frame))[1].tobytes()
+    command = ['C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe', '-NoProfile',
+               '-ExecutionPolicy', 'Bypass', '-File', str(ROOT/'tools/windows_ocr.ps1'),
+               '-InputPath', '__BD2_PIPE__', '-OutputPath', '__BD2_PIPE__', '-LanguageTag', language]
+    arguments = dict(input=base64.b64encode(raw), capture_output=True, timeout=25,
+                     creationflags=subprocess.CREATE_NO_WINDOW)
+    with _external_process_lock:
+        if getattr(sys, 'frozen', False):
+            import ctypes
+            ctypes.windll.kernel32.SetDllDirectoryW(None)
+        try:
+            result = subprocess.run(command, **arguments)
+        finally:
+            if getattr(sys, 'frozen', False):
+                ctypes.windll.kernel32.SetDllDirectoryW(str(sys._MEIPASS))
+    if result.returncode:
+        raise RuntimeError('Windows OCR pipe failed: '+result.stderr.decode('utf-8', errors='replace')[:400])
+    return json.loads(result.stdout.decode('utf-8-sig'))
+
+
+def _system_windows_ocr(path, output, language='zh-Hans-CN'):
+    from frame_store import active
+    if active():
+        return _memory_system_ocr(path, language)
     path, output = Path(path).resolve(strict=True), Path(output).resolve()
     output.mkdir(parents=True, exist_ok=True)
-    sha = hashlib.sha256(path.read_bytes()).hexdigest()
+    sha = hashlib.sha256(image_bytes(path)).hexdigest()
     target = output / (f'{sha}.json' if language == 'zh-Hans-CN' else f'{sha}_{language}.json')
     if not target.exists():
         command = ['C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe', '-NoProfile',
@@ -101,7 +143,7 @@ def read_mirror_multiplier(image,box,output,name):
         path=Path(output)/f'{name}_{hashlib.sha256(encoded.tobytes()).hexdigest()[:16]}_{scale}.png'
         path.parent.mkdir(parents=True,exist_ok=True)
         with _numeric_crop_lock:
-            if not path.exists():encoded.tofile(str(path))
+            if not path.exists():write_encoded_png(path, encoded)
             payload=windows_ocr(path,Path(output)/'ocr',language='en-US')
         text=compact(''.join(line['text'] for line in payload['lines']))
         # OCR sometimes renders the trailing 倍 as fi. Only this fixed label
@@ -125,7 +167,7 @@ def read_mirror_price(image,box,output):
         path=Path(output)/f'mirror_value_{hashlib.sha256(encoded.tobytes()).hexdigest()[:16]}_{scale}.png'
         path.parent.mkdir(parents=True,exist_ok=True)
         with _numeric_crop_lock:
-            if not path.exists():encoded.tofile(str(path))
+            if not path.exists():write_encoded_png(path, encoded)
             payload=windows_ocr(path,Path(output)/'ocr',language='en-US')
         text=compact(''.join(line['text'] for line in payload['lines'])).upper();texts.append(text)
         match=re.fullmatch(r'VALUE([0-9OIL]+)',text)
@@ -145,7 +187,7 @@ def fixed_map_payload(image, output, resources_only=False):
             a,b,c,d=box;crop=cv2.cvtColor(normalized[b:d,a:c],cv2.COLOR_BGR2GRAY)
             enlarged=cv2.resize(crop,None,fx=2,fy=2,interpolation=cv2.INTER_CUBIC)
             encoded=cv2.imencode('.png',enlarged)[1];crop_path=output/f'map_{name}_{hashlib.sha256(encoded.tobytes()).hexdigest()[:16]}.png'
-            output.mkdir(parents=True,exist_ok=True);encoded.tofile(str(crop_path))
+            output.mkdir(parents=True,exist_ok=True);write_encoded_png(crop_path, encoded)
             region=windows_ocr(crop_path,output/'regional_ocr',language=language)
             for line in region['lines']:
                 words=[{**w,'x':a+w['x']/2,'y':b+w['y']/2,'width':w['width']/2,'height':w['height']/2} for w in line['words']]
@@ -190,11 +232,11 @@ def inspect_frame(path, vision, config, output, payload=None):
         crop = cv2.copyMakeBorder(crop, 12, 12, 12, 12, cv2.BORDER_CONSTANT, value=255)
         values = []
         output.mkdir(parents=True, exist_ok=True)
-        source_hash = hashlib.sha256(path.read_bytes()).hexdigest()[:16]
+        source_hash = hashlib.sha256(image_bytes(path)).hexdigest()[:16]
         for scale in (3, 4):
             crop_path = output / f'price_{source_hash}_{scale}.png'
             enlarged = cv2.resize(crop, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
-            cv2.imencode('.png', enlarged)[1].tofile(str(crop_path))
+            write_encoded_png(crop_path, cv2.imencode('.png', enlarged)[1])
             price_ocr = windows_ocr(crop_path, output / 'ocr', language='en-US')
             text = compact(''.join(l['text'] for l in price_ocr['lines']))
             values.append(int(text) if re.fullmatch(r'\d+', text) else None)

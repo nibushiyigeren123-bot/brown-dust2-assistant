@@ -5,11 +5,26 @@ import stat
 from datetime import date, timedelta
 from pathlib import Path
 
-from local_cache import cache_path, load_local_config, save
+from local_cache import cache_path, load_local_config, save, iter_cache_records
 from pending_daily import exclusive_ledger
 from game_calendar import game_day
 
 CACHE_NAME = re.compile(r'^(\d{4}-\d{2}-\d{2})_[0-9a-f]{12}\.json$')
+
+
+def local_cache_file(path, runtime):
+    """Only flat files and the named day folder; never follow reparse points."""
+    path, runtime = Path(path), Path(runtime).resolve()
+    match = CACHE_NAME.fullmatch(path.name)
+    if not match:
+        return False
+    allowed = (runtime, runtime / 'days' / match.group(1))
+    if path.parent not in allowed or path.resolve().parent != path.parent:
+        return False
+    for item in (path, path.parent, path.parent.parent):
+        if item.exists() and item.lstat().st_file_attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+            return False
+    return True
 
 
 def automatic_cleanup_enabled(root):
@@ -40,7 +55,7 @@ def protected_dates(root):
 
 
 def plan_cleanup(root, today=None):
-    root = Path(root)
+    root = Path(root).resolve()
     today = today or game_day()
     cutoff = today - timedelta(days=1)
     result = {'today':today.isoformat(), 'keep_since':cutoff.isoformat(), 'candidates':[], 'kept':[], 'errors':[]}
@@ -54,13 +69,13 @@ def plan_cleanup(root, today=None):
     if runtime_path.exists() and runtime_path.lstat().st_file_attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT:
         result['errors'].append('runtime 指向其他目录，未清理任何缓存。')
         return result
-    for path in sorted((root / 'runtime').glob('*.json')):
+    for path in iter_cache_records(root / 'runtime'):
         match = CACHE_NAME.fullmatch(path.name)
         if not match:
             continue  # Never touch logs, recovery pointers, backups or arbitrary files.
         reason = None
         try:
-            if path.lstat().st_file_attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT or path.resolve().parent != runtime:
+            if not local_cache_file(path, runtime):
                 reason = '路径不是本地普通缓存文件'
             else:
                 day = date.fromisoformat(match.group(1))
@@ -74,13 +89,18 @@ def plan_cleanup(root, today=None):
                     reason = '日期或格式无法核对'
                 elif data.get('pending'):
                     reason = '有未决操作'
+                elif (data.get('completed') is True or data.get('issued') is True
+                      or bool(data.get('events')) or bool(data.get('batches'))
+                      or bool(data.get('spent_total'))
+                      or any(key in data for key in ('equipment', 'hunting', 'goddess', 'mirror'))):
+                    reason = '历史任务与消费账本保留'
                 elif day.isoformat() in protected:
                     reason = '当前选用的缓存日期'
                 elif day >= cutoff:
                     reason = '保留今天和昨天（以及未来日期）'
         except (OSError, ValueError, TypeError, AttributeError):
             reason = '文件暂不可读'
-        item = {'file':path.name, 'date':match.group(1)}
+        item = {'file':path.relative_to(runtime).as_posix(), 'date':match.group(1)}
         if reason:
             result['kept'].append(item | {'reason':reason})
         else:
@@ -90,7 +110,7 @@ def plan_cleanup(root, today=None):
 
 def clear_old_cache(root, today_provider=None):
     today_provider = today_provider or game_day
-    root = Path(root)
+    root = Path(root).resolve()
     result = {'deleted':[], 'kept':[], 'errors':[], 'busy':False}
     try:
         runtime_path = root / 'runtime'
@@ -117,7 +137,7 @@ def clear_old_cache(root, today_provider=None):
                     result['kept'].append(item | {'reason':'清理前保护条件已变化'})
                     continue
                 path = root / 'runtime' / item['file']
-                if path.lstat().st_file_attributes & stat.FILE_ATTRIBUTE_REPARSE_POINT or path.resolve().parent != runtime:
+                if not local_cache_file(path, runtime):
                     result['errors'].append('缓存路径发生变化，未删除。'); break
                 try:
                     path.unlink()

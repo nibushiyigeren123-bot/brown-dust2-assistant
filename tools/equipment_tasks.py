@@ -1,4 +1,5 @@
 """Equipment execution and local-date receipts. Read-only unless --execute."""
+from frame_store import next_path, report_write, persist_references
 import argparse
 import hashlib
 import json
@@ -80,8 +81,17 @@ class EquipmentLedger:
         qualities = observation['selected_qualities']
         if qualities != [self.data.get('selected_quality')]:
             raise RuntimeError('Saved filter differs from the inspected item')
-        if type(observation.get('inventory_count')) is not int:
-            raise RuntimeError('Read the inventory count before decomposition')
+        inventory = observation.get('inventory_count')
+        if inventory is not None and (type(inventory) is not int or not 0 <= inventory <= 2000):
+            raise RuntimeError('Invalid auxiliary inventory count')
+        if inventory is None or observation.get('visual_receipt', {}).get('basis') == 'filtered_selectable_item':
+            from equipment_receipts import verify_selection
+            try:
+                verified = verify_selection(EquipmentVision(), observation, image)
+            except (OSError, KeyError, TypeError, ValueError):
+                verified = False
+            if not verified:
+                raise RuntimeError('Inventory unavailable and image-backed single R selection is incomplete')
         self.progress.submit_decompose(observation['card'], qualities, observation['selected_count'],
                                        r_unavailable=observation.get('r_unavailable', False))
         self.data['pending'] = {'module': 'equipment', 'stage': 'decompose',
@@ -92,12 +102,21 @@ class EquipmentLedger:
         pending = self.data['pending']
         if not pending or pending['stage'] != 'decompose':
             return False
-        before = pending['observation']['inventory_count']
-        if type(inventory_count) is not int or before - inventory_count != 1 or not result_evidence:
+        before = pending['observation'].get('inventory_count')
+        if not result_evidence:
             return False
+        known_counts = type(before) is int and type(inventory_count) is int
+        if known_counts:
+            if before - inventory_count != 1:
+                return False
+        else:
+            from equipment_receipts import verify_visual_settlement
+            if not verify_visual_settlement(pending, result_evidence, image):
+                return False
         self.progress.confirm_decompose(1)
         self.data['events'].append({'submission': pending, 'inventory_after': inventory_count,
-                                    'result_evidence': str(result_evidence), 'evidence': str(image)})
+                                    'result_evidence': str(result_evidence), 'evidence': str(image),
+                                    'settlement_basis': 'inventory_delta' if known_counts else 'single_R_visual_receipts'})
         self.data['pending'] = None
         self.save()
         return True
@@ -118,7 +137,7 @@ def probe_refine_once(output, data_root):
             for _ in range(2):
                 image, geometry = window.capture()
                 path = output / f"before_{len(report['observations']):03}.png"
-                image.save(path)
+                path=next_path(path);image.save(path)
                 obs = vision.inspect_file(path, output)
                 assert obs['state'] == 'equipment_refine' and obs['score'] != 24
                 report['observations'].append({'image': str(path), 'observation': obs})
@@ -135,7 +154,7 @@ def probe_refine_once(output, data_root):
                 time.sleep(1)
                 image, geometry = window.capture()
                 path = output / f"after_{len(report['observations']):03}.png"
-                image.save(path)
+                path=next_path(path);image.save(path)
                 obs = vision.inspect_file(path, output)
                 report['observations'].append({'image': str(path), 'observation': obs})
                 if ledger.settle_refine(obs, path):
@@ -176,7 +195,7 @@ def main():
         else:
             image, geometry = GameWindow.find().capture()
             path = output / 'current.png'
-            image.save(path)
+            path=next_path(path);image.save(path)
             report['geometry'] = geometry
         observation = EquipmentVision().inspect_file(path, output / 'recognition')
         report.update(cache_date=ledger.data['cache_date'],

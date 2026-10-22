@@ -1,4 +1,5 @@
 """Guild entry and check-in receipt. Default is inspection; --execute is explicit."""
+from frame_store import next_path, report_write, persist_references
 import argparse
 import hashlib
 import json
@@ -66,6 +67,10 @@ class GuildController:
 
 
 def save_json(path,data):
+    from frame_store import active
+    if active() and path.name == 'run.json':
+        return report_write(path, data)
+    persist_references(data)
     path.parent.mkdir(parents=True,exist_ok=True)
     temporary=path.with_suffix(path.suffix+'.tmp')
     with temporary.open('w',encoding='utf-8',newline='\n') as handle:
@@ -121,7 +126,7 @@ def run(args):
                     break
                 image,geometry=window.capture()
                 path=output/f"frame_{len(report['observations']):03}.png"
-                image.save(path)
+                path=next_path(path);image.save(path)
                 obs=vision.inspect_file(path,output)
                 decision=controller.step(obs)
                 report['observations'].append({'image':str(path),'observation':obs,'decision':decision})
@@ -144,7 +149,7 @@ def run(args):
                     # the UI before committing either an entry or a return.
                     fresh,fresh_geometry=window.capture()
                     fresh_path=output/f"preclick_{len(report['observations']):03}.png"
-                    fresh.save(fresh_path)
+                    fresh_path=next_path(fresh_path);fresh.save(fresh_path)
                     current=vision.inspect_file(fresh_path,output)
                     candidate=controller.step(current)
                     if candidate!=decision:

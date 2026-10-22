@@ -107,7 +107,7 @@ def summarize_report(report, task_id):
             return prefix+'赛季末 · 已跳过。'+(report.get('skip_reason') or '已确认结算提示并返回主菜单，继续其他日常；未记作战斗完成。')
         if task_id in ('goddess_check_in','goddess_daily_reward') and report.get('deferred_actions'):
             done=report.get('progress',{}).get('goddess',{}).get('done',[])
-            if 'check_in' in done and 'daily_reward' in report['deferred_actions']:
+            if task_id == 'goddess_check_in' and 'check_in' in done and 'daily_reward' in report['deferred_actions']:
                 return prefix+'签到已完成，当前没有可领的日常奖励，已返回主菜单；完成其他关卡后可再检查。'
             return prefix+'当前未发现可领取的女神像互动，已返回主菜单；尚未核实的项目保留待检查。'
         if task_id == 'guild' and not report.get('actions'):

@@ -207,7 +207,8 @@ class WorkbenchApp:
             day = self.daily['cache_date']
             if previous and previous != day:
                 self.task_reports.clear()
-            count = len(list((ROOT / 'runtime').glob(day + '_*.json')))
+            from local_cache import iter_cache_records
+            count = sum(path.name.startswith(day + '_') for path in iter_cache_records(ROOT / 'runtime'))
             self.context.set('游戏日  ' + game_day().isoformat() + '（北京时间08:00刷新） / 数据缓存 ' + day + f' · {count}项')
         except Exception as error:
             self.daily, self.event = {}, {}
@@ -454,15 +455,21 @@ class WorkbenchApp:
                 self.settings_editor.notebook.select(self.settings_editor.guild_tab)
                 return
         if not resume:
-            stamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
-            self.output = ROOT / 'evidence/workbench_runs' / f'{stamp}_{task_id}'
-            self.output.mkdir(parents=True, exist_ok=False)
+            if self.execute.get():
+                stamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+                self.output = ROOT / 'evidence/workbench_runs' / f'{stamp}_{task_id}'
+                self.output.mkdir(parents=True, exist_ok=False)
+            else:
+                from game_calendar import game_day
+                self.output = ROOT / 'evidence/inspections' / game_day().isoformat() / task_id
+                self.output.mkdir(parents=True, exist_ok=True)
+                self.receipt_log = None
         self.running_task_id = task_id
         self.running_cache_date = self.daily.get('cache_date')
         if task_id != 'workflow':
             self.task_reports.pop(task_id, None)
         self.stop_file, self.pause_file = self.output / 'stop.requested', self.output / 'pause.requested'
-        if resume:
+        if resume or not self.execute.get():
             self.stop_file.unlink(missing_ok=True); self.pause_file.unlink(missing_ok=True)
         args = ['--worker', task_id, '--output', str(self.output)]
         if self.execute.get():
@@ -470,7 +477,7 @@ class WorkbenchApp:
         if plan:
             manifest = self.output / 'plan.json'; manifest.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding='utf-8')
             args.extend(['--manifest', str(manifest)])
-        if task_id == 'workflow':
+        if task_id == 'workflow' and self.execute.get():
             from workflow_runner import save
             save(ROOT / 'runtime/workbench_last_run.json', {'output': str(self.output)})
         if resume:
@@ -481,7 +488,7 @@ class WorkbenchApp:
         self.log_context = '实机执行' if self.execute.get() else '只读检查 · 不发送游戏输入'
         self.open_process_window()
         self.root.update_idletasks()
-        with (self.output / 'process.log').open('ab') as log:
+        with (self.output / 'process.log').open('ab' if self.execute.get() else 'wb') as log:
             self.process = subprocess.Popen(base + args, cwd=str(ROOT), env=env, stdout=log, stderr=log, creationflags=subprocess.CREATE_NO_WINDOW)
         self.status.set('正在逐段核对队列…' if task_id == 'workflow' else '正在运行：' + BY_ID[task_id].name)
         self.stop_button.configure(state='normal'); self.pause_button.configure(state='normal' if task_id == 'workflow' else 'disabled')
@@ -634,6 +641,10 @@ class WorkbenchApp:
             state = json.loads((output / 'workflow.json').read_text(encoding='utf-8'))
             if state['identity'].get('cache_date') != game_day().isoformat():
                 return
+            if state['status'] == 'running':
+                self.output = output
+                self.status.set('上次记录仍标为运行中，可能尚未收尾；请先查看原日志和未决记录，不会自动重跑。')
+                return
             if state['status'] in ('paused', 'stopped', 'needs_review'):
                 self.output = output
                 self.resume_button.configure(state='normal')
@@ -650,8 +661,19 @@ class WorkbenchApp:
 
     def close(self):
         if self.process:
-            self.closing = True; self.stop(); return
+            if self.closing:
+                return
+            self.closing = True
+            self.stop()
+            self.status.set('正在停止任务并保存回执，最多等待30秒；随后关闭助手及其模型。')
+            self.root.after(30000, self.finish_close)
+            return
         self.root.destroy()
+
+    def finish_close(self):
+        if self.closing:
+            # Do not clear a ledger or rewrite the original workflow on forced exit.
+            self.root.destroy()
 
     def open_logs(self):
         target = self.output or ROOT / 'evidence'

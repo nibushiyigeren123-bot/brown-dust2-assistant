@@ -50,6 +50,27 @@ class EventPreparationVision:
         region = image[max(0, b-4):min(720, d+4), max(0, a-4):min(1280, c+4)]
         return float(cv2.matchTemplate(region, self.templates[name], cv2.TM_CCOEFF_NORMED).max()) >= threshold
 
+    def home_event(self, image):
+        """Match the known title, excluding the D-4/D-DAY badge above it."""
+        if abs(image.shape[1] / image.shape[0] - 16/9) > .025:
+            return None
+        from ui_foreground import foreground_mask, masked_shape_match
+        # The old full-card template includes a changing countdown. The title
+        # glyph is invariant; locate it within the right-hand event-card area.
+        glyph = foreground_mask(self.templates['home_loyal_maid'][23:73, :111])
+        normalized = cv2.resize(image, (1280,720), interpolation=cv2.INTER_AREA)
+        gray = cv2.cvtColor(normalized, cv2.COLOR_BGR2GRAY)
+        best = None
+        for factor in (.95, 1., 1.05):
+            mask = cv2.resize(glyph, None, fx=factor, fy=factor, interpolation=cv2.INTER_NEAREST)
+            match = masked_shape_match(gray[320:610,1010:1235], mask)
+            if match['score'] >= .82 and match['foreground_gray'] >= 170:
+                x,y = match['position']; h,w = mask.shape
+                found = {'event_id':'Loyal_Maid_20261016', 'point':[1010+x+w/2,320+y+h/2],
+                         'score':round(match['score'],4), 'recognition':'known_event_title_glyph'}
+                if best is None or found['score'] > best['score']: best = found
+        return best
+
     def inspect_file(self, path, output):
         image = read_image(path)
         payload = windows_ocr(path, Path(output) / 'ocr')
@@ -64,9 +85,11 @@ class EventPreparationVision:
             if observation['state'] == 'event_preparation':
                 observation['points']['back'] = [113, 33]
         if observation['state'] == 'main_menu':
-            if self.anchor(image, 'home_loyal_maid'):
-                observation['event_id'] = 'Loyal_Maid_20261016'
-                observation['points'] = {'enter_event': [1135, 505]}
+            entry = self.home_event(image)
+            if entry:
+                observation['event_id'] = entry['event_id']
+                observation['points'] = {'enter_event': entry['point']}
+                observation['event_entry_evidence'] = entry
             return observation
         if self.anchor(image, 'hub_loyal_maid'):
             doc = OcrDocument(payload)

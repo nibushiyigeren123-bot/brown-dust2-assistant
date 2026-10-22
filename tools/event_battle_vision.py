@@ -94,8 +94,9 @@ class EventBattleVision:
                 return {'state': 'event_defeat', **balance}
         base = self.preparation.base.inspect(image, payload)
         if base['state'] == 'main_menu':
-            if self.preparation.anchor(image, 'home_loyal_maid'):
-                base.update(event_id='Loyal_Maid_20261016', points={'enter_event': [1135, 505]})
+            entry = self.preparation.home_event(image)
+            if entry:
+                base.update(event_id=entry['event_id'], points={'enter_event': entry['point']}, event_entry_evidence=entry)
             return base
         if self.preparation.anchor(image, 'hub_loyal_maid'):
             normal = doc.find('普通战斗', (300, 600, 500, 680), exact=True)

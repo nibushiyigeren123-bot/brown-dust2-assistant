@@ -6,7 +6,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 from game_calendar import game_day, check_execution_day
-from local_cache import load_local_config, save
+from local_cache import load_local_config, save, initialize_day_cache
 
 NAMES = ('daily_tasks.json', 'event_and_rewards.json')
 
@@ -28,8 +28,12 @@ def require_current_cache(root):
     if daily['cache_date'] != event['cache_date']:
         from execution_control import stop_execution
         stop_execution('日常和活动缓存日期不一致，暂不执行。', 'configuration')
-    check_execution_day(daily['cache_date'])
-    return daily['cache_date']
+    current = game_day().isoformat()
+    if daily['cache_date'] != current:
+        from execution_control import stop_execution
+        stop_execution(f"电脑当前游戏日为 {current}，活动配置日期仍为 {daily['cache_date']}；启动日期同步尚未完成。", 'configuration')
+    initialize_day_cache(root, current)
+    return current
 
 def restore_prepared(root, record):
     backup = (Path(root) / record['backup']).resolve()
@@ -58,15 +62,12 @@ def synchronize_date(root):
     values = [load_local_config(root / 'config' / name) for name in NAMES]
     raw = [json.loads((root / 'config' / name).read_text(encoding='utf-8')) for name in NAMES]
     if previous.get('status') != 'prepared' and all(v.get('cache_date') == target for v in raw):
+        initialize_day_cache(root, target)
         return {'changed': False, 'cache_date': target}
     from pending_daily import exclusive_ledger
     with exclusive_ledger(root / 'runtime/workflow_control'), exclusive_ledger(root / 'runtime/game_control'):
-        for path in (root / 'runtime').glob('*.json'):
-            data = json.loads(path.read_text(encoding='utf-8'))
-            if not isinstance(data, dict):
-                raise RuntimeError('存在格式异常的本地记录，未自动换日。')
-            if data.get('pending'):
-                raise RuntimeError('存在未决操作，先核对原日期回执；不会自动换日或重复提交。')
+        # Historical pending belongs to its own day. Calendar initialization
+        # changes only active config dates, never the old operation or receipt.
         previous = read_journal(root)
         if previous.get('status') == 'prepared':
             restore_prepared(root, previous)
@@ -75,11 +76,10 @@ def synchronize_date(root):
         raw = [json.loads(originals[name].decode('utf-8')) for name in NAMES]
         values = [load_local_config(root / 'config' / name) for name in NAMES]
         if all(v.get('cache_date') == target for v in raw):
+            initialize_day_cache(root, target)
             return {'changed': False, 'cache_date': target}
-        if any(v['cache_date'] > target for v in values):
-            raise RuntimeError('缓存日期晚于当前游戏日；不倒退日期或重复执行，请核对电脑时间。')
-        if values[0]['cache_date'] != values[1]['cache_date']:
-            raise RuntimeError('日常和活动日期不一致，保留原配置待核对。')
+        # The clock is authoritative even if old config files disagree. Existing
+        # per-day ledgers are retained, so selecting a date never resets progress.
         updated = copy.deepcopy(values)
         for value in updated:
             value['cache_date'] = target
@@ -104,6 +104,7 @@ def synchronize_date(root):
         except Exception:
             restore_prepared(root, record)
             raise
+        initialize_day_cache(root, target)
         record['status'] = 'complete'
         save(journal_path(root), record)
         save(backup / 'receipt.json', record)

@@ -1,4 +1,5 @@
 """Serial coordinator. Modules own game input and journals; this layer owns the queue."""
+from frame_store import next_path, report_write, persist_references
 import argparse
 import hashlib
 import json
@@ -76,7 +77,9 @@ def continuation_plan(state_path):
 def pending_receipts(root):
     """Read-only references for error summaries; never settle or relabel a ledger."""
     records = []
-    for path in (root / 'runtime').glob('*.json'):
+    from local_cache import iter_cache_records
+    from game_calendar import game_day
+    for path in iter_cache_records(root / 'runtime'):
         try:
             data = json.loads(path.read_text(encoding='utf-8'))
             if not isinstance(data, dict):
@@ -84,7 +87,8 @@ def pending_receipts(root):
             pending = data.get('pending')
             if pending:
                 records.append({'ledger': str(path), 'module': pending.get('module'),
-                                'op_id': pending.get('op_id')})
+                                'op_id': pending.get('op_id'), 'cache_date': data.get('cache_date'),
+                                'historical': bool(data.get('cache_date') and data['cache_date'] < game_day().isoformat())})
         except (OSError, ValueError, AttributeError):
             # Unknown is still unresolved in the summary. Never hide it as empty.
             records.append({'ledger': str(path), 'module': '无法核对的记录',
@@ -183,23 +187,27 @@ def run(args):
                     continue
                 key, module = item['id'], BY_ID[item['id']]
                 step_output = output / f'{index:02d}_{key}'
-                if step_output.exists() and not args.execute:
+                reuse_inspection = not args.execute and output.is_relative_to((ROOT / 'evidence/inspections').resolve())
+                if step_output.exists() and not args.execute and not reuse_inspection:
                     count = 1
                     while (output / f'{index:02d}_{key}_inspection_{count}').exists():
                         count += 1
                     step_output = output / f'{index:02d}_{key}_inspection_{count}'
-                if step_output.exists():
+                if step_output.exists() and not reuse_inspection:
                     # Unexpected evidence is not permission to rerun an input.
                     item.update(status='blocked', reason='存在原运行目录，未覆盖或重试；请核对原回执。', output=str(step_output))
                     state['cursor'] = index + 1
                     save(state_path, state)
                     continue
-                step_output.mkdir()
+                step_output.mkdir(exist_ok=reuse_inspection)
                 item.update(status='running', output=str(step_output), started_at=time.time())
                 save(state_path, state)
                 child, code = {}, None
                 control_path = step_output / 'control.json'
                 problem_path = step_output / 'item_problem.json'
+                if reuse_inspection:
+                    for name in ('control.json','item_problem.json','run.json','worker_failure.json','worker_result.json'):
+                        (step_output / name).unlink(missing_ok=True)
                 try:
                     command = worker_command(key, step_output, args.execute)
                     env = dict(os.environ, BD2_STOP_FILE=str(stop_path),
@@ -232,7 +240,7 @@ def run(args):
                             state['daily_audit_id'] = audit['audit_id']
                     reason = child.get('stopped') or child.get('error')
                     if status == 'needs_review' and not reason:
-                        reason = f'{module.name}执行器退出码：{code}，尚未核实完成。'
+                        reason = child.get('completion_reason') or f'{module.name}执行器退出码：{code}，尚未核实完成。'
                     problem = json.loads(problem_path.read_text(encoding='utf-8')) if problem_path.is_file() else {}
                     if child.get('blocked') or problem.get('blocked'):
                         status, reason = 'blocked', problem.get('reason') or reason
@@ -270,20 +278,15 @@ def run(args):
                     break
                 if args.execute:
                     from game_window import GameWindow, check_requested_stop
-                    from common_navigation import PageDiagnosis
-                    from m00_recognize import read_image
-                    from runtime_policy import network_wait_seconds, wait_observed
-                    home_checks = 0
-                    def observe_home():
-                        nonlocal home_checks
-                        image, _ = GameWindow.find().capture()
-                        home = step_output / f'coordinator_home_check_{home_checks:03d}.png'
-                        image.save(home)
-                        home_checks += 1
-                        return PageDiagnosis().inspect(read_image(home))
+                    from common_navigation import ensure_main_menu
+                    from runtime_policy import network_wait_seconds
+                    os.environ['BD2_QUEUE_TASK'] = key
                     try:
-                        wait_observed(observe_home, lambda obs: obs['state'] == 'main_menu',
-                                      network_wait_seconds(), stop=check_requested_stop)
+                        with exclusive_ledger(ROOT / 'runtime/game_control'):
+                            returned = ensure_main_menu(GameWindow.find(), step_output / 'queue_return',
+                                                        execute=True, timeout=network_wait_seconds())
+                        if not returned['completed']:
+                            raise RuntimeError(returned.get('stopped') or '主菜单尚未确认')
                         item['return_verified'] = True
                     except ExecutionControlError:
                         raise

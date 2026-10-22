@@ -1,4 +1,5 @@
 """Navigation-only daily hunting status probe. Never claims or starts a battle."""
+from frame_store import next_path, report_write, persist_references
 from types import SimpleNamespace
 from pathlib import Path
 from task_rewards import TaskRewardRun, save
@@ -117,10 +118,10 @@ def probe_hunting_task(config, output, data_root, on_frame=None):
     from daily_vision import DailyVision, inspect_frame
     window,vision = GameWindow.find(),DailyVision()
     for index in range(4):
-        image,geo=window.capture();path=output/f'start_{index}.png';image.save(path)
+        image,geo=window.capture();path=output/f'start_{index}.png';path=next_path(path);image.save(path)
         observed=inspect_frame(path,vision,config,output/'start_ocr')
         if observed['state'] not in ('hunt_map','hunt_dialog'):break
-        fresh,fresh_geo=window.capture();fresh_path=output/f'start_{index}_verified.png';fresh.save(fresh_path)
+        fresh,fresh_geo=window.capture();fresh_path=output/f'start_{index}_verified.png';fresh_path=next_path(fresh_path);fresh.save(fresh_path)
         verified=inspect_frame(fresh_path,vision,config,output/'start_ocr')
         if geo!=fresh_geo or verified['state']!=observed['state']:continue
         point=verified['points']['cancel'] if verified['state']=='hunt_dialog' else verified['back_point']

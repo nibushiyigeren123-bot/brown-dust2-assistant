@@ -6,8 +6,14 @@ import uuid
 from pathlib import Path
 
 
-def write_json(path, value, *, fsync=False, newline=None):
+def write_json(path, value, *, fsync=False, newline=None, _direct=False):
     path = Path(path)
+    if not _direct:
+        from frame_store import active, report_write, persist_references
+        if active():
+            if path.name in ('run.json', 'inspection.json'):
+                return report_write(path, value)
+            persist_references(value)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + '.' + uuid.uuid4().hex + '.tmp')
     with temporary.open('w', encoding='utf-8', newline=newline) as handle:

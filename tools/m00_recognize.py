@@ -15,7 +15,8 @@ from project_paths import ROOT
 
 
 def read_image(path):
-    image = cv2.imdecode(np.fromfile(str(path), dtype=np.uint8), cv2.IMREAD_COLOR)
+    from frame_store import image_bytes
+    image = cv2.imdecode(np.frombuffer(image_bytes(path), dtype=np.uint8), cv2.IMREAD_COLOR)
     if image is None:
         raise ValueError(f"Cannot decode image: {path}")
     return image

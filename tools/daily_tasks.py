@@ -114,7 +114,9 @@ def guard_foreign_pending(directory, selected_path, *, module=None):
     from game_calendar import game_day
     selected_path = Path(selected_path).resolve()
     retained = []
-    for path in Path(directory).glob('*.json'):
+    from local_cache import iter_cache_records
+    from datetime import date
+    for path in iter_cache_records(directory):
         if path.resolve() == selected_path:
             continue
         try:
@@ -129,6 +131,17 @@ def guard_foreign_pending(directory, selected_path, *, module=None):
         if not isinstance(pending, dict) or not pending.get('module'):
             stop_execution(f'未决身份不完整，保留原记录：{path}', 'ledger_invalid')
         owner = pending['module']
+        record_day = data.get('cache_date')
+        try:
+            historical = date.fromisoformat(record_day) < game_day()
+        except (TypeError, ValueError):
+            historical = False
+        if (historical and owner in ('event', 'equipment', 'guild', 'hunting',
+                'goddess', 'mirror', 'task_rewards', 'pass_rewards')
+                and pending.get('cache_date', record_day) == record_day):
+            retained.append({'module': owner, 'ledger': str(path), 'op_id': pending.get('op_id'),
+                             'cache_date': record_day, 'historical': True})
+            continue
         independent = (owner == 'event' and module in EVENT_INDEPENDENT
             and data.get('schema_version') == 1
             and data.get('cache_date') == pending.get('cache_date') == game_day().isoformat()
@@ -180,6 +193,8 @@ class DailyLedger:
                 raise RuntimeError('An existing hunting plan ID changed target; create a new plan ID')
 
     def save(self):
+        from frame_store import persist_references
+        persist_references(self.data)
         if self.path:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             temporary = self.path.with_suffix(self.path.suffix + '.tmp')
@@ -244,6 +259,7 @@ class DailyController:
         self.checked_free_sweeps = set()
         self.resolved_this_run = set()
         self.goddess_scene_attempts = 0
+        self.goddess_no_available_since = None
         self.goddess_scene_transition_since = None
         self.goddess_collection_attempts = 0
         self.goddess_collection_transition_since = None
@@ -545,6 +561,7 @@ class DailyController:
         if all(task in done for task in wanted):
             return {'status': 'finished', 'reason': 'Requested statue interactions verified'}
         if (obs['state']!='goddess_scene' or obs.get('interaction_available') is not False):
+            self.goddess_no_available_since = None
             if self.last_ready and self.last_ready[0]=='goddess_no_available':
                 self.last_ready,self.ready_observations=None,0
         if obs['state'] == 'main_menu':
@@ -572,7 +589,15 @@ class DailyController:
                 if obs.get('interaction_available') is False:
                     if not self.stable(('goddess_no_available',tuple(done))):
                         return {'status':'wait','reason':'Verify no statue interaction on a second observation'}
-                    return {'status':'finished','reason':'No currently available statue interaction',
+                    now = time.monotonic()
+                    if self.goddess_no_available_since is None:
+                        self.goddess_no_available_since = now
+                    wait_seconds = getattr(self, 'network_wait_seconds', 60)
+                    elapsed = now - self.goddess_no_available_since
+                    if elapsed < wait_seconds:
+                        return {'status':'wait',
+                                'reason':f'等待固定F互动按钮（手形或叹号）加载/重新出现 {elapsed:.0f}/{wait_seconds:g}秒；尚未领取的项目不标记完成。'}
+                    return {'status':'finished','reason':'等待后仍未识别到固定F互动按钮，未核实的女神像互动保留；不能据此声称今日奖励已经领取。',
                             'completion_scope':'currently_available',
                             'deferred_actions':[task for task in wanted if task not in done]}
                 return {'status':'waiting_for_option','reason':'No verified interaction glyph; do not mark it done'}

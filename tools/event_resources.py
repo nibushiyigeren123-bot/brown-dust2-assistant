@@ -13,6 +13,8 @@ def retain_balance(root, observation, cache_date, event_id=None):
             'source': observation.get('resource_source'), 'state': observation['state']}
     path = Path(root) / 'runtime/event_resources.json'
     from atomic_json import write_json
+    if path.is_file() and json.loads(path.read_text(encoding='utf-8')) == data:
+        return
     write_json(path, data)
 
 

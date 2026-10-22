@@ -1,0 +1,9 @@
+{
+  "enabled": true,
+  "ocr_model": "aligned_v2",
+  "runtime": "onnx_cpu",
+  "threads": 2,
+  "visual_model": "bd2_visual_v1",
+  "visual_in_workflow": "existing_template_rules",
+  "lifetime": "embedded_in_assistant_process_no_model_service"
+}

@@ -121,7 +121,8 @@ class GameWindow:
             image = Image.frombuffer("RGB", (width, height), bitmap.GetBitmapBits(True), "raw", "BGRX", 0, 1)
             if image.getextrema() == ((0, 0), (0, 0), (0, 0)):
                 raise RuntimeError("Game capture is black")
-            return image.copy(), geometry
+            from frame_store import capture_image
+            return capture_image(image.copy()), geometry
         finally:
             if previous is not None:
                 memory_dc.SelectObject(previous)
@@ -209,8 +210,9 @@ class GameWindow:
         try:
             win32api.SetCursorPos(position)
             time.sleep(0.10)
-            if win32api.GetCursorPos() != position:
-                raise RuntimeError('Pointer moved before game input; no mouse press sent')
+            actual_position = win32api.GetCursorPos()
+            if actual_position != position:
+                raise RuntimeError(f'点击前检测到鼠标位置变化，未发出鼠标按下；目标{position}，实际{actual_position}。已停止当前项。')
             if win32gui.GetForegroundWindow() != self.hwnd or self.geometry() != expected_geometry:
                 raise RuntimeError("Game changed before mouse press")
             check_requested_stop()

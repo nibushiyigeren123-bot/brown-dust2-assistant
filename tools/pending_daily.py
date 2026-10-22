@@ -2,6 +2,7 @@
 
 Execution is date-gated by configuration. Read-only inspection is the default.
 """
+from frame_store import next_path, report_write, persist_references
 import argparse
 import hashlib
 import json
@@ -68,7 +69,7 @@ def prepare_goddess_menu(window,vision,output):
             return {'completed':False,'stopped':'F8','collection_actions':actions}
         image,geometry=window.capture()
         path=output/f'collection_check_{attempt}.png'
-        image.save(path)
+        path=next_path(path);image.save(path)
         collection=vision.goddess_entry.library(read_image(path))
         if not collection: break
         fresh,fresh_geometry=window.capture()
@@ -86,6 +87,13 @@ def prepare_goddess_menu(window,vision,output):
     return result
 
 
+def goddess_checkpoint_complete(checkpoint, data, expected_day):
+    """A deferred reward never negates a separately verified daily check-in."""
+    return (checkpoint in ('check_in', 'daily_reward')
+            and data.get('cache_date') == expected_day and not data.get('pending')
+            and checkpoint in data.get('goddess', {}).get('done', []))
+
+
 def run(args):
     config = load_config(args.config.resolve(strict=True))
     output = args.output.resolve()
@@ -98,7 +106,7 @@ def run(args):
         ledger = DailyLedger(None, config)
         result = {'execute': False, 'observation': observation,
                   'proposed': DailyController(config, ledger, args.module, args.checkpoint).step(observation)}
-        (output / 'inspection.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
+        report_write(output / 'inspection.json', result)
         return result
     if args.execute:
         from game_calendar import check_execution_day
@@ -115,7 +123,7 @@ def run(args):
               'actions': [], 'observations': [], 'ledger': str(ledger_path) if args.execute else None}
 
     def save():
-        (output / 'run.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
+        report_write(output / 'run.json', report)
 
     with exclusive_ledger(ROOT / 'runtime/game_control'):
         if args.execute:
@@ -168,7 +176,7 @@ def run(args):
                     and ledger.data['mirror']['completed']<config['mirror']['max_battles']
                     and ledger.data['mirror']['spent']<config['mirror']['resource_budget']):
                 startup,geometry=window.capture()
-                startup_path=output/'startup.png';startup.save(startup_path)
+                startup_path=output/'startup.png';startup_path=next_path(startup_path);startup.save(startup_path)
                 startup_obs=inspect(startup_path,vision,config,output)
                 report['startup_observation']=startup_obs
                 if startup_obs['state'] not in ('main_menu','goddess_collection','mirror_lobby','mirror_ready','mirror_auto_dialog'):
@@ -183,8 +191,11 @@ def run(args):
                     break
                 image, geometry = window.capture()
                 path = output / f"frame_{len(report['observations']):03}.png"
-                image.save(path)
+                path=next_path(path);image.save(path)
                 observation = inspect(path, vision, config, output)
+                from frame_store import active
+                if active():
+                    observation['image_evidence'] = str(path)
                 if args.module == 'hunting':
                     from hunting_resources import retain_observation
                     retain_observation(ROOT, observation, path, config['cache_date'])
@@ -228,7 +239,7 @@ def run(args):
                     # authorize a later click merely because geometry is stable.
                     fresh, fresh_geometry = window.capture()
                     fresh_path = output / f"preclick_{len(report['observations']):03}.png"
-                    fresh.save(fresh_path)
+                    fresh_path=next_path(fresh_path);fresh.save(fresh_path)
                     fresh_observation = inspect(fresh_path, vision, config, output)
                     if args.module == 'hunting':
                         retain_observation(ROOT, fresh_observation, fresh_path, config['cache_date'])
@@ -245,6 +256,8 @@ def run(args):
                         report['stopped'] = 'F8'
                         break
                     if decision.get('consumes'):
+                        if active():
+                            decision['image_evidence'] = {'before':str(path), 'preclick':str(fresh_path)}
                         ledger.submit_intent(decision)
                     x, y = decision['point']
                     receipt = window.click_client([x * geometry['width'] / 1280, y * geometry['height'] / 720], geometry)
@@ -260,9 +273,15 @@ def run(args):
                         report.update(skipped=True,unavailable=decision.get('unavailable'),skip_reason=decision.get('reason'))
                     deferred=decision.get('deferred_actions',[])
                     report['module_completed'] = not deferred
+                    if args.module == 'goddess' and args.checkpoint in ('check_in','daily_reward'):
+                        report['completion_checkpoint'] = args.checkpoint
+                        report['module_completed'] = goddess_checkpoint_complete(args.checkpoint, ledger.data, config['cache_date'])
                     report['deferred_actions'] = deferred
                     report['completion_scope'] = decision.get('completion_scope','requested_tasks')
                     report['completion_reason'] = decision.get('reason')
+                    if args.module == 'goddess' and args.checkpoint in deferred:
+                        report['completion_reason'] = ('尚未识别并领取女神像今日奖励，已返回主菜单；该项保留未完成，请核对叹号入口画面。'
+                            if args.checkpoint == 'daily_reward' else '当前没有可用的女神像签到互动，签到尚未核实。')
                     returned = ensure_main_menu(window, output/'return_to_menu', execute=True, timeout=network_wait_seconds())
                     report['returned_to_main_menu'] = returned['completed']
                     report['completed'] = returned['completed']

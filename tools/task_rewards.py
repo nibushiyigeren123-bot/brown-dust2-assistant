@@ -1,4 +1,5 @@
 """Daily claims always include a fresh weekly check; never performs unfinished tasks."""
+from frame_store import next_path, report_write, persist_references
 import argparse
 import hashlib
 import json
@@ -55,7 +56,7 @@ class TaskRewardRun:
                 time.sleep(.5)
         path = self.args.output / f'frame_{self.sequence:03d}.png'
         self.sequence += 1
-        image.save(path)
+        path=next_path(path);image.save(path)
         obs = self.vision.inspect_file(path, self.args.output / 'ocr')
         self.report['observations'].append({'image': str(path), 'observation': obs})
         print(json.dumps({'frame': path.name, 'state': obs['state'], 'claimable': obs.get('claimable')}, ensure_ascii=False), flush=True)
@@ -119,28 +120,33 @@ class TaskRewardRun:
             self.ledger['pending'] = {'module': getattr(self, 'module_id', 'task_rewards'), **intent}
             save(self.path, self.ledger)
         save(self.args.output / 'run.json', self.report)
-        # The observed client occasionally ignores a short press; keep hover and press visible.
-        position = win32gui.ClientToScreen(self.window.hwnd, (round(point[0] * geo['width'] / 1280), round(point[1] * geo['height'] / 720)))
-        assert self.window.geometry() == geo
-        assert win32gui.GetAncestor(win32gui.WindowFromPoint(position), win32con.GA_ROOT) == self.window.hwnd
-        previous = win32api.GetCursorPos()
-        try:
-            win32api.SetCursorPos(position)
-            time.sleep(.8)
-            check_requested_stop()
-            assert self.window.geometry() == geo and win32gui.GetForegroundWindow() == self.window.hwnd
-            win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
-            try:
-                time.sleep(.5)
-            finally:
-                win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-            time.sleep(.4)
-        finally:
-            win32api.SetCursorPos(previous)
-        self.report['actions'].append(intent)
+        # Use the shared game input path, including focus, occlusion, geometry
+        # and user mouse movement checks. Page response is observed below.
+        event = self.window.click_client(
+            [point[0] * geo['width'] / 1280, point[1] * geo['height'] / 720],
+            geo, press_ms=250)
+        self.report['actions'].append({**intent, **event})
         self.report.pop('pending_input', None)
         self.expect_after(label)
-        time.sleep(1)
+        time.sleep(.25)
+
+    def confirm_no_rewards(self, state, identity=None, first=None):
+        """Two live views of the global claim button, independent of list coverage."""
+        first = first if first is not None else self.capture()
+        obs, geo, _, path = first
+        if (obs['state'] != state or obs.get('claimable') is not False
+                or (identity is not None and obs.get('pass_id') != identity)):
+            raise RuntimeError('全部获得按钮或任务页身份未确认，不标记领奖完成。')
+        self.window.focus_client(geo)
+        fresh, fresh_geo, _, fresh_path = self.capture()
+        if (fresh_geo != geo or fresh['state'] != state
+                or fresh.get('claimable') is not False
+                or fresh.get('pass_id') != obs.get('pass_id')):
+            raise RuntimeError('全部获得按钮或页面已变化，不标记领奖完成。')
+        self.report.setdefault('reward_checks', []).append({
+            'state': state, 'pass_id': identity, 'claimable': False,
+            'basis': 'global_claim_all', 'images': [str(path), str(fresh_path)]})
+        return fresh
 
     def scroll(self, mode, amount):
         obs, geo, _, _ = self.capture()
@@ -178,12 +184,7 @@ class TaskRewardRun:
 
     def check_mode(self, mode):
         self.enter(mode)
-        self.scroll(mode, 6)
         obs, _, image, _ = self.capture()
-        from reward_endpoints import RewardEndpoints
-        endpoints = RewardEndpoints()
-        if not endpoints.confirmed(image, mode + ':top'):
-            self.report.setdefault('coverage_warnings',[]).append(mode+':顶部内容变化，任务覆盖未确认；继续核对全局全部获得按钮。')
         if obs.get('claimable') is None:
             raise RuntimeError('未读清全部获得按钮，未领取。')
         if obs['claimable']:
@@ -204,27 +205,13 @@ class TaskRewardRun:
             self.ledger.setdefault('events', []).append(event)
             self.ledger['pending'] = None
             save(self.path, self.ledger)
-        last = cv2.resize(image, (1280, 720))[85:645, 385:1195]
-        stable = 0
-        for _ in range(10):
-            self.report['incomplete_visible'].extend({'mode': mode, **r} for r in obs.get('incomplete_visible', []))
-            self.scroll(mode, -3)
-            obs, _, image, _ = self.capture()
-            if obs['state'] != mode + '_tasks' or obs.get('claimable') is not False:
-                raise RuntimeError('列表复查中页面或领取状态发生变化，请核对。')
-            current = cv2.resize(image, (1280, 720))[85:645, 385:1195]
-            difference = float(cv2.absdiff(current, last).mean())
-            stable = stable + 1 if difference < .3 else 0
-            last = current
-            if stable >= 2:
-                if endpoints.confirmed(image, mode + ':bottom'):
-                    break
-                self.report.setdefault('coverage_warnings',[]).append(mode+':底部覆盖未确认；不推断所有任务完成。')
-                break
-        else:
-            self.report.setdefault('coverage_warnings',[]).append(mode+':列表覆盖达到观察上限；不推断所有任务完成。')
-        # The global claim-all button covers available rewards independently of
-        # list position. Task-list coverage is separate from reward collection.
+        # Unfinished tasks sort to the top. Check only that view after claiming;
+        # global claim-all does not require walking every completed row.
+        self.scroll(mode, 6)
+        top = self.capture()
+        obs = self.confirm_no_rewards(mode + '_tasks', first=top)
+        self.report['incomplete_visible'].extend(
+            {'mode': mode, **row} for row in obs.get('incomplete_visible', []))
         self.report['all_tasks_completed']=False
         self.report['checked_modes'].append(mode)
         self.ledger['checked_modes'] = self.report['checked_modes'][:]
@@ -334,7 +321,7 @@ def main():
         path = args.image
         if not path:
             image, _ = GameWindow.find().capture()
-            path = args.output / 'readonly.png'; image.save(path)
+            path = args.output / 'readonly.png'; path=next_path(path);image.save(path)
         observation = TaskRewardVision().inspect_file(path, args.output / 'ocr')
         save(args.output / 'run.json', {'execute': False, 'completed': False,
              'actions': [], 'observations': [{'observation': observation}]})

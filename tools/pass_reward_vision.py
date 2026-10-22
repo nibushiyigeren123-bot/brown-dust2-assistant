@@ -49,7 +49,14 @@ class PassRewardVision:
         current_level = doc.extract_int(r'(?i)LV\.?(\d+)', (380, 430, 500, 465))
         visible_levels = sorted({int(match.group(1)) for line in doc.within((620, 225, 690, 485))
                                  if (match := re.fullmatch(r'(?i)LV\.?(\d+)', line['text']))})
+        rows = []
+        if tab == 'tasks':
+            for line in doc.within((450, 190, 1000, 485)):
+                match = re.search(r'(.+?)(\d+)/(\d+)$', line['text'])
+                if match and int(match[2]) < int(match[3]):
+                    rows.append({'name': match[1], 'current': int(match[2]), 'target': int(match[3])})
         return {'state': 'pass_' + tab, 'pass_id': identity, 'tab': tab, 'claimable': claimable,
+                'incomplete_visible': rows,
                 'current_level': current_level, 'visible_levels': visible_levels,
                 'button_bright_fraction': bright, 'button_dark_fraction': dark, 'scores': scores}
 

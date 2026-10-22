@@ -1,4 +1,5 @@
 """Two current passes: fresh task and level scans with pending-aware claims."""
+from frame_store import next_path, report_write, persist_references
 import argparse
 import json
 import time
@@ -66,70 +67,40 @@ class PassRun(TaskRewardRun):
 
     def scan_group(self, identity, tab):
         self.enter_pass(identity, tab)
-        covered_levels = set()
-        # Repeated scrolls cover both limits, independent of the current scroll position.
-        for direction in (1, -1):
-            previous, stable = None, 0
-            for _ in range(32):
-                obs, _, image, path = self.capture()
-                if obs['state'] != 'pass_' + tab or obs.get('pass_id') != identity or obs.get('claimable') is None:
-                    raise RuntimeError('通行证身份、页签或可领取状态未读清。')
-                if tab == 'levels' and direction < 0:
-                    current = obs.get('current_level')
-                    if type(current) is not int or current <= 0:
-                        raise RuntimeError('通行证当前等级未读清，不把锁定区当作覆盖证明。')
-                    covered_levels.update(obs.get('visible_levels', []))
-                if obs['claimable']:
-                    self.click([966, 511], obs['state'], 'claim_pass_' + identity + '_' + tab, claim=True)
-                    for _ in range(5):
-                        receipt, _, _, reward_path = self.capture()
-                        if receipt['state'] == 'reward_overlay':
-                            break
-                        time.sleep(.6)
-                    else:
-                        raise RuntimeError('通行证已提交领取但奖励未核实，保留pending，禁止补点。')
-                    self.click([760, 645], 'reward_overlay', 'dismiss_pass_reward')
-                    post, _, _, _ = self.capture()
-                    if post['state'] != 'pass_' + tab or post.get('pass_id') != identity or post.get('claimable') is not False:
-                        raise RuntimeError('通行证领取后未确认灰按钮，保留pending。')
-                    event = {'pass_id': identity, 'tab': tab, 'reward_image': str(reward_path)}
-                    self.ledger.setdefault('events', []).append(event)
-                    self.report['claims'].append(event)
-                    self.ledger['pending'] = None
-                    save(self.path, self.ledger)
-                    previous, stable = None, 0
-                    continue
-                if tab == 'levels' and direction < 0 and set(range(1, current + 1)) <= covered_levels:
-                    self.report.setdefault('coverage_proof', {})[identity + ':levels'] = {
-                        'current_level': current, 'verified_levels': sorted(covered_levels),
-                        'scope': 'all_currently_unlocked_levels', 'claimable': False}
-                    break
-                normalized = cv2.resize(image, (1280, 720))
-                # Keep animated reward artwork and premium glints out of the
-                # scroll boundary comparison; compare row labels instead.
-                view = normalized[235:483, 622:680] if tab == 'levels' else normalized[200:480, 705:950]
-                difference = float(cv2.absdiff(view, previous).mean()) if previous is not None else 99
-                stable = stable + 1 if difference < .3 else 0
-                if stable >= 2:
-                    from reward_endpoints import RewardEndpoints
-                    edge = 'top' if direction > 0 else 'bottom'
-                    if tab == 'levels' and direction < 0:
-                        raise RuntimeError('列表静止但未覆盖当前等级前的全部等级，不标记完成。')
-                    if RewardEndpoints().confirmed(image, identity + ':' + tab + ':' + edge):
-                        if tab == 'levels':
-                            # A reviewed Lv.1 anchor proves level one even when
-                            # the small OCR glyph is omitted; no middle page can seed it.
-                            covered_levels.add(1)
-                            covered_levels.update(obs.get('visible_levels', []))
-                        break
-                    if tab=='tasks':
-                        self.report.setdefault('coverage_warnings',[]).append(identity+':任务列表端点内容变化；全局领奖按钮已确认不可领，不推断任务全部完成。')
-                        break
-                    raise RuntimeError('通行证列表静止但端点未核实，不标记本组完成。')
-                previous = view
-                self.scroll_pass(direction * (3 if tab == 'levels' and direction < 0 else 12))
-            else:
-                raise RuntimeError('通行证列表未确认滚动边界，不标记检查完成。')
+        obs, _, _, _ = self.capture()
+        if (obs['state'] != 'pass_' + tab or obs.get('pass_id') != identity
+                or type(obs.get('claimable')) is not bool):
+            raise RuntimeError('通行证身份、页签或全部获得按钮未读清。')
+        reward_path = None
+        post = None
+        if obs['claimable']:
+            self.click([966, 511], obs['state'], 'claim_pass_' + identity + '_' + tab, claim=True)
+            receipt, _, _, reward_path = self.capture()
+            if receipt['state'] != 'reward_overlay':
+                raise RuntimeError('通行证已提交领取但奖励未核实，保留pending，禁止补点。')
+            self.click([760, 645], 'reward_overlay', 'dismiss_pass_reward')
+            post = self.capture()
+            if (post[0]['state'] != 'pass_' + tab or post[0].get('pass_id') != identity
+                    or post[0].get('claimable') is not False):
+                raise RuntimeError('通行证领取结果未确认，保留pending。')
+        if tab == 'tasks':
+            # Remaining tasks move above completed tasks. One top view suffices;
+            # never traverse completed rows or compare both list endpoints.
+            self.scroll_pass(12)
+        final = self.confirm_no_rewards('pass_' + tab, identity,
+                                        first=post if tab == 'levels' else None)
+        if reward_path is not None:
+            event = {'pass_id': identity, 'tab': tab, 'reward_image': str(reward_path)}
+            self.ledger.setdefault('events', []).append(event)
+            self.report['claims'].append(event)
+            self.ledger['pending'] = None
+            save(self.path, self.ledger)
+        if tab == 'tasks':
+            self.report['incomplete_visible'].extend(
+                {'pass_id': identity, **row} for row in final.get('incomplete_visible', []))
+        self.report.setdefault('coverage_proof', {})[identity + ':' + tab] = {
+            'scope': 'available_rewards', 'basis': 'global_claim_all', 'claimable': False,
+            'task_view': 'top_only' if tab == 'tasks' else None}
         self.report['checked_groups'].append(identity + ':' + tab)
         self.ledger['checked_groups'] = self.report['checked_groups'][:]
         save(self.path, self.ledger)
@@ -171,7 +142,7 @@ def main():
         path = args.image
         if path is None:
             image, _ = GameWindow.find().capture()
-            path = args.output / 'current.png'; image.save(path)
+            path = args.output / 'current.png'; path=next_path(path);image.save(path)
         obs = PassRewardVision().inspect_file(path, args.output / 'ocr')
         save(args.output / 'run.json', {'execute': False, 'completed': False, 'actions': [], 'observations': [{'image': str(path), 'observation': obs}]})
         return

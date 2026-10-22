@@ -1,4 +1,5 @@
 """Bounded equipment execution, with intents before every irreversible action."""
+from frame_store import next_path, report_write, persist_references
 import time
 from pathlib import Path
 import cv2
@@ -9,6 +10,8 @@ from return_navigation_vision import ReturnNavigationVision
 from common_navigation import ensure_main_menu
 from runtime_policy import network_wait_seconds
 from game_window import check_requested_stop
+from equipment_receipts import (image_receipt, same_item, exactly_one_selected,
+                                exactly_one_confirmed, selected_slot)
 
 
 def visible_cards(frame,vision,quality,badge=None):
@@ -41,11 +44,11 @@ class EquipmentRun:
         self.timeout=network_wait_seconds()
         self.index=0
 
-    def capture(self):
+    def capture(self, *, inventory=False):
         check_requested_stop()
         image,geo=self.window.capture();path=self.output/f'equipment_{self.index:03d}.png';self.index+=1
-        image.save(path);frame=read_image(path)
-        obs=self.vision.inspect_file(path,self.output/'ocr')
+        path=next_path(path);image.save(path);frame=read_image(path)
+        obs=self.vision.inspect_file(path,self.output/'ocr',frame=frame,include_inventory=inventory)
         if obs['state']=='unknown':
             returned=self.returns.inspect(frame)
             if returned and returned['state']=='equipment_detail':
@@ -93,13 +96,22 @@ class EquipmentRun:
         if not menu['completed']:raise RuntimeError('装备开始前未确认主页。')
         # The bag opens its most recently used tab. The equipment tab is fixed.
         self.go([247,655],'main_menu',lambda o:o['state'] in ('equipment_grid','equipment_bag'),'open_bag')
-        obs,_,frame,_=self.capture()
-        if obs['state']!='equipment_grid':
-            from daily_vision import OcrDocument,windows_ocr
-            doc=OcrDocument(windows_ocr(self.report['observations'][-1]['image'],self.output/'bag_ocr'))
-            if not doc.find('消耗品',(150,10,400,65)):
-                raise RuntimeError('未核对到背包消耗品页，不猜测装备分类。')
-            self.go([116,166],obs['state'],lambda o:o['state']=='equipment_grid','select_equipment_tab')
+        # One transient OCR miss after navigation is not evidence of a wrong
+        # page. Require two known bag/grid frames before selecting a category.
+        previous = None
+        stable = 0
+        def known_bag(obs, geo, frame, path):
+            nonlocal previous, stable
+            signature = (obs.get('state'), geo)
+            if obs.get('state') not in ('equipment_grid', 'equipment_bag'):
+                previous, stable = None, 0
+                return False
+            stable = stable + 1 if signature == previous else 1
+            previous = signature
+            return stable >= 2
+        obs,_,_,_ = self.wait(known_bag)
+        if obs['state'] == 'equipment_bag':
+            self.go([116,166], 'equipment_bag', lambda o:o['state']=='equipment_grid', 'select_equipment_tab')
 
     def refine(self):
         obs,_,frame,_=self.capture();assert obs['state']=='equipment_grid'
@@ -162,16 +174,15 @@ class EquipmentRun:
         self.go([973,160],'equipment_filter',lambda o:o['state']=='equipment_grid','close_saved_filter')
 
     def decompose(self):
-        self.filter_r();obs,grid_geo,frame,path=self.capture()
+        self.filter_r();obs,grid_geo,frame,path=self.capture(inventory=True)
         quality='R';r_unavailable=False
         inventory=obs.get('inventory',{}).get('value')
-        if type(inventory) is not int:raise RuntimeError('R装备总数未读清，不分解。')
         if inventory==0:
             # The counter changes with the active filter (909 total / 269 R /
             # 0 N in live evidence). Require the saved R-only filter AND an
             # explicit empty-grid anchor across two observations.
             proof=self.ledger.data.get('filter_evidence',{})
-            fresh,fresh_geo,_,fresh_path=self.capture()
+            fresh,fresh_geo,_,fresh_path=self.capture(inventory=True)
             if (proof.get('qualities')!=['R'] or proof.get('saved') is not True
                     or proof.get('worn_hidden') is not True
                     or obs.get('empty_filtered_grid') is not True
@@ -184,42 +195,49 @@ class EquipmentRun:
                 'images':[str(path),str(fresh_path)],'filter':proof,'empty_grid_verified':True}
             self.ledger.save()
             quality='N';r_unavailable=True
-            self.filter_quality('N');obs,_,frame,path=self.capture()
+            self.filter_quality('N');obs,_,frame,path=self.capture(inventory=True)
             inventory=obs.get('inventory',{}).get('value')
             if type(inventory) is not int or inventory<=0:
                 raise RuntimeError('R已确认为0，但N数量未读清或也为0，未分解。')
-        candidates=visible_cards(frame,self.vision,quality);chosen=None
-        for card in candidates:
-            def same_card(o,f):return any(c['point']==card['point'] for c in visible_cards(f,self.vision,quality))
-            self.go(card['point'],'equipment_grid',lambda o:o['state'] in ('equipment_detail','equipment_reviewed_R_detail'),'inspect_'+quality+'_candidate',same_card)
-            obs,_,frame,path=self.capture()
-            if obs.get('unlocked') and obs.get('not_equipped'):
-                chosen={**card,'detail_evidence':str(path)}
-            self.go([946,217],obs['state'],lambda o:o['state']=='equipment_grid','close_R_detail')
-            if chosen:break
-        if not chosen:raise RuntimeError('当前可见'+quality+'未发现已核对的未锁且未穿戴项；不能凭单屏无候选改用其他品质。')
         self.go([1135,670],'equipment_grid',lambda o:o['state']=='equipment_decompose_selection','open_single_decompose')
-        obs,_,_,_=self.capture()
+        obs,_,selection_before,selection_before_path=self.capture()
         if obs.get('matches_reviewed_one_item_selection'):raise RuntimeError('分解模式已经有选中项，不追加选择。')
-        self.go(chosen['point'],'equipment_decompose_selection',lambda o:o.get('matches_reviewed_one_item_selection') is True,'select_one_'+quality)
+        selectable = visible_cards(selection_before,self.vision,quality)
+        if not selectable:
+            raise RuntimeError('分解列表未找到品质一致的可选项，未选择。')
+        chosen = selectable[0]
+        # The game may reorder items on entering decomposition. Choose directly
+        # from that filtered list; only bind the item until this selection click.
+        inspected_grid, inspected_path = selection_before, selection_before_path
+        # Retain the bound item before navigation can evict its observation.
+        image_receipt(inspected_path)
+        self.go(chosen['point'],'equipment_decompose_selection',lambda o:o.get('matches_reviewed_one_item_selection') is True,'select_one_'+quality,
+                lambda o,f:same_item(inspected_grid,f,chosen)
+                    and any(c['point']==chosen['point'] for c in visible_cards(f,self.vision,quality)))
         obs,geo,frame,path=self.capture()
-        if not self.vision.anchor(frame,'selected_count_one',.97):raise RuntimeError('未核对恰好选中1件，不打开确认。')
-        self.ledger.submit_decompose({'card':{'quality':quality,'locked':False,'equipped':False,'detail_evidence':chosen['detail_evidence']},
-            'selected_qualities':[quality],'selected_count':1,'inventory_count':inventory,'r_unavailable':r_unavailable},path)
+        if not exactly_one_selected(self.vision,frame) or not selected_slot(self.vision,frame,chosen):
+            raise RuntimeError('未核对目标品质、选中边框和恰好1件，不打开确认。')
+        self.ledger.submit_decompose({'card':{'quality':quality,'locked':False,'equipped':False,'eligibility_basis':'filtered_selectable_item'},
+            'selected_qualities':[quality],'selected_count':1,'inventory_count':inventory,'r_unavailable':r_unavailable,
+            'visual_receipt':{'card':chosen,'filter':image_receipt(self.ledger.data['filter_evidence']['image']),
+                'basis':'filtered_selectable_item','inspected_grid':image_receipt(inspected_path),
+                'before_selection':image_receipt(selection_before_path),'selection':image_receipt(path)}},path)
         self.go([1185,670],'equipment_decompose_selection',lambda o:o['state']=='equipment_decompose_confirmation','open_one_item_confirmation')
         obs,geo,frame,path=self.capture();fresh,fresh_geo,fresh_frame,fresh_path=self.capture()
         if (any(o.get('state') != 'equipment_decompose_confirmation' for o in (obs, fresh))
-                or not all(self.vision.anchor(f, name, .97) for f in (frame, fresh_frame)
-                           for name in ('decompose_confirm_warning', 'decompose_confirm_one', 'decompose_confirm_button'))
+                or not all(exactly_one_confirmed(self.vision,f) for f in (frame, fresh_frame))
                 or geo != fresh_geo):
             raise RuntimeError('单件分解确认没有连续读清，保留未决，不提交。')
-        pending=self.ledger.data['pending'];pending['confirmation']={'selected_count':1,'image':str(fresh_path),'submitted':True};self.ledger.save()
+        pending=self.ledger.data['pending'];pending['confirmation']={'selected_count':1,'image':str(fresh_path),
+            'images':[image_receipt(path),image_receipt(fresh_path)],'geometry':fresh_geo,'submitted':True};self.ledger.save()
         self.consume([697,467],'decompose_one',fresh_geo)
         obs,_,frame,result_path=self.wait(lambda o,g,f,p:o['state']=='equipment_decompose_result')
-        self.ledger.data['pending']['result_evidence']=str(result_path);self.ledger.save()
+        self.ledger.data['pending']['result_evidence']=str(result_path)
+        self.ledger.data['pending']['result_image']=image_receipt(result_path);self.ledger.save()
         self.go([640,658],'equipment_decompose_result',lambda o:o['state']=='equipment_grid','close_decomposition_result')
-        obs,_,frame,path=self.capture();count=obs.get('inventory',{}).get('value')
-        if not self.ledger.settle_decompose(count,result_path,path):raise RuntimeError('装备数量尚未确认只减少1件，保留未决。')
+        obs,_,frame,path=self.capture(inventory=True);count=obs.get('inventory',{}).get('value')
+        self.ledger.data['pending']['return_grid_image']=image_receipt(path);self.ledger.save()
+        if not self.ledger.settle_decompose(count,result_path,path):raise RuntimeError('分解单件图像回执不完整或数量矛盾，保留未决，不重复提交。')
 
     def initialize(self):
         self.go([1141,67],'equipment_grid',lambda o:o['state']=='equipment_filter','open_filter_for_initialization')

@@ -11,6 +11,13 @@ BUILD_ROOT = PROJECT.parent / (PROJECT.name + '_build')
 
 
 def main(target=None):
+    if (PROJECT / 'models/gamevision_bd2').is_dir():
+        try:
+            import onnxruntime
+        except ImportError as error:
+            raise RuntimeError('构建内嵌模型版本需要当前Python环境安装ONNX Runtime CPU；不能生成缺少模型运行库的包。') from error
+        if 'CPUExecutionProvider' not in onnxruntime.get_available_providers():
+            raise RuntimeError('当前ONNX Runtime没有CPU执行器，未构建。')
     deps = BUILD_ROOT / 'deps'
     if deps.is_dir():
         sys.path.insert(0, str(deps))
@@ -36,7 +43,7 @@ def main(target=None):
             '--paths', str(PROJECT / 'tools')]
     if deps.is_dir():
         args.extend(['--paths', str(deps)])
-    for name in ('torch', 'tensorflow', 'matplotlib', 'scipy', 'pandas', 'PySide6', 'PyQt6'):
+    for name in ('torch', 'torchvision', 'paddle', 'onnx', 'tensorflow', 'matplotlib', 'scipy', 'pandas', 'PySide6', 'PyQt6'):
         args.extend(['--exclude-module', name])
     for name in hidden:
         args.extend(['--hidden-import', name])
@@ -49,6 +56,8 @@ def main(target=None):
         return []
     shutil.copytree(PROJECT / 'assets', target / 'assets', ignore=asset_ignore)
     shutil.copytree(PROJECT / 'templates', target / 'templates')
+    if (PROJECT / 'models/gamevision_bd2').is_dir():
+        shutil.copytree(PROJECT / 'models/gamevision_bd2', target / 'models/gamevision_bd2')
     shutil.copytree(PROJECT / 'templates/config', target / 'config')
     (target / 'tools').mkdir()
     shutil.copy2(PROJECT / 'tools/windows_ocr.ps1', target / 'tools/windows_ocr.ps1')

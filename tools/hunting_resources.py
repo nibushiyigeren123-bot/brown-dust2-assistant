@@ -1,4 +1,5 @@
 """Observed resource balances, not user-entered spending budgets."""
+from frame_store import write_encoded_png
 import json
 import re
 from datetime import datetime, timezone
@@ -59,7 +60,7 @@ def read_fixed_balance(image,output,ocr):
         gray=cv2.copyMakeBorder(gray,8,8,85,8,cv2.BORDER_CONSTANT,value=0)
         cv2.putText(gray,'VALUE',(3,8+int(height*.8)),cv2.FONT_HERSHEY_SIMPLEX,.6,255,1,cv2.LINE_AA)
         encoded=cv2.imencode('.png',cv2.resize(gray,None,fx=3,fy=3,interpolation=cv2.INTER_CUBIC))[1]
-        path=output/f'balance_{name}_{hashlib.sha256(encoded.tobytes()).hexdigest()[:16]}.png';encoded.tofile(str(path))
+        path=output/f'balance_{name}_{hashlib.sha256(encoded.tobytes()).hexdigest()[:16]}.png';write_encoded_png(path, encoded)
         payload=ocr(path,output/'balance_ocr',language='en-US')
         text=re.sub(r'\s+','',''.join(line['text'] for line in payload['lines']))
         tokens.append(text[5:] if text.startswith('VALUE') else '')
@@ -75,12 +76,22 @@ def retain_observation(root, observation, image, cache_date):
     try: data = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {}
     except (OSError,ValueError): data = {}
     if data.get('cache_date') != cache_date: data = {'cache_date':cache_date, 'resources':{}}
+    from frame_store import active
+    fields = ('free_available','free_capacity','owned_extra','extra_display','extra_approximate')
+    old = data.get('resources', {}).get(resource, {})
+    inventory = observation.get('stone_inventory')
+    if (active() and resource in data.get('resources', {})
+            and all(old.get(k) == observation.get(k) for k in fields)
+            and (inventory is None or data.get('stone_inventory',{}).get('values') == inventory)):
+        return
+    if active():
+        image = None
     data.setdefault('resources', {})[resource] = {key:observation.get(key) for key in
         ('free_available','free_capacity','owned_extra','extra_display','extra_approximate')}
-    data['resources'][resource].update(observed_at=datetime.now(timezone.utc).isoformat(),image=str(image))
+    data['resources'][resource].update(observed_at=datetime.now(timezone.utc).isoformat(),image=str(image) if image is not None else None)
     inventory=observation.get('stone_inventory')
     if isinstance(inventory,dict) and len(inventory)==5 and all(type(value) is int and value>=0 for value in inventory.values()):
-        data['stone_inventory']={'values':inventory,'observed_at':datetime.now(timezone.utc).isoformat(),'image':str(image)}
+        data['stone_inventory']={'values':inventory,'observed_at':datetime.now(timezone.utc).isoformat(),'image':str(image) if image is not None else None}
     save(path, data)
 
 

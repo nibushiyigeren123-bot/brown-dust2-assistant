@@ -1,0 +1,432 @@
+{
+  "schema_version": 1,
+  "size": [
+    1280,
+    720
+  ],
+  "account_exclusion": [
+    0,
+    0,
+    360,
+    80
+  ],
+  "author": "user-provided retained game captures",
+  "license_status": "Game UI rights retained by original owners; no separate commercial permission supplied; see NOTICE.md",
+  "derivation": "resize then deterministic black account exclusion; no redraw",
+  "templates": {
+    "main_menu": {
+      "file": "scene_a709e16fcaa3d9673ef9.png",
+      "sha256": "a709e16fcaa3d9673ef925f3801d6ea66cc0400d2432d21bcf3988a6a9f40738",
+      "state": "main_menu",
+      "module": "hunting"
+    },
+    "management_panel": {
+      "file": "scene_b968fa99a3f074448580.png",
+      "sha256": "b968fa99a3f0744485801bddd58ca2ac3e8ae167c1b61671b656ae5bc2eebf2f",
+      "state": "management_panel",
+      "module": "management"
+    },
+    "page_with_back": {
+      "file": "scene_a351445ef3b8aa9dd07c.png",
+      "sha256": "a351445ef3b8aa9dd07c316fd0fc1d928b869a13b2297dc901cd6bdb1d840bae",
+      "state": "page_with_back",
+      "module": "navigation"
+    },
+    "daily_tasks|daily": {
+      "file": "scene_73526d80576dc72bdeb1.png",
+      "sha256": "73526d80576dc72bdeb17f6a5f5933894209ee3d5aa3a97105c5647b72dcc039",
+      "state": "daily_tasks",
+      "module": "task_check"
+    },
+    "weekly_tasks|weekly": {
+      "file": "scene_1e5073cc9e4c6775eb6c.png",
+      "sha256": "1e5073cc9e4c6775eb6cee556199e345a09973ee32e2ade8c0f18923c2865af3",
+      "state": "weekly_tasks",
+      "module": "precheck"
+    },
+    "pass_levels|special": {
+      "file": "scene_b8d26f4bd233fd32ca78.png",
+      "sha256": "b8d26f4bd233fd32ca783e3c70a82b5eb1e75624d2950c79faa26de3e884aa10",
+      "state": "pass_levels",
+      "module": "rewards",
+      "navigation": {
+        "action": "close_panel",
+        "point": [
+          50,
+          360
+        ],
+        "anchors": [
+          [
+            212,
+            181,
+            352,
+            316
+          ],
+          [
+            1037,
+            179,
+            1086,
+            539
+          ]
+        ]
+      }
+    },
+    "pass_tasks|special": {
+      "file": "scene_eda586b245235c7069b9.png",
+      "sha256": "eda586b245235c7069b997f93595fe6d936b5b665c28bfc4ce0bd4cfeb804fab",
+      "state": "pass_tasks",
+      "module": "rewards",
+      "navigation": {
+        "action": "close_panel",
+        "point": [
+          50,
+          360
+        ],
+        "anchors": [
+          [
+            212,
+            181,
+            352,
+            316
+          ],
+          [
+            1037,
+            179,
+            1086,
+            539
+          ]
+        ]
+      }
+    },
+    "equipment_bag": {
+      "file": "scene_b0c1b7f9f8b7721bd891.png",
+      "sha256": "b0c1b7f9f8b7721bd891094c2d7e508aa694ed37b3fed172c6aed98600b8bbff",
+      "state": "equipment_bag",
+      "module": "equipment"
+    },
+    "equipment_grid": {
+      "file": "scene_8615d468901d26e17c49.png",
+      "sha256": "8615d468901d26e17c495f46a2cad2f6f9d0d91a228b75e626ac42aeaf9ccb24",
+      "state": "equipment_grid",
+      "module": "equipment"
+    },
+    "equipment_filter": {
+      "file": "scene_7c5ad1417b094c56dc78.png",
+      "sha256": "7c5ad1417b094c56dc781b7029f19cdcdc4ebba03a4841ac46e53b6778465478",
+      "state": "equipment_filter",
+      "module": "equipment"
+    },
+    "equipment_detail": {
+      "file": "scene_ccc1aa0169020b09407e.png",
+      "sha256": "ccc1aa0169020b09407e7ee93ff2f68fcaa49f0fe682ee0007fc53609018c39c",
+      "state": "equipment_detail",
+      "module": "equipment"
+    },
+    "equipment_decompose_selection": {
+      "file": "scene_907acca33bc6d397d56b.png",
+      "sha256": "907acca33bc6d397d56be58f88f99d407fb0b39471938b9c1c6e834d61fe284a",
+      "state": "equipment_decompose_selection",
+      "module": "equipment"
+    },
+    "equipment_decompose_confirmation": {
+      "file": "scene_a81fa1e95559ff60c4be.png",
+      "sha256": "a81fa1e95559ff60c4be027903d3cae425d8f04186284657a4316f887af5ae75",
+      "state": "equipment_decompose_confirmation",
+      "module": "equipment"
+    },
+    "equipment_decompose_result": {
+      "file": "scene_484c251eb330c8c73e2e.png",
+      "sha256": "484c251eb330c8c73e2e631c947c255f1ae9c709844a404aad3fea1ad3b763a9",
+      "state": "equipment_decompose_result",
+      "module": "equipment"
+    },
+    "hunt_map": {
+      "file": "scene_f24bdf3b8a067bf31af3.png",
+      "sha256": "f24bdf3b8a067bf31af3bbefef37585015c6ca9c6a2c538812ab61e295593b57",
+      "state": "hunt_map",
+      "module": "hunting"
+    },
+    "gacha_page|costume": {
+      "file": "scene_52845678bf3424dda0b7.png",
+      "sha256": "52845678bf3424dda0b7ce8dd39d697558ad7bb3302b90709cb93874e3ddaf91",
+      "state": "gacha_page",
+      "module": "free_draw"
+    },
+    "gacha_page|equipment": {
+      "file": "scene_c842483f288282af9ff4.png",
+      "sha256": "c842483f288282af9ff4b7dc663181d664f1013763206621ab4d2e827698f6a5",
+      "state": "gacha_page",
+      "module": "free_draw"
+    },
+    "reward": {
+      "file": "scene_0f3d86481fd2959b91bb.png",
+      "sha256": "0f3d86481fd2959b91bb999592c33b12bf6ef4d5577205e1c8fd43cde2eb08e4",
+      "state": "reward",
+      "module": "management"
+    },
+    "pass_levels|season": {
+      "file": "scene_aee499bfd521d94607ed.png",
+      "sha256": "aee499bfd521d94607ed43fb223616465a43dbe711f242aa4fd1051057aafc3d",
+      "state": "pass_levels",
+      "module": "rewards",
+      "navigation": {
+        "action": "close_panel",
+        "point": [
+          50,
+          360
+        ],
+        "anchors": [
+          [
+            212,
+            181,
+            352,
+            316
+          ],
+          [
+            1037,
+            179,
+            1086,
+            539
+          ]
+        ]
+      }
+    },
+    "pass_tasks|season": {
+      "file": "scene_cb55190c870e287c40fb.png",
+      "sha256": "cb55190c870e287c40fb64deb5fbb89f11cec2734aad458e47c117b1b3614ecf",
+      "state": "pass_tasks",
+      "module": "rewards",
+      "navigation": {
+        "action": "close_panel",
+        "point": [
+          50,
+          360
+        ],
+        "anchors": [
+          [
+            212,
+            181,
+            352,
+            316
+          ],
+          [
+            1037,
+            179,
+            1086,
+            539
+          ]
+        ]
+      }
+    },
+    "reward_overlay": {
+      "file": "scene_0fc1bfcecb226ac2a324.png",
+      "sha256": "0fc1bfcecb226ac2a3247e10f17bd63fd3b50075b83331b9a4c93000977e9174",
+      "state": "reward_overlay",
+      "module": "rewards"
+    },
+    "menu_overlay": {
+      "file": "scene_38520db87bd898d88fd5.png",
+      "sha256": "38520db87bd898d88fd56daecfd3e8336bfd053b87bed198fae9fcf480d1d155",
+      "state": "menu_overlay",
+      "module": "home"
+    },
+    "event_hub": {
+      "file": "scene_18c1fc61e9d80a23e57d.png",
+      "sha256": "18c1fc61e9d80a23e57d1823d9214d7fcbfe9f467cd182411c76240d9f3f3f9d",
+      "state": "event_hub",
+      "module": "event"
+    },
+    "event_preparation|normal": {
+      "file": "scene_b216ce2ac8ab480ef3c6.png",
+      "sha256": "b216ce2ac8ab480ef3c6e0ed39e5f00ac1f4392389616e2e40ccb55bfb0efd66",
+      "state": "event_preparation",
+      "module": "event"
+    },
+    "event_quick_dialog|normal": {
+      "file": "scene_1499b53ff4504ff4b533.png",
+      "sha256": "1499b53ff4504ff4b533676549d4eb6d4428744fce06ab27fe24be91b9474f52",
+      "state": "event_quick_dialog",
+      "module": "event"
+    },
+    "event_reward": {
+      "file": "scene_00c5e6588656cdae0d98.png",
+      "sha256": "00c5e6588656cdae0d9807f6e1534d59329067f4a37ef1fb38e366214c5e2a24",
+      "state": "event_reward",
+      "module": "event"
+    },
+    "equipment_refine": {
+      "file": "scene_0fec410cc0403732a6be.png",
+      "sha256": "0fec410cc0403732a6be02475bf8f8cac0d2084ff622e9be33ab46bcd7f3036c",
+      "state": "equipment_refine",
+      "module": "equipment"
+    },
+    "goddess_collection": {
+      "file": "scene_3941ecff7c99e80febb3.png",
+      "sha256": "3941ecff7c99e80febb3cb16e2b4a663b324571c3e6e4afe899ba771813fe76b",
+      "state": "goddess_collection",
+      "module": "goddess_check_in"
+    },
+    "goddess_options": {
+      "file": "scene_e72858ef220677d4bdaa.png",
+      "sha256": "e72858ef220677d4bdaa0abc7eec214ed09ec5b83bccca1af565ac9cce0e2ea1",
+      "state": "goddess_options",
+      "module": "goddess_check_in"
+    },
+    "goddess_reward_result": {
+      "file": "scene_ed9d1bbffd5269da8ebb.png",
+      "sha256": "ed9d1bbffd5269da8ebb9b455ed714c1aa7fc1aecd4aad0d3da068cab653a90e",
+      "state": "goddess_reward_result",
+      "module": "goddess_check_in"
+    },
+    "scene_with_home": {
+      "file": "scene_bb9b344a45af910aa344.png",
+      "sha256": "bb9b344a45af910aa344a03c87564eaa198baf9de467d59fda1e59225410c2dd",
+      "state": "scene_with_home",
+      "module": "to_menu"
+    },
+    "goddess_scene": {
+      "file": "scene_67c473f2240e88ff41f7.png",
+      "sha256": "67c473f2240e88ff41f758cd0e5660e0d586f9780d3991f736097108b5c473d1",
+      "state": "goddess_scene",
+      "module": "goddess_daily_reward"
+    },
+    "mirror_lobby": {
+      "file": "scene_fcee3367478845c6d9db.png",
+      "sha256": "fcee3367478845c6d9db50c9ac1b417a4ecb7ed0fb4bae86c43d6c21751a674f",
+      "state": "mirror_lobby",
+      "module": "mirror"
+    },
+    "mirror_ready": {
+      "file": "scene_aa9a21ea5b41f44ff0b9.png",
+      "sha256": "aa9a21ea5b41f44ff0b9823c1002edf2e4214c0ef7eaa729a34a1d91a6f5d872",
+      "state": "mirror_ready",
+      "module": "mirror"
+    },
+    "mirror_auto_dialog": {
+      "file": "scene_e7d48223261d8fc4efb3.png",
+      "sha256": "e7d48223261d8fc4efb3c8346ed9a56202f6a0afc356df17a19521f376254741",
+      "state": "mirror_auto_dialog",
+      "module": "mirror"
+    },
+    "mirror_result": {
+      "file": "scene_dbe114105c1225def61d.png",
+      "sha256": "dbe114105c1225def61d54bd0c2a8e6a13c173b6ee226d338c1f91dcb155b08c",
+      "state": "mirror_result",
+      "module": "mirror"
+    },
+    "mirror_result_footer": {
+      "file": "scene_234b269009e7b2353b32.png",
+      "sha256": "234b269009e7b2353b322460666c5ca28b24b2e8a2533d534ed6e45603e67c84",
+      "state": "mirror_result_footer",
+      "module": "mirror"
+    },
+    "goddess_loot_result": {
+      "file": "scene_b7b12d3543aa34b04f5b.png",
+      "sha256": "b7b12d3543aa34b04f5bc39047adf38bf170b95eb3899219f84b397352ff956b",
+      "state": "goddess_loot_result",
+      "module": "goddess_check_in"
+    },
+    "hunt_dialog": {
+      "file": "scene_389fbf4df47d63d45d12.png",
+      "sha256": "389fbf4df47d63d45d123f4573ea2b33f46eb0b5fef5a735d898732dacb4be34",
+      "state": "hunt_dialog",
+      "module": "hunting"
+    },
+    "hunt_reward": {
+      "file": "scene_01992be548f85477218a.png",
+      "sha256": "01992be548f85477218a4c0c3baf529ae9045b54128e3158b07c36fe3e992b80",
+      "state": "hunt_reward",
+      "module": "hunting"
+    },
+    "guild_check_in_receipt": {
+      "file": "scene_4e29edd036827a010346.png",
+      "sha256": "4e29edd036827a0103463b483b774c24eb12e0f76b85a1ada7930dfe20c35120",
+      "state": "guild_check_in_receipt",
+      "module": "guild"
+    },
+    "guild_page": {
+      "file": "scene_8eb523e54e8593d4a425.png",
+      "sha256": "8eb523e54e8593d4a42547106e857c41a6063ba40b2c5a8732c8e8017fce6339",
+      "state": "guild_page",
+      "module": "guild"
+    },
+    "free_confirmation": {
+      "file": "scene_47d2ea96b175ac6cc5a4.png",
+      "sha256": "47d2ea96b175ac6cc5a4827a8f83342a8f225700052b3ba1ff605ef550981da5",
+      "state": "free_confirmation",
+      "module": "free_draw"
+    },
+    "draw_animation": {
+      "file": "scene_0b0eeac390d48d501e1f.png",
+      "sha256": "0b0eeac390d48d501e1fb6b5f649c0365b64e3037ee3ba5991affdf3eac6461b",
+      "state": "draw_animation",
+      "module": "free_draw"
+    },
+    "draw_result": {
+      "file": "scene_e898b804639a7e1d8a35.png",
+      "sha256": "e898b804639a7e1d8a359e43c133e436c468610b32c9ab8e6e4ec2790e140bf3",
+      "state": "draw_result",
+      "module": "free_draw"
+    },
+    "settings_house_present": {
+      "file": "scene_750de15f63f393ecc46a.png",
+      "sha256": "750de15f63f393ecc46aa64436bfc406fd84c9c3241fe9e99aec2289a21ba223",
+      "state": "settings_house_present",
+      "module": "navigation"
+    },
+    "signin_event": {
+      "file": "scene_2b63b78eb7b66a3181d5.png",
+      "sha256": "2b63b78eb7b66a3181d50f3cc4ec238f41f8045d99f4bcd87431c090a64429f1",
+      "state": "signin_event",
+      "module": "navigation"
+    },
+    "signin_pass": {
+      "file": "scene_fd7743824dbdf5ef3011.png",
+      "sha256": "fd7743824dbdf5ef30119d8feccf1eac9fefd86371c61ac683076853e402dfb7",
+      "state": "signin_pass",
+      "module": "navigation"
+    },
+    "page_with_circle_back": {
+      "file": "scene_cd1d7faf4a65fdfa1f9b.png",
+      "sha256": "cd1d7faf4a65fdfa1f9b3179e26c53d922785da8fb7b1973e90717e3ebd40e36",
+      "state": "page_with_circle_back",
+      "module": "home"
+    },
+    "event_defeat": {
+      "file": "scene_e230370f05d587c301cd.png",
+      "sha256": "e230370f05d587c301cdb3b316ba9e206b1db2e9606241fc3f50062b98cc9a17",
+      "state": "event_defeat",
+      "module": "event_resume_1"
+    },
+    "event_preparation|challenge": {
+      "file": "scene_b06fbb5385be9ef01dd4.png",
+      "sha256": "b06fbb5385be9ef01dd43b763986e03b6bd36f8d13c4542baf7a542606753433",
+      "state": "event_preparation",
+      "module": "event"
+    },
+    "event_auto_dialog|challenge": {
+      "file": "scene_bf5fde5561999bcf8f36.png",
+      "sha256": "bf5fde5561999bcf8f36108c908e257963e66df2c3637f4b2084147babd27f04",
+      "state": "event_auto_dialog",
+      "module": "event"
+    },
+    "event_auto_running": {
+      "file": "scene_6375b4dd2234510b54cc.png",
+      "sha256": "6375b4dd2234510b54cc9c8255494279f13c400b33506513af3e8b8572179b97",
+      "state": "event_auto_running",
+      "module": "event"
+    },
+    "event_victory|challenge": {
+      "file": "scene_9ad55f4a9715abedd67a.png",
+      "sha256": "9ad55f4a9715abedd67abbceee29ef9f3de5a2f110959363d8a7ce1d24502be3",
+      "state": "event_victory",
+      "module": "event"
+    },
+    "goddess_check_in_result": {
+      "file": "scene_13a77dc206881d2bbca6.png",
+      "sha256": "13a77dc206881d2bbca647f04727ce4be817fc006a9752ffe0db986d5fbbff23",
+      "state": "goddess_check_in_result",
+      "module": "goddess_check_in"
+    }
+  }
+}

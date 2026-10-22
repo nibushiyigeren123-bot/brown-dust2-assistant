@@ -61,7 +61,8 @@ class QueueTests(unittest.TestCase):
         for patcher in (patch.object(w, 'ROOT', self.root),
                         patch.object(w, 'config_identity', side_effect=lambda _: (self.identity, self.hashes.copy())),
                         patch.object(w.subprocess, 'Popen', Worker),
-                        patch('runtime_policy.wait_observed', return_value={}),
+                        patch('game_window.GameWindow.find', return_value=object()),
+                        patch('common_navigation.ensure_main_menu', return_value={'completed': True}),
                         patch('game_window.check_requested_stop', return_value=None)):
             patcher.start()
             self.addCleanup(patcher.stop)
@@ -79,6 +80,22 @@ class QueueTests(unittest.TestCase):
         self.assertTrue(state['traversed'])
         self.assertEqual(state['summary']['failed'], 1)
         self.assertEqual(state['tasks'][1]['status'], 'needs_review')
+
+    def test_repeated_readonly_reuses_inspection_directories(self):
+        output = self.root / 'evidence/inspections' / self.identity['cache_date'] / 'workflow'
+        args = SimpleNamespace(output=output, manifest=self.manifest, execute=False, resume=False)
+        original = self.root / 'evidence/workbench_runs/original/workflow.json'
+        w.save(original, {'status':'stopped', 'cursor':4})
+        before = original.read_bytes()
+        first = w.run(args)
+        directories = {str(p.relative_to(output)) for p in output.rglob('*') if p.is_dir()}
+        w.save(output / '00_navigation/control.json', {'kind':'stopped','reason':'old read-only attempt'})
+        second = w.run(args)
+        self.assertEqual(first['status'], 'inspected')
+        self.assertEqual(second['status'], 'inspected')
+        self.assertEqual(directories, {str(p.relative_to(output)) for p in output.rglob('*') if p.is_dir()})
+        self.assertFalse((output / '00_navigation/control.json').exists())
+        self.assertEqual(original.read_bytes(), before)
 
     def test_multiple_errors_missing_and_corrupt_reports_continue(self):
         self.failures['management'] = '错误A'

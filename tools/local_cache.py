@@ -39,10 +39,55 @@ def load_local_config(path):
 def cache_path(root, config, module='daily'):
     day = cache_date(config)
     suffix = hashlib.sha256(module.encode('utf-8')).hexdigest()[:12]
-    return Path(root) / 'runtime' / f'{day}_{suffix}.json'
+    runtime = Path(root) / 'runtime'
+    filename = f'{day}_{suffix}.json'
+    legacy, scoped = runtime / filename, runtime / 'days' / day / filename
+    if legacy.exists() and scoped.exists():
+        raise RuntimeError('同一天同一模块存在两份缓存，保留原记录待核对，不选择空白状态重做。')
+    # Existing records retain their exact path/bytes. New days use a real folder.
+    return legacy if legacy.exists() else scoped
+
+
+def initialize_day_cache(root, day=None):
+    """Only the computer clock selects today's folder; no old ledger is copied."""
+    day = day or game_day().isoformat()
+    date.fromisoformat(day)
+    folder = Path(root) / 'runtime/days' / day
+    folder.mkdir(parents=True, exist_ok=True)
+    marker = folder / 'day.json'
+    if not marker.exists():
+        from atomic_json import write_json
+        write_json(marker, {'cache_date': day, 'date_source': 'computer_clock',
+                            'reset_rule': 'Asia/Shanghai 08:00'})
+    return folder
+
+
+def iter_cache_records(directory):
+    """Read live flat/scoped records, never descend into recovery backups."""
+    directory = Path(directory)
+    for path in sorted(directory.glob('*.json')):
+        yield path
+    days = directory / 'days'
+    if days.exists():
+        if days.is_symlink() or days.is_junction():
+            raise RuntimeError('日期缓存目录指向其他位置，保留现场待核对。')
+        for folder in sorted(days.iterdir()):
+            if not folder.is_dir():
+                continue
+            try:
+                date.fromisoformat(folder.name)
+            except ValueError:
+                continue
+            if folder.is_symlink() or folder.is_junction():
+                raise RuntimeError('日期缓存目录指向其他位置，保留现场待核对。')
+            yield from sorted(folder.glob('*.json'))
 
 
 def save(path, value):
+    from frame_store import active, persist_references, report_write
+    if active() and path.name in ('run.json', 'inspection.json'):
+        return report_write(path, value)
+    persist_references(value)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix('.tmp')
     with temporary.open('w', encoding='utf-8', newline='\n') as stream:

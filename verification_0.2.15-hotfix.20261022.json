@@ -1,0 +1,33 @@
+{
+  "version": "0.2.15-hotfix.20261022",
+  "application_version": "0.2.15",
+  "hotfix": "queue_templates_memory_20261022",
+  "status": "preview",
+  "date": "2026-10-22",
+  "exe_sha256": "a45d440d381e958a268962c86f2fba5c4be9553c743e3453388c4c1179726b2d",
+  "offline_checks": {
+    "queue_templates": 88,
+    "continue_queue": 16,
+    "queue_policy": 7,
+    "return_navigation": 38,
+    "management": 38,
+    "fast_recognition": 142,
+    "embedded_model": 17,
+    "cleanup_retention": 39
+  },
+  "total_offline_checks": 385,
+  "live_game_actions_for_publication": false,
+  "full_new_live_daily_run": "pending_user_debug",
+  "performance_live_acceptance": "pending_user_debug",
+  "reference_frames": {
+    "count": 55,
+    "account_mask": [
+      0,
+      0,
+      360,
+      80
+    ],
+    "raw_account_frames_included": false
+  },
+  "private_config_runtime_evidence_included": false
+}

@@ -1,4 +1,5 @@
 """Common, explicit return-to-menu diagnosis, independent of daily modules."""
+from frame_store import next_path, report_write, persist_references
 import argparse
 import json
 import time
@@ -106,11 +107,13 @@ class PageDiagnosis:
 
 
 def ensure_main_menu(window, output, execute=False, timeout=20):
-    """Bounded, observed return navigation; no reward or battle submissions."""
+    """Observe every input; opening ads continue until the confirmed main menu."""
     from game_window import check_requested_stop
     output = Path(output).resolve()
     output.mkdir(parents=True, exist_ok=True)
     diagnosis = PageDiagnosis()
+    from queue_recognition import context_for_goal
+    context = context_for_goal()
     report = {"execute": execute, "completed": False, "actions": [], "observations": []}
     deadline = time.monotonic() + timeout
     previous = None
@@ -118,18 +121,20 @@ def ensure_main_menu(window, output, execute=False, timeout=20):
     attempts_by_control = {}
     recovered = False
     last_input = 0.0
+    opening_session = False
+    non_opening_actions = 0
     clickable = ('click_home','dismiss_opening','click_back','close_panel','cancel_panel')
 
     def save():
-        (output/'run.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+        report_write(output/'run.json', report)
 
     def capture():
         check_requested_stop()
         image, geometry = window.capture()
         frame = cv2.cvtColor(np.asarray(image),cv2.COLOR_RGB2BGR)
-        started=time.monotonic();result=diagnosis.inspect(frame)
+        started=time.monotonic();result=context.diagnose(frame, diagnosis.inspect(frame))
         result['recognition_ms']=round((time.monotonic()-started)*1000,1)
-        path=output/f"frame_{len(report['observations']):03d}.png";image.save(path)
+        path=output/f"frame_{len(report['observations']):03d}.png";path=next_path(path);image.save(path)
         report['observations'].append({'image':str(path),'window':geometry,**result});save()
         return result,geometry,frame
 
@@ -141,7 +146,7 @@ def ensure_main_menu(window, output, execute=False, timeout=20):
         return result['return_button']['client_point']
 
     try:
-        while time.monotonic()<deadline:
+        while opening_session or time.monotonic()<deadline:
             result,geometry,frame=capture()
             if result['state']=='main_menu':
                 home_stable+=1
@@ -151,6 +156,8 @@ def ensure_main_menu(window, output, execute=False, timeout=20):
                 time.sleep(.25);continue
             home_stable=0
             if not execute:break
+            if result['next_action'] == 'dismiss_opening':
+                opening_session = True
             if result['next_action'] not in clickable:
                 stable=0;previous=None;time.sleep(.2);continue
             point=target(result,geometry)
@@ -162,11 +169,12 @@ def ensure_main_menu(window, output, execute=False, timeout=20):
             previous=signature
             if stable<2 or time.monotonic()-last_input<.8:
                 time.sleep(.2);continue
-            if attempts>=3:
+            is_opening = result['next_action'] == 'dismiss_opening'
+            if not is_opening and attempts>=3:
                 report['stopped']='同一返回入口尝试3次仍未确认离开；已停止，不继续盲点。';break
-            if len(report['actions'])>=12:
+            if not is_opening and non_opening_actions>=12:
                 report['stopped']='返回导航已达本轮动作上限，停止核对。';break
-            if attempts==2 and not recovered:
+            if not is_opening and attempts==2 and not recovered:
                 event=window.recover_input(geometry)
                 report['actions'].append({'type':'recover_window_input',**event});save()
                 recovered=True;stable=0;last_input=time.monotonic();continue
@@ -178,6 +186,8 @@ def ensure_main_menu(window, output, execute=False, timeout=20):
             if max(abs(a-b) for a,b in zip(point,fresh_point))>5:
                 previous=None;continue
             event=window.click_client(fresh_point,fresh_geometry,press_ms=250)
+            if not is_opening:
+                non_opening_actions += 1
             attempts+=1;attempts_by_control[key]=attempts;last_input=time.monotonic()
             report['actions'].append({'type':verified['next_action'],'source_state':verified['state'],'attempt':attempts,**event});save()
             time.sleep(.4)

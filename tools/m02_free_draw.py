@@ -2,6 +2,7 @@
 
 Default is read-only. --execute enables a bounded run; F8 stops live input.
 """
+from frame_store import next_path, report_write, persist_references
 import argparse
 import json
 import time
@@ -221,7 +222,7 @@ def run_free_draw(window, output, execute=False, timeout=90):
     def save():
         report['categories'] = controller.categories
         report['completed'] = controller.completed
-        (output / 'run.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
+        report_write(output / 'run.json', report)
 
     try:
         im, _ = window.capture()
@@ -240,7 +241,7 @@ def run_free_draw(window, output, execute=False, timeout=90):
             im, geometry = window.capture()
             result = recognizer.inspect(cv2.cvtColor(np.asarray(im), cv2.COLOR_RGB2BGR))
             path = output / f"frame_{len(report['observations']):03}.png"
-            im.save(path)
+            path=next_path(path);im.save(path)
             report['observations'].append({'image': str(path), 'window': geometry, **result})
             save()
             if not execute:

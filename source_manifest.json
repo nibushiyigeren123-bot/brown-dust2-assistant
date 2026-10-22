@@ -1,11 +1,11 @@
 {
-  "version": "0.2.15",
+  "version": "0.2.15-hotfix.20261022",
   "source_only": true,
   "private_state_included": false,
   "files": [
     {
       "path": ".gitattributes",
-      "sha256": "c53b65665fb118a933282745278d936a805efe450884feffcce561dc97bc14ec"
+      "sha256": "8b9c3028d6467ff3be7c793141927841d70f47f52d0590677438f488ca154992"
     },
     {
       "path": ".gitignore",
@@ -122,6 +122,14 @@
     {
       "path": "assets/equipment/badge_9.png",
       "sha256": "3bbfef5d82ab6d827829c476bff55bd2facff722d176d22eace2beecd0b30637"
+    },
+    {
+      "path": "assets/equipment/bag_consumables_selected.png",
+      "sha256": "4d89cda9605fdff6b91d60b2fc3b6523b538820ae7c4cf7fb47bb8e88f036984"
+    },
+    {
+      "path": "assets/equipment/bag_consumables_title.png",
+      "sha256": "af2382ef517b29ff98832c50b297783c66f0dbabc4d539daca7a5bf8141f543f"
     },
     {
       "path": "assets/equipment/decompose_confirm_button.png",
@@ -257,7 +265,7 @@
     },
     {
       "path": "assets/equipment/sources.json",
-      "sha256": "c88e4c9a13b8240092b032f6ca928b4dc7bbb6ca12ff83c5ac8b9aded6c731e0"
+      "sha256": "c5bd3232d05606cf5e54bd8c64508c6aef03b60290c681e823069f34823d9f14"
     },
     {
       "path": "assets/event_battle/auto_off.png",
@@ -860,6 +868,230 @@
       "sha256": "0b71ece3c77cad465c63f9f1c4a3716853c78255a72d44713484b4377394149a"
     },
     {
+      "path": "assets/shared_references/index.json",
+      "sha256": "673702f58f10ed6cf3cec1e0487d0c83eb857cc84b91d65f85ae3e5bd49a009b"
+    },
+    {
+      "path": "assets/shared_references/scene_00c5e6588656cdae0d98.png",
+      "sha256": "00c5e6588656cdae0d9807f6e1534d59329067f4a37ef1fb38e366214c5e2a24"
+    },
+    {
+      "path": "assets/shared_references/scene_01992be548f85477218a.png",
+      "sha256": "01992be548f85477218a4c0c3baf529ae9045b54128e3158b07c36fe3e992b80"
+    },
+    {
+      "path": "assets/shared_references/scene_0b0eeac390d48d501e1f.png",
+      "sha256": "0b0eeac390d48d501e1fb6b5f649c0365b64e3037ee3ba5991affdf3eac6461b"
+    },
+    {
+      "path": "assets/shared_references/scene_0f3d86481fd2959b91bb.png",
+      "sha256": "0f3d86481fd2959b91bb999592c33b12bf6ef4d5577205e1c8fd43cde2eb08e4"
+    },
+    {
+      "path": "assets/shared_references/scene_0fc1bfcecb226ac2a324.png",
+      "sha256": "0fc1bfcecb226ac2a3247e10f17bd63fd3b50075b83331b9a4c93000977e9174"
+    },
+    {
+      "path": "assets/shared_references/scene_0fec410cc0403732a6be.png",
+      "sha256": "0fec410cc0403732a6be02475bf8f8cac0d2084ff622e9be33ab46bcd7f3036c"
+    },
+    {
+      "path": "assets/shared_references/scene_13a77dc206881d2bbca6.png",
+      "sha256": "13a77dc206881d2bbca647f04727ce4be817fc006a9752ffe0db986d5fbbff23"
+    },
+    {
+      "path": "assets/shared_references/scene_1499b53ff4504ff4b533.png",
+      "sha256": "1499b53ff4504ff4b533676549d4eb6d4428744fce06ab27fe24be91b9474f52"
+    },
+    {
+      "path": "assets/shared_references/scene_18c1fc61e9d80a23e57d.png",
+      "sha256": "18c1fc61e9d80a23e57d1823d9214d7fcbfe9f467cd182411c76240d9f3f3f9d"
+    },
+    {
+      "path": "assets/shared_references/scene_1e5073cc9e4c6775eb6c.png",
+      "sha256": "1e5073cc9e4c6775eb6cee556199e345a09973ee32e2ade8c0f18923c2865af3"
+    },
+    {
+      "path": "assets/shared_references/scene_234b269009e7b2353b32.png",
+      "sha256": "234b269009e7b2353b322460666c5ca28b24b2e8a2533d534ed6e45603e67c84"
+    },
+    {
+      "path": "assets/shared_references/scene_2b63b78eb7b66a3181d5.png",
+      "sha256": "2b63b78eb7b66a3181d50f3cc4ec238f41f8045d99f4bcd87431c090a64429f1"
+    },
+    {
+      "path": "assets/shared_references/scene_38520db87bd898d88fd5.png",
+      "sha256": "38520db87bd898d88fd56daecfd3e8336bfd053b87bed198fae9fcf480d1d155"
+    },
+    {
+      "path": "assets/shared_references/scene_389fbf4df47d63d45d12.png",
+      "sha256": "389fbf4df47d63d45d123f4573ea2b33f46eb0b5fef5a735d898732dacb4be34"
+    },
+    {
+      "path": "assets/shared_references/scene_3941ecff7c99e80febb3.png",
+      "sha256": "3941ecff7c99e80febb3cb16e2b4a663b324571c3e6e4afe899ba771813fe76b"
+    },
+    {
+      "path": "assets/shared_references/scene_47d2ea96b175ac6cc5a4.png",
+      "sha256": "47d2ea96b175ac6cc5a4827a8f83342a8f225700052b3ba1ff605ef550981da5"
+    },
+    {
+      "path": "assets/shared_references/scene_484c251eb330c8c73e2e.png",
+      "sha256": "484c251eb330c8c73e2e631c947c255f1ae9c709844a404aad3fea1ad3b763a9"
+    },
+    {
+      "path": "assets/shared_references/scene_4e29edd036827a010346.png",
+      "sha256": "4e29edd036827a0103463b483b774c24eb12e0f76b85a1ada7930dfe20c35120"
+    },
+    {
+      "path": "assets/shared_references/scene_52845678bf3424dda0b7.png",
+      "sha256": "52845678bf3424dda0b7ce8dd39d697558ad7bb3302b90709cb93874e3ddaf91"
+    },
+    {
+      "path": "assets/shared_references/scene_6375b4dd2234510b54cc.png",
+      "sha256": "6375b4dd2234510b54cc9c8255494279f13c400b33506513af3e8b8572179b97"
+    },
+    {
+      "path": "assets/shared_references/scene_67c473f2240e88ff41f7.png",
+      "sha256": "67c473f2240e88ff41f758cd0e5660e0d586f9780d3991f736097108b5c473d1"
+    },
+    {
+      "path": "assets/shared_references/scene_73526d80576dc72bdeb1.png",
+      "sha256": "73526d80576dc72bdeb17f6a5f5933894209ee3d5aa3a97105c5647b72dcc039"
+    },
+    {
+      "path": "assets/shared_references/scene_750de15f63f393ecc46a.png",
+      "sha256": "750de15f63f393ecc46aa64436bfc406fd84c9c3241fe9e99aec2289a21ba223"
+    },
+    {
+      "path": "assets/shared_references/scene_7c5ad1417b094c56dc78.png",
+      "sha256": "7c5ad1417b094c56dc781b7029f19cdcdc4ebba03a4841ac46e53b6778465478"
+    },
+    {
+      "path": "assets/shared_references/scene_8615d468901d26e17c49.png",
+      "sha256": "8615d468901d26e17c495f46a2cad2f6f9d0d91a228b75e626ac42aeaf9ccb24"
+    },
+    {
+      "path": "assets/shared_references/scene_8eb523e54e8593d4a425.png",
+      "sha256": "8eb523e54e8593d4a42547106e857c41a6063ba40b2c5a8732c8e8017fce6339"
+    },
+    {
+      "path": "assets/shared_references/scene_907acca33bc6d397d56b.png",
+      "sha256": "907acca33bc6d397d56be58f88f99d407fb0b39471938b9c1c6e834d61fe284a"
+    },
+    {
+      "path": "assets/shared_references/scene_9ad55f4a9715abedd67a.png",
+      "sha256": "9ad55f4a9715abedd67abbceee29ef9f3de5a2f110959363d8a7ce1d24502be3"
+    },
+    {
+      "path": "assets/shared_references/scene_a351445ef3b8aa9dd07c.png",
+      "sha256": "a351445ef3b8aa9dd07c316fd0fc1d928b869a13b2297dc901cd6bdb1d840bae"
+    },
+    {
+      "path": "assets/shared_references/scene_a709e16fcaa3d9673ef9.png",
+      "sha256": "a709e16fcaa3d9673ef925f3801d6ea66cc0400d2432d21bcf3988a6a9f40738"
+    },
+    {
+      "path": "assets/shared_references/scene_a81fa1e95559ff60c4be.png",
+      "sha256": "a81fa1e95559ff60c4be027903d3cae425d8f04186284657a4316f887af5ae75"
+    },
+    {
+      "path": "assets/shared_references/scene_aa9a21ea5b41f44ff0b9.png",
+      "sha256": "aa9a21ea5b41f44ff0b9823c1002edf2e4214c0ef7eaa729a34a1d91a6f5d872"
+    },
+    {
+      "path": "assets/shared_references/scene_aee499bfd521d94607ed.png",
+      "sha256": "aee499bfd521d94607ed43fb223616465a43dbe711f242aa4fd1051057aafc3d"
+    },
+    {
+      "path": "assets/shared_references/scene_b06fbb5385be9ef01dd4.png",
+      "sha256": "b06fbb5385be9ef01dd43b763986e03b6bd36f8d13c4542baf7a542606753433"
+    },
+    {
+      "path": "assets/shared_references/scene_b0c1b7f9f8b7721bd891.png",
+      "sha256": "b0c1b7f9f8b7721bd891094c2d7e508aa694ed37b3fed172c6aed98600b8bbff"
+    },
+    {
+      "path": "assets/shared_references/scene_b216ce2ac8ab480ef3c6.png",
+      "sha256": "b216ce2ac8ab480ef3c6e0ed39e5f00ac1f4392389616e2e40ccb55bfb0efd66"
+    },
+    {
+      "path": "assets/shared_references/scene_b7b12d3543aa34b04f5b.png",
+      "sha256": "b7b12d3543aa34b04f5bc39047adf38bf170b95eb3899219f84b397352ff956b"
+    },
+    {
+      "path": "assets/shared_references/scene_b8d26f4bd233fd32ca78.png",
+      "sha256": "b8d26f4bd233fd32ca783e3c70a82b5eb1e75624d2950c79faa26de3e884aa10"
+    },
+    {
+      "path": "assets/shared_references/scene_b968fa99a3f074448580.png",
+      "sha256": "b968fa99a3f0744485801bddd58ca2ac3e8ae167c1b61671b656ae5bc2eebf2f"
+    },
+    {
+      "path": "assets/shared_references/scene_bb9b344a45af910aa344.png",
+      "sha256": "bb9b344a45af910aa344a03c87564eaa198baf9de467d59fda1e59225410c2dd"
+    },
+    {
+      "path": "assets/shared_references/scene_bf5fde5561999bcf8f36.png",
+      "sha256": "bf5fde5561999bcf8f36108c908e257963e66df2c3637f4b2084147babd27f04"
+    },
+    {
+      "path": "assets/shared_references/scene_c842483f288282af9ff4.png",
+      "sha256": "c842483f288282af9ff4b7dc663181d664f1013763206621ab4d2e827698f6a5"
+    },
+    {
+      "path": "assets/shared_references/scene_cb55190c870e287c40fb.png",
+      "sha256": "cb55190c870e287c40fb64deb5fbb89f11cec2734aad458e47c117b1b3614ecf"
+    },
+    {
+      "path": "assets/shared_references/scene_ccc1aa0169020b09407e.png",
+      "sha256": "ccc1aa0169020b09407e7ee93ff2f68fcaa49f0fe682ee0007fc53609018c39c"
+    },
+    {
+      "path": "assets/shared_references/scene_cd1d7faf4a65fdfa1f9b.png",
+      "sha256": "cd1d7faf4a65fdfa1f9b3179e26c53d922785da8fb7b1973e90717e3ebd40e36"
+    },
+    {
+      "path": "assets/shared_references/scene_dbe114105c1225def61d.png",
+      "sha256": "dbe114105c1225def61d54bd0c2a8e6a13c173b6ee226d338c1f91dcb155b08c"
+    },
+    {
+      "path": "assets/shared_references/scene_e230370f05d587c301cd.png",
+      "sha256": "e230370f05d587c301cdb3b316ba9e206b1db2e9606241fc3f50062b98cc9a17"
+    },
+    {
+      "path": "assets/shared_references/scene_e72858ef220677d4bdaa.png",
+      "sha256": "e72858ef220677d4bdaa0abc7eec214ed09ec5b83bccca1af565ac9cce0e2ea1"
+    },
+    {
+      "path": "assets/shared_references/scene_e7d48223261d8fc4efb3.png",
+      "sha256": "e7d48223261d8fc4efb3c8346ed9a56202f6a0afc356df17a19521f376254741"
+    },
+    {
+      "path": "assets/shared_references/scene_e898b804639a7e1d8a35.png",
+      "sha256": "e898b804639a7e1d8a359e43c133e436c468610b32c9ab8e6e4ec2790e140bf3"
+    },
+    {
+      "path": "assets/shared_references/scene_ed9d1bbffd5269da8ebb.png",
+      "sha256": "ed9d1bbffd5269da8ebb9b455ed714c1aa7fc1aecd4aad0d3da068cab653a90e"
+    },
+    {
+      "path": "assets/shared_references/scene_eda586b245235c7069b9.png",
+      "sha256": "eda586b245235c7069b997f93595fe6d936b5b665c28bfc4ce0bd4cfeb804fab"
+    },
+    {
+      "path": "assets/shared_references/scene_f24bdf3b8a067bf31af3.png",
+      "sha256": "f24bdf3b8a067bf31af3bbefef37585015c6ca9c6a2c538812ab61e295593b57"
+    },
+    {
+      "path": "assets/shared_references/scene_fcee3367478845c6d9db.png",
+      "sha256": "fcee3367478845c6d9db50c9ac1b417a4ecb7ed0fb4bae86c43d6c21751a674f"
+    },
+    {
+      "path": "assets/shared_references/scene_fd7743824dbdf5ef3011.png",
+      "sha256": "fd7743824dbdf5ef30119d8feccf1eac9fefd86371c61ac683076853e402dfb7"
+    },
+    {
       "path": "assets/task_rewards/daily.png",
       "sha256": "4a65df68ebd3b669f7fc7d2e7150b2f456ecae9769ad7781d3354878c6dee3ea"
     },
@@ -908,6 +1140,10 @@
       "sha256": "10f05a53e3b25549ead69d90fb6d9c4eb5944f18d66be2fa01b38a163ce30cd1"
     },
     {
+      "path": "docs/RELEASE_0.2.15-hotfix.20261022.md",
+      "sha256": "7f10a14120a9a4b16b93f3e275a40aa373d0147071e8f508e50a54cabda2e458"
+    },
+    {
       "path": "docs/RELEASE_0.2.15.md",
       "sha256": "b3829db27fffda760cc8cae7eac3e1f2e788bd53a1f64ae242bc60768d63822d"
     },
@@ -916,16 +1152,32 @@
       "sha256": "87da6f94ee4f3c31072730f92280ba84a256293b7e249898d8adfef454d4af1b"
     },
     {
+      "path": "models/gamevision_bd2/dictionary.txt",
+      "sha256": "2af150bab777d86fa1ce821f6a37eabea90f1bb99ab9c41f031262e892a747bc"
+    },
+    {
+      "path": "models/gamevision_bd2/model_card.json",
+      "sha256": "6bfac339c043ba0dc5f55c6c4b2bc4959eca48109b4b35d990a6a6294c26b71d"
+    },
+    {
+      "path": "models/gamevision_bd2/ocr.onnx",
+      "sha256": "0adf5b050c2a7492943dec42564fb738054891c8f722c8f38110eb755605acb8"
+    },
+    {
+      "path": "models/gamevision_bd2/visual.onnx",
+      "sha256": "5cd58dc5d54b63633598e2f45bbc091ba4aa00a7209246d9224488d193ae83a7"
+    },
+    {
       "path": "NOTICE.md",
-      "sha256": "75b7693aa71af5da01944b2af0d46218e53a1edfe0e4fe6e62658101ab4b94ab"
+      "sha256": "85ee83fcae66495c58335c70ce3e22d1a486ed5dd17475ff587873a74537e320"
     },
     {
       "path": "README.md",
-      "sha256": "74f28b7bd4b201e5bfebf630eed71b25ce187d69ba616292c91bf9700db3dc17"
+      "sha256": "1d99faf7a563b473c417fa64a156f6511560bac460637130eec7245a7a8e42a3"
     },
     {
       "path": "requirements.txt",
-      "sha256": "f1e2376e2e77404643228890da5adeb13662c91d6065b2d0171a4393d136ebb5"
+      "sha256": "5c32f2c9b678f0714c065605497df736e2cb166b785740ab3e71cddc6934189b"
     },
     {
       "path": "templates/config/daily_tasks.json",
@@ -938,6 +1190,10 @@
     {
       "path": "templates/config/event_and_rewards.json",
       "sha256": "b8c1743586995a61652cc5eda739fe0a3ae7fe7fd7795e940345f2e771c6608c"
+    },
+    {
+      "path": "templates/config/model_recognition.json",
+      "sha256": "b069871308f35765c2b53d17ac6441bddf6dae7aa363ffef979f3353fe0c8adf"
     },
     {
       "path": "templates/config/reserved_reward_entries.json",
@@ -953,11 +1209,15 @@
     },
     {
       "path": "tools/assistant_app.py",
-      "sha256": "d0c703db68022e66054035e9175dd1e45a1ee9eb005ebb71a4687d0a8d288e65"
+      "sha256": "473a7978a4ba59bc86bc85aa167fe3176cb1feb1c1390590ed1f8fde16d66d8f"
+    },
+    {
+      "path": "tools/assistant_lifetime.py",
+      "sha256": "9e270ba919dec0bc6146780c00455f787c770a70b20d5268a45463f8957f051d"
     },
     {
       "path": "tools/atomic_json.py",
-      "sha256": "842eadaf0086e47e12814bc10f53241268b7835512b8c6138e2bcb86cb287def"
+      "sha256": "5c7769cabc3c550f1427d44a97189348f82ae8df018370f712757eb75ad9d1bf"
     },
     {
       "path": "tools/build_desktop.py",
@@ -965,31 +1225,35 @@
     },
     {
       "path": "tools/build_portable.py",
-      "sha256": "1923aef93321d31436596ca4c252ddbba9f0f76f3cfa260613dc0a1b3af60310"
+      "sha256": "2f793c3798e706f89778928847f23dae4ecb28265ca53881aef7a5bbbb7dcbc3"
     },
     {
       "path": "tools/cache_cleanup.py",
-      "sha256": "93484b26c4a983df837b42fb68174ccedf53e9eb4cb4cb02c00101269ce96a87"
+      "sha256": "283bf7439691c7eb84d1d48ec7e4ad3ce10e4bcd9b38b8a207f543fbe9d909d8"
     },
     {
       "path": "tools/common_navigation.py",
-      "sha256": "d9e86a2a712e14d86904b296c5cc7ec21f2642c254226ae627eb5d56dcba9829"
+      "sha256": "24969308cf088ecf85066f52591ade3840915690353b23cfaf521b0e0546e7fa"
     },
     {
       "path": "tools/daily_settings.py",
-      "sha256": "7dfe919cb177a0769ac83b7b36843c90dfbec251bd69f7c236898cbcf5b6f547"
+      "sha256": "0f66154d7f01671f0d2f0261af42e4ef086b38519a0caa878cdd8ba23afed463"
     },
     {
       "path": "tools/daily_tasks.py",
-      "sha256": "13cb07b020cf4fa7ad338c1ac8e5d1e31c2f3237040af4c8d757dc0f077a4b33"
+      "sha256": "a987a9853df838c51cfb39ac962353c063c94d734c4067afeab6b404811ef320"
     },
     {
       "path": "tools/daily_vision.py",
-      "sha256": "65d6cfb70d6746469885e187ec6daf7d04f5b6bf72fcac796e8b4ba18013ddbe"
+      "sha256": "4888e80bfdd8518cc40e34b22756200759e5b4649409bde19005893a2050e17f"
     },
     {
       "path": "tools/date_rollover.py",
-      "sha256": "322eca7ca743b42119f10777b9b74950185c530f2a35c94d370f83541d884c92"
+      "sha256": "327e00cce9c27201529fe1beb3df34ef4b14c59fcd9250d514336e8b3acf184f"
+    },
+    {
+      "path": "tools/equipment_receipts.py",
+      "sha256": "e13153f51a38e07c825f31e0667bb46d0aecc5eb9d53daffd437689b5cdc7773"
     },
     {
       "path": "tools/equipment_rules.py",
@@ -997,15 +1261,15 @@
     },
     {
       "path": "tools/equipment_tasks.py",
-      "sha256": "d445a35772141d41ca518bdc3a8d7c83f173fd416b597dcedaf1a669fb64bdb5"
+      "sha256": "63fa9940331744b683aaec85090f1470673eebefeaddeff8f473b1bee433347c"
     },
     {
       "path": "tools/equipment_vision.py",
-      "sha256": "c3772ac25d908f8c100a7b59bdb56391f6de4b7841cf876cc885d46651fddb21"
+      "sha256": "76e1fdf46d089bf037966fe68a9f6c2c3657ee331c7e79b687b69d048725df5b"
     },
     {
       "path": "tools/equipment_workflow.py",
-      "sha256": "e721912746abeddfbbf0cabe02a79c78d2bf5ff25f38c1559eb71108b42825b8"
+      "sha256": "4395c91bb4285beff7dad8c919d7f15ae34ac6651254212758d8ab7a005feba0"
     },
     {
       "path": "tools/event_battle_flow.py",
@@ -1013,19 +1277,19 @@
     },
     {
       "path": "tools/event_battle_runtime.py",
-      "sha256": "0c4d5feeb16e4784534dfb54b49f0eddd1b49d9b0c5848eb90d3de80b56ec01e"
+      "sha256": "22755704ae4aeb0782c4f4ef03b3179bb153c8d30d1fa604f4c319a8dd38a833"
     },
     {
       "path": "tools/event_battle_vision.py",
-      "sha256": "98f388909a66259b95e99adc282bf92affdb90235970562a37f6891bc73a5b1c"
+      "sha256": "d43bfdb11375c66ed6c1c705101893552230fa1578ef0390d053111d3f13c167"
     },
     {
       "path": "tools/event_prepare_vision.py",
-      "sha256": "c083879ebd6dab4063ffb33d17e52415870112dae866e9586e1e29925a13292d"
+      "sha256": "61d5941bc0bbec6766de135560b382901eb842a49ed08954880d738a3e492992"
     },
     {
       "path": "tools/event_resources.py",
-      "sha256": "9587bce95ae95995fe73dce6dd3a2c99569570639031583542f41a2f462d96de"
+      "sha256": "091446e199570d96e2e3fbf3e8d4ad834a530c2e042262e49ab406cbb33cfa4c"
     },
     {
       "path": "tools/event_reward_rules.py",
@@ -1033,7 +1297,7 @@
     },
     {
       "path": "tools/event_tasks.py",
-      "sha256": "c27237158599e25337d9b35a29bffee3bb89013b5c712dc1a840b067104aa6b0"
+      "sha256": "0d8496d4e92585a5ba8fa834a987953fa6128a36e4628c9668aa0ead30b813e2"
     },
     {
       "path": "tools/execution_control.py",
@@ -1041,7 +1305,11 @@
     },
     {
       "path": "tools/execution_log.py",
-      "sha256": "64d725fbd2fb29adf267ac2d153bd55ecd0cab2938785c86cb67aa59d0740006"
+      "sha256": "cfd8f147c12e234279c1e162f0740cff81a69a1cfd33bbae2b934233fbea2199"
+    },
+    {
+      "path": "tools/frame_store.py",
+      "sha256": "30eb9470e220f5ac0b84ef15dce5e70e74980bd56bc83973a4b9f75dd6398251"
     },
     {
       "path": "tools/game_calendar.py",
@@ -1049,7 +1317,11 @@
     },
     {
       "path": "tools/game_window.py",
-      "sha256": "27427c16852de28d6bcbbfa822b22cd829d51cc3ca61225b94be9ad71adb23db"
+      "sha256": "5e0ca0e2e23bb68bd1cece10ab5de1a776ed4c7d88e53df860f2389b499cf74b"
+    },
+    {
+      "path": "tools/gamevision_runtime.py",
+      "sha256": "9d58b56413e978686e170410648a037caabc0c173b6acf993f0c69b6f7c2f2df"
     },
     {
       "path": "tools/goddess_entry_vision.py",
@@ -1057,35 +1329,35 @@
     },
     {
       "path": "tools/guild_check_in.py",
-      "sha256": "cebb98e019fccbc0480bd108e66fbc51c31160f2682e5a1a2ae1d49613fb6b21"
+      "sha256": "2c97bb5e8189b77d09b489b5fa6eea7396ecd4573f4e09309a32bf9db298b6b8"
     },
     {
       "path": "tools/hunting_probe.py",
-      "sha256": "d0e38d182e2939c9561ccefd7d005833b2bb5c11ff65f2df389abca229f4e4b6"
+      "sha256": "f39e925d8699153b46632925d8748d18a4ec06788880145319be14fdf0bde132"
     },
     {
       "path": "tools/hunting_resources.py",
-      "sha256": "847db857c95cf4652af7348bd13604b00f6e69762f768fc77d396a9401a91631"
+      "sha256": "cd5e0e596834b10042af7a0b0d677210b38fc4fbac5fa2f8cc89af0724519df2"
     },
     {
       "path": "tools/hunting_survey.py",
-      "sha256": "0ddb6955b63d4e544f28bc4f70666ba9ff2baafa38299e9b0ceba8f67f1f634b"
+      "sha256": "27f7ad36113bfbeaed1a1f396adbd4b69fea89a045c4ad5f186a6f044cc2d288"
     },
     {
       "path": "tools/local_cache.py",
-      "sha256": "95ac76aeb6bf880ea664331e9d4f9fb35567d9cf4d5724c67eac4edfe62d8909"
+      "sha256": "e51ef9ead6ab70282d15eb739058b64c29be2e53addbcbae8ad843a9f3e61797"
     },
     {
       "path": "tools/m00_recognize.py",
-      "sha256": "4c0e9f07ba4f59e520172cd7f3e6a7c967b685d22f0a653ab0b477fdc95cf0f9"
+      "sha256": "d0be9407f18ca34a5e7aff057408319ef9b0e65fb0e1bf5bd0d07c07434d237c"
     },
     {
       "path": "tools/m01_management.py",
-      "sha256": "8f0b44291dbb0523985731fb37de7b42dffc7a649d9089d70c043a4bc6e358d0"
+      "sha256": "ab28389407b31e57126106c1379d0e26e3c65b60728a4bf4adf0cb07b1c63ae2"
     },
     {
       "path": "tools/m02_free_draw.py",
-      "sha256": "215130c9b17c692417c4d8d9005d208f0066b912061c3b9757f81aab5888e8e0"
+      "sha256": "c59055ec5984f7f15e136cd00a8b2ddc9f2d230cda92033d7467256cc3802ce6"
     },
     {
       "path": "tools/mirror_entry_vision.py",
@@ -1094,6 +1366,14 @@
     {
       "path": "tools/mirror_status.py",
       "sha256": "7da42663c9f80364af19a859cffbdba4f053e26b2af75fd6c0ab0b113c602dfd"
+    },
+    {
+      "path": "tools/model_checks.py",
+      "sha256": "cbbe923f5b5a9c9a1fe84cd9602f5ecba4d779edaab03ce30bb9fd4e9ce4fcaf"
+    },
+    {
+      "path": "tools/model_ocr_provider.py",
+      "sha256": "bbdb282bff6d92a45fa6543588b0f74d35ad9d0b6910b809e41866e224038611"
     },
     {
       "path": "tools/module_catalog.py",
@@ -1113,19 +1393,19 @@
     },
     {
       "path": "tools/pass_reward_vision.py",
-      "sha256": "587e20cca74917b7aff531a48f21929a94699723dbae7b3ca7df62b6dd5be894"
+      "sha256": "26d4c6844e30e4beadb6215091a47765acb40c0d75a46dfde2a995073025d500"
     },
     {
       "path": "tools/pass_rewards.py",
-      "sha256": "7d6f4ed375989025f6cf1d5551f6d5b14babcae76af40fa56f01db828d53fd63"
+      "sha256": "7d20eed2d88a3f86829362d9858844e04639eccef5234762ee1cdc09094189fc"
     },
     {
       "path": "tools/pending_daily.py",
-      "sha256": "e586245460f598b27fd9e6e405046a0116f4c0257b833efe3757fd4bf838dae7"
+      "sha256": "b981d065f25d7cbdfe9405055c1a2d7bbb6152275043d67daed9cfda43226b78"
     },
     {
       "path": "tools/phase08_vision.py",
-      "sha256": "2d087343873555bf4680c074d0d0dd10a61f19286ae015969bf3f33e49b7a747"
+      "sha256": "b7d02de7621f3af9eaccba60b6d9fbeacc46e2919461f47077571bb8c4f3579a"
     },
     {
       "path": "tools/process_window.py",
@@ -1134,6 +1414,10 @@
     {
       "path": "tools/project_paths.py",
       "sha256": "b34c6e52b864a5636a8e2b5309b5275786cf41b08172ead06434a92e780cf711"
+    },
+    {
+      "path": "tools/queue_recognition.py",
+      "sha256": "b39530b8a53c9e07a677a70dc97de06405161741e80b4ad7d3f4f0bf9a30e7d0"
     },
     {
       "path": "tools/resource_pools.py",
@@ -1157,7 +1441,7 @@
     },
     {
       "path": "tools/task_feedback.py",
-      "sha256": "010237c30b5c9439abf8c340fdb75173b3c98f89ab2f877ec5cddf4b1b5f6032"
+      "sha256": "1a849506819603820ee036ad62ce025b099828eb97aa0571809259017414738c"
     },
     {
       "path": "tools/task_progress.py",
@@ -1169,7 +1453,7 @@
     },
     {
       "path": "tools/task_rewards.py",
-      "sha256": "6dadfb5b7fd9eb366a782d788fd0cad15059766c22a36295b2348c7cc62e593f"
+      "sha256": "01b361ec0ff67e7034a6d3e61ecf9eec4b2f6c10a095a0047ac02a4b8fb2d0a4"
     },
     {
       "path": "tools/ui_foreground.py",
@@ -1185,11 +1469,11 @@
     },
     {
       "path": "tools/verify_workflow_continue.py",
-      "sha256": "700f948ea161e7681b10481f47f1d4ca8c976269127e99c12999b212926ef98b"
+      "sha256": "8fc156a19679331892ad6d04260fc4c8e06e1689651e26b9714ed4d8d4d92cc2"
     },
     {
       "path": "tools/windows_ocr.ps1",
-      "sha256": "17e0bd57c28f3c1a7703f11576f993c1b3c8d553a44b64cccd86bff3d1e965ae"
+      "sha256": "d29fd09b35c001f1a5e6cc1990aace48d5c107e11e8ac36f6aac18299a59a446"
     },
     {
       "path": "tools/workbench_theme.py",
@@ -1197,15 +1481,15 @@
     },
     {
       "path": "tools/workbench_ui.py",
-      "sha256": "5ae3bf4b683499c38ba7d2c405b971eada6310d043365ca2f9c845919426d422"
+      "sha256": "66b7eeef9e2191c0fe28860a80449a34c821eb03d9e137a3079c8c745f345021"
     },
     {
       "path": "tools/workflow_runner.py",
-      "sha256": "be5d2f5c4636379c0c4a68780bf4968cc32ec2cc3bd2c16a90c0b169e9aa92b7"
+      "sha256": "8381f0c6036f6f8dce75d78f50186a017322bbce80f24f684e82b6cb0b7d6137"
     },
     {
-      "path": "verification_0.2.15.json",
-      "sha256": "50c01aa40f46e1cc7eeb8d658d73df64b86345d66ac7042b91cc37cb1d3e61e6"
+      "path": "verification_0.2.15-hotfix.20261022.json",
+      "sha256": "611e19a59792a91eca794afd56e5feb2801eac102d622e397bb65472a8dc9c5e"
     }
   ]
 }

@@ -1,4 +1,5 @@
 """Own event input, double-frame submit checks and the shared AP journal."""
+from frame_store import next_path, report_write, persist_references
 import copy
 import json
 import time
@@ -8,6 +9,7 @@ from pathlib import Path
 
 from common_navigation import ensure_main_menu
 from daily_tasks import guard_foreign_pending
+from local_cache import iter_cache_records
 from event_battle_vision import EventBattleVision
 from event_resources import retain_balance
 from event_reward_rules import load_config, event_ledger_path
@@ -24,6 +26,38 @@ OBSERVATION_KEYS = ('state', 'event_id', 'mode', 'stage', 'unit_cost', 'quantity
 
 def stable_observation(first, second):
     return all(first.get(key) == second.get(key) for key in OBSERVATION_KEYS)
+
+
+def wait_home_event(window, vision, root, output, report, expected_day):
+    """Observe the automatic carousel; never click an unidentified card."""
+    deadline = time.monotonic() + network_wait_seconds(root)
+    previous = None
+    index = 0
+    while time.monotonic() < deadline:
+        check_requested_stop()
+        if game_day().isoformat() != expected_day:
+            raise RuntimeError('等待活动入口时已换日，未进入活动。')
+        image, geometry = window.capture()
+        entry = output / f'home_carousel_{index:04d}.png'
+        index += 1
+        entry=next_path(entry);image.save(entry)
+        observation = vision.inspect_file(entry, output / 'recognition')
+        report['observations'].append({'image': str(entry), 'geometry': geometry, 'observation': observation})
+        point = observation.get('points', {}).get('enter_event')
+        identity = observation.get('event_id')
+        signature = (identity, point, geometry) if observation.get('state') == 'main_menu' and identity and point else None
+        if signature is not None and signature == previous:
+            report.pop('waiting', None)
+            report['event_entry_images'] = [r['image'] for r in report['observations'][-2:]]
+            persist_references(report['event_entry_images'])
+            save(output / 'run.json', report)
+            return observation
+        previous = copy.deepcopy(signature)
+        report['waiting'] = {'message': '等待主页轮播显示已识别的活动标题',
+                             'timeout_seconds': network_wait_seconds(root), 'frames': index}
+        save(output / 'run.json', report)
+        time.sleep(.5)
+    raise RuntimeError('等待主页活动轮播超时，未稳定识别当期活动标题，未进入活动。')
 
 
 class EventBattleRun:
@@ -89,7 +123,7 @@ class EventBattleRun:
         image, geometry = self.window.capture()
         path = self.args.output / f'frame_{self.sequence:04d}.png'
         self.sequence += 1
-        image.save(path)
+        path=next_path(path);image.save(path)
         observation = self.vision.inspect_file(path, self.args.output / 'recognition')
         retain_balance(self.root, observation, self.config['cache_date'], self.config['event']['event_id'])
         self.report['observations'].append({'image': str(path), 'observation': observation})
@@ -203,20 +237,21 @@ def reconcile_visible_pending(root, output):
     from argparse import Namespace
     root, output = Path(root), Path(output)
     found = []
-    for path in (root / 'runtime').glob('*.json'):
+    for path in iter_cache_records(root / 'runtime'):
         try:
             value = json.loads(path.read_text(encoding='utf-8'))
         except (OSError, ValueError):
             continue
         pending = value.get('pending') if isinstance(value, dict) else None
-        if isinstance(pending, dict) and pending.get('module') == 'event':
+        if (isinstance(pending, dict) and pending.get('module') == 'event'
+                and value.get('cache_date') == pending.get('cache_date') == game_day().isoformat()):
             found.append(path)
     if len(found) != 1:
         return None
     with exclusive_ledger(root / 'runtime/game_control'):
         output.mkdir(parents=True, exist_ok=True)
         image, _ = GameWindow.find().capture()
-        probe = output / 'existing_result.png'; image.save(probe)
+        probe = output / 'existing_result.png'; probe=next_path(probe);image.save(probe)
         observation = EventBattleVision().inspect_file(probe, output / 'probe_ocr')
     if observation['state'] not in ('event_reward', 'event_victory', 'event_auto_running', 'event_defeat'):
         return None
@@ -238,10 +273,11 @@ def run(args):
                 require_current_cache(root)
                 config = load_config(root / 'config/event_and_rewards.json')
                 candidates = []
-                for candidate in (root / 'runtime').glob('*.json'):
+                for candidate in iter_cache_records(root / 'runtime'):
                     value = json.loads(candidate.read_text(encoding='utf-8'))
                     pending = value.get('pending') if isinstance(value, dict) else None
-                    if isinstance(pending, dict) and pending.get('module') == 'event':
+                    if (isinstance(pending, dict) and pending.get('module') == 'event'
+                and value.get('cache_date') == pending.get('cache_date') == game_day().isoformat()):
                         candidates.append((candidate, value))
                 if len(candidates) != 1:
                     raise RuntimeError('活动未决记录不是唯一一份，未执行任何恢复动作。')
@@ -267,15 +303,11 @@ def run(args):
                 report.update(completed=True, skipped=True, skip_reason='活动在设置中停用，已跳过。')
                 return report
             vision = EventBattleVision()
-            image, _ = window.capture()
-            entry = output / 'verified_home.png'; image.save(entry)
-            observation = vision.inspect_file(entry, output / 'recognition')
             effective = copy.deepcopy(config)
             event_id = effective['event']['event_id']
             if event_id in ('auto_current', 'configure_current_event'):
-                event_id = observation.get('event_id')
-                if not event_id:
-                    raise RuntimeError('主菜单中的当期活动入口未识别，未进入活动。')
+                observation = wait_home_event(window, vision, root, output, report, config['cache_date'])
+                event_id = observation['event_id']
                 effective['event']['event_id'] = event_id
             path = event_ledger_path(root, effective)
             if not args.prepare_only:

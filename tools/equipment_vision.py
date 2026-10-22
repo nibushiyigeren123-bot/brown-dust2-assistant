@@ -1,4 +1,5 @@
 """Local equipment UI recognition. Does not send game input."""
+from frame_store import write_encoded_png
 import hashlib
 import json
 import re
@@ -12,20 +13,22 @@ from m00_recognize import ROOT, read_image
 
 def read_inventory_count(image, output):
     image = cv2.resize(image, (1280, 720), interpolation=cv2.INTER_AREA)
-    crop = image[25:48, 235:314]
-    crop = cv2.copyMakeBorder(crop, 6, 6, 6, 6, cv2.BORDER_CONSTANT, value=0)
+    # Include the entire numerator: the previous ROI clipped the leading 2
+    # from 272. Inventory is auxiliary; never reconstruct missing digits.
+    crop = cv2.cvtColor(image[23:50, 231:320], cv2.COLOR_BGR2GRAY)
+    crop = cv2.copyMakeBorder(crop, 10, 10, 10, 10, cv2.BORDER_CONSTANT, value=0)
     readings, values = [], []
     for scale in (3, 4):
         encoded = cv2.imencode('.png', cv2.resize(crop, None, fx=scale, fy=scale,
                                                 interpolation=cv2.INTER_CUBIC))[1]
         path = Path(output) / ('inventory_' + hashlib.sha256(encoded.tobytes()).hexdigest()[:16] + '.png')
         path.parent.mkdir(parents=True, exist_ok=True)
-        encoded.tofile(str(path))
+        write_encoded_png(path, encoded)
         payload = windows_ocr(path, Path(output) / 'ocr', language='en-US')
         text = compact(''.join(line['text'] for line in payload['lines']))
         readings.append(text)
         match = re.fullmatch(r'(\d{1,4})/2000', text)
-        values.append(int(match[1]) if match else None)
+        values.append(int(match[1]) if match and 0 <= int(match[1]) <= 2000 else None)
     return {'value': values[0] if values[0] is not None and values[0] == values[1] else None,
             'readings': readings}
 
@@ -44,7 +47,7 @@ def read_integer(image, box, output, label):
         path = Path(output) / (label + '_' + hashlib.sha256(encoded.tobytes()).hexdigest()[:16] + '.png')
         path.parent.mkdir(parents=True, exist_ok=True)
         if not path.exists():
-            encoded.tofile(str(path))
+            write_encoded_png(path, encoded)
         payload = windows_ocr(path, Path(output) / 'ocr', language='en-US')
         text = compact(''.join(line['text'] for line in payload['lines']))
         readings.append(text)
@@ -65,7 +68,7 @@ def read_integer(image, box, output, label):
             path = Path(output) / (label + '_context_' + hashlib.sha256(encoded.tobytes()).hexdigest()[:16] + '.png')
             path.parent.mkdir(parents=True, exist_ok=True)
             if not path.exists():
-                encoded.tofile(str(path))
+                write_encoded_png(path, encoded)
             payload = windows_ocr(path, Path(output) / 'ocr', language='en-US')
             text = compact(''.join(line['text'] for line in payload['lines']))
             readings.append('context:' + text)
@@ -91,7 +94,7 @@ def read_native_integer(image, box, output, label):
         encoded=cv2.imencode('.png',cv2.resize(field,None,fx=scale,fy=scale,interpolation=cv2.INTER_CUBIC))[1]
         path=Path(output)/(label+'_native_'+hashlib.sha256(encoded.tobytes()).hexdigest()[:16]+'.png')
         path.parent.mkdir(parents=True,exist_ok=True)
-        if not path.exists():encoded.tofile(str(path))
+        if not path.exists():write_encoded_png(path, encoded)
         payload=windows_ocr(path,Path(output)/'ocr',language='en-US')
         text=compact(''.join(line['text'] for line in payload['lines']))
         readings.append(text)
@@ -101,14 +104,35 @@ def read_native_integer(image, box, output, label):
     return {'value':value,'readings':readings}
 
 
+class LazyEquipmentDocument:
+    def __init__(self, path, output):
+        self.path, self.output, self.document = path, output, None
+
+    def find(self, *args, **kwargs):
+        if self.document is None:
+            self.document = OcrDocument(windows_ocr(self.path, Path(self.output) / 'ocr'))
+        return self.document.find(*args, **kwargs)
+
+
 class EquipmentVision:
     def __init__(self):
         assets = ROOT / 'assets/equipment'
         self.specs = json.loads((assets / 'sources.json').read_text(encoding='utf-8'))
         self.images = {name: read_image(assets / spec['file']) for name, spec in self.specs.items()}
+        import numpy as np
+        self.visibility = {}
+        for name, image in self.images.items():
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            mask = gray >= max(1, np.percentile(gray, 70))
+            self.visibility[name] = (mask, float(gray[mask].mean()) if mask.any() else 0)
+
+    @staticmethod
+    def normalized(image):
+        return image if image.shape[:2] == (720, 1280) else cv2.resize(
+            image, (1280, 720), interpolation=cv2.INTER_AREA)
 
     def anchor(self, image, name, threshold=.88):
-        image = cv2.resize(image, (1280, 720), interpolation=cv2.INTER_AREA)
+        image = self.normalized(image)
         a, b, c, d = self.specs[name]['box']
         region = image[max(0, b-3):min(720, d+3), max(0, a-3):min(1280, c+3)]
         score = float(cv2.matchTemplate(region, self.images[name], cv2.TM_CCOEFF_NORMED).max())
@@ -116,18 +140,16 @@ class EquipmentVision:
 
     def visible(self, image, name, minimum=.8):
         """A matching title dimmed behind a modal cannot identify the foreground."""
-        image = cv2.resize(image, (1280, 720), interpolation=cv2.INTER_AREA)
+        image = self.normalized(image)
         a, b, c, d = self.specs[name]['box']
-        reference = cv2.cvtColor(self.images[name], cv2.COLOR_BGR2GRAY)
-        import numpy as np
-        mask = reference >= max(1, np.percentile(reference, 70))
+        mask, reference_mean = self.visibility[name]
         observed = cv2.cvtColor(image[b:d, a:c], cv2.COLOR_BGR2GRAY)
-        return bool(mask.any() and float(observed[mask].mean()) >= minimum * float(reference[mask].mean()))
+        return bool(mask.any() and float(observed[mask].mean()) >= minimum * reference_mean)
 
-    def inspect_file(self, path, output):
-        image = read_image(path)
-        doc = OcrDocument(windows_ocr(path, Path(output) / 'ocr'))
-        return self.inspect(image, doc, output)
+    def inspect_file(self, path, output, *, frame=None, include_inventory=True):
+        image = read_image(path) if frame is None else frame
+        doc = LazyEquipmentDocument(path, output)
+        return self.inspect(image, doc, output, include_inventory=include_inventory)
 
     def detail_flags(self, image, doc):
         wear = doc.find('穿戴', (790, 470, 870, 510), exact=True)
@@ -136,46 +158,50 @@ class EquipmentVision:
                 'not_equipped': bool(wear and not worn and self.anchor(image, 'detail_wear_available', .97)),
                 'score20': self.anchor(image, 'detail_score20', .97)}
 
-    def inspect(self, image, doc, output):
+    def inspect(self, image, doc, output, *, include_inventory=True):
+        normalized = self.normalized(image)
         if abs(image.shape[1] / image.shape[0] - 16/9) > .035:
             return {'state': 'unknown', 'reason': 'unsupported_aspect_ratio'}
-        if 'decompose_result_title' in self.images and self.anchor(image, 'decompose_result_title', .97):
+        if 'decompose_result_title' in self.images and self.anchor(normalized, 'decompose_result_title', .97):
             return {'state': 'equipment_decompose_result',
-                    'matches_reviewed_55_5_result': self.anchor(image, 'decompose_result_rewards', .97)}
-        if 'filter_title' in self.images and self.anchor(image, 'filter_title'):
-            selected = ['R'] if self.anchor(image, 'filter_r_only', .97) else (
-                ['N'] if 'filter_n_only' in self.images and self.anchor(image, 'filter_n_only', .97) else (
-                [] if self.anchor(image, 'filter_quality_default', .97) else None))
+                    'matches_reviewed_55_5_result': self.anchor(normalized, 'decompose_result_rewards', .97)}
+        if 'filter_title' in self.images and self.anchor(normalized, 'filter_title'):
+            selected = ['R'] if self.anchor(normalized, 'filter_r_only', .97) else (
+                ['N'] if 'filter_n_only' in self.images and self.anchor(normalized, 'filter_n_only', .97) else (
+                [] if self.anchor(normalized, 'filter_quality_default', .97) else None))
             return {'state': 'equipment_filter', 'selected_qualities': selected,
-                    'worn_hidden': self.anchor(image, 'filter_worn_off', .97),
-                    'default_visible_options': self.anchor(image, 'filter_quality_default', .97)
-                        and self.anchor(image, 'filter_other_default', .97)
-                        and self.anchor(image, 'filter_worn_default', .97),
-                    'saved_toast': self.anchor(image, 'filter_saved_toast', .97)}
-        if 'decompose_confirm_warning' in self.images and self.anchor(image, 'decompose_confirm_warning', .97):
+                    'worn_hidden': self.anchor(normalized, 'filter_worn_off', .97),
+                    'default_visible_options': self.anchor(normalized, 'filter_quality_default', .97)
+                        and self.anchor(normalized, 'filter_other_default', .97)
+                        and self.anchor(normalized, 'filter_worn_default', .97),
+                    'saved_toast': self.anchor(normalized, 'filter_saved_toast', .97)}
+        if 'decompose_confirm_warning' in self.images and self.anchor(normalized, 'decompose_confirm_warning', .97):
             return {'state': 'equipment_decompose_confirmation',
-                    'matches_reviewed_one_item_confirmation': self.anchor(image, 'decompose_confirm_one', .97)}
-        if 'decompose_select_prompt' in self.images and self.anchor(image, 'decompose_select_prompt'):
+                    'matches_reviewed_one_item_confirmation': self.anchor(normalized, 'decompose_confirm_one', .97)}
+        if 'decompose_select_prompt' in self.images and self.anchor(normalized, 'decompose_select_prompt'):
             return {'state': 'equipment_decompose_selection',
-                    'matches_reviewed_one_item_selection': self.anchor(image, 'selected_count_one', .97)}
-        if 'detail_r_gun' in self.images and self.anchor(image, 'detail_r_gun', .97):
+                    'matches_reviewed_one_item_selection': self.anchor(normalized, 'selected_count_one', .97)}
+        if 'detail_r_gun' in self.images and self.anchor(normalized, 'detail_r_gun', .97):
             return {'state': 'equipment_reviewed_R_detail', 'quality': 'R',
-                    **self.detail_flags(image, doc)}
-        if ('refine_title' in self.images and self.anchor(image, 'refine_single')
-                and (self.anchor(image, 'refine_title') or
-                     (self.anchor(image, 'refine_score_label') and self.anchor(image, 'refine_material_label')))):
+                    **self.detail_flags(normalized, doc)}
+        if ('refine_title' in self.images and self.anchor(normalized, 'refine_single')
+                and (self.anchor(normalized, 'refine_title') or
+                     (self.anchor(normalized, 'refine_score_label') and self.anchor(normalized, 'refine_material_label')))):
             fields = {name: read_integer(image, box, output, name) for name, box in {
                 'material_balance': (989, 25, 1068, 49), 'gold_balance': (1099, 25, 1200, 49),
                 'material_cost': (1020, 592, 1048, 617), 'gold_cost': (1088, 658, 1118, 681),
             }.items()}
-            score = 20 if self.anchor(image, 'refine_score20', threshold=.97) else None
+            score = 20 if self.anchor(normalized, 'refine_score20', threshold=.97) else None
             return {'state': 'equipment_refine', 'score': score, 'numeric_evidence': fields,
                     'before': {'material': fields['material_balance']['value'], 'gold': fields['gold_balance']['value']},
                     'cost': {'material': fields['material_cost']['value'], 'gold': fields['gold_cost']['value']},
                     'points': {'submit': [1070, 670], 'back': [113, 33]}}
-        if self.anchor(image, 'grid_title', .97) and self.visible(image, 'grid_title'):
-            return {'state': 'equipment_grid', 'inventory': read_inventory_count(image, output),
-                    'empty_filtered_grid': 'grid_empty' in self.images and self.anchor(image, 'grid_empty', .97)}
+        if all(name in self.images and self.anchor(normalized, name, .94) and self.visible(normalized, name)
+               for name in ('bag_consumables_title', 'bag_consumables_selected')):
+            return {'state': 'equipment_bag', 'recognition': 'title_and_selected_bag_icon'}
+        if self.anchor(normalized, 'grid_title', .97) and self.visible(normalized, 'grid_title'):
+            return {'state': 'equipment_grid', 'inventory': read_inventory_count(image, output) if include_inventory else {'value': None, 'deferred': True},
+                    'empty_filtered_grid': 'grid_empty' in self.images and self.anchor(normalized, 'grid_empty', .97)}
         from ui_foreground import MenuForegroundRecognizer
         if MenuForegroundRecognizer().inspect(image)['state'] == 'main_menu':
             return {'state': 'main_menu'}

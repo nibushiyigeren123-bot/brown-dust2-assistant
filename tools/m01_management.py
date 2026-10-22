@@ -1,4 +1,5 @@
 """M01: open the cycling management entry and collect only an enabled button."""
+from frame_store import next_path, report_write, persist_references
 import argparse
 import json
 import time
@@ -45,15 +46,20 @@ class ManagementRecognizer:
                         "scale": patch.shape[1] / template.shape[1]}
         return best if best["score"] >= threshold else None
 
-    def entry_point(self, image):
-        # The label stays the same while fishing/restaurant/assistant icons cycle.
-        match = self._match(image, self.entry, (0.035, 0.16, 0.18, 0.34), threshold=0.67, foreground_only=True)
-        if match is None:
-            return None
+    def entry_point(self, image, *, main_menu_verified=False):
+        # Fishing/restaurant/assistant rotate inside the same home-menu slot.
+        # Once the foreground home page is verified, click its fixed icon centre;
+        # don't derive a moving point from the currently visible icon or label.
         h, w = image.shape[:2]
-        return {"score": round(match["score"], 4), "method": "masked_management_label",
-                "client_point": [(match["x"] + match["width"] / 2) * w / 1280,
-                                 (match["y"] + match["height"] / 2 - 35 * match["scale"]) * h / 720]}
+        if abs(w / h - 16 / 9) > 0.035:
+            return None
+        match = None if main_menu_verified else self._match(
+            image, self.entry, (0.035, 0.16, 0.18, 0.34), threshold=0.67, foreground_only=True)
+        if not main_menu_verified and match is None:
+            return None
+        return {"score": round(match["score"], 4) if match else None,
+                "method": "fixed_management_slot", "home_verified": main_menu_verified,
+                "client_point": [110 * w / 1280, 170 * h / 720]}
 
     def panel(self, image):
         match = self._match(image, self.title, (0.30, 0.12, 0.72, 0.42), threshold=0.75)
@@ -97,7 +103,7 @@ class ManagementRecognizer:
             return {"state": "management_panel", "panel": panel}
         diagnosis = PageDiagnosis().inspect(image)
         if diagnosis["state"] == "main_menu":
-            return {"state": "main_menu", "entry": self.entry_point(image)}
+            return {"state": "main_menu", "entry": self.entry_point(image, main_menu_verified=True)}
         return {"state": "other_page", "diagnosis": diagnosis}
 
 
@@ -108,7 +114,8 @@ def run_management(window, output, execute=False, timeout=20):
               "actions": [], "observations": []}
     recognizer = ManagementRecognizer()
     collect_clicked = False
-    entry_clicked = False
+    entry_attempts = 0
+    entry_recovered = False
     last_action_kind = None
     closing = False
     close_attempts = 0
@@ -116,7 +123,7 @@ def run_management(window, output, execute=False, timeout=20):
     deadline = time.monotonic() + timeout
 
     def save():
-        (output / "run.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        report_write(output / "run.json", report)
 
     try:
         initial_image, _ = window.capture()
@@ -135,20 +142,37 @@ def run_management(window, output, execute=False, timeout=20):
             image, geometry = window.capture()
             result = recognizer.inspect(cv2.cvtColor(np.asarray(image), cv2.COLOR_RGB2BGR))
             path = output / f"frame_{len(report['observations']):03}.png"
-            image.save(path)
+            path=next_path(path);image.save(path)
             report["observations"].append({"image": str(path), "window": geometry, **result})
             save()
             if not execute:
                 break
             action, point = None, None
             state = result["state"]
+            if state != "main_menu":
+                report.pop("waiting", None)
             if state == "main_menu":
                 if closing:
                     report["completed"] = True
                     report["returned_to_main_menu"] = True
                     break
-                if not entry_clicked and result["entry"]:
-                    action, point = "open_management", result["entry"]["client_point"]
+                # Opening a panel is navigation. A delivered click can be ignored
+                # by the game; don't wait the full network timeout on a known home.
+                if not collect_clicked and not existing_reward:
+                    response_waited = time.monotonic() - last_action >= 1.5
+                    if entry_attempts >= 3 and response_waited:
+                        raise RuntimeError("经营入口点击三次后仍在主页，已停止本项，不继续空等。")
+                    if result["entry"] and (entry_attempts == 0 or response_waited):
+                        if entry_attempts == 2 and not entry_recovered:
+                            # Reuse the ordinary navigation recovery, restricted
+                            # to this same verified game window. Observe again
+                            # before the final navigation attempt.
+                            recovery = window.recover_input(geometry)
+                            entry_recovered = True
+                            report["actions"].append({"type": "recover_management_entry", **recovery})
+                            save()
+                            continue
+                        action, point = "open_management", result["entry"]["client_point"]
             elif state == "reward":
                 if collect_clicked or existing_reward:
                     if sum(a["type"] == "dismiss_reward" for a in report["actions"]) >= 3:
@@ -167,18 +191,37 @@ def run_management(window, output, execute=False, timeout=20):
                     # Re-observe the panel and retry its Cancel, then require home.
                     if close_attempts < 3:
                         action, point = "close_management", panel["cancel"]["client_point"]
-                    elif timeout <= 20 and time.monotonic() - last_action >= 1.5:
+                    elif time.monotonic() - last_action >= 1.5:
                         raise RuntimeError("Management panel remained open after three return attempts")
                 elif panel["state"] == "enabled" and not collect_clicked and not closing:
                     action, point = "collect_once", panel["collect"]["client_point"]
-            repeat_gap = .8 if timeout <= 20 else timeout / 3
+            repeat_gap = .8  # Network patience must not delay a verified Cancel by 40 seconds.
             if action and time.monotonic() - last_action >= (repeat_gap if action == last_action_kind else .8):
-                event = window.click_client(point, geometry)
+                window.focus_client(geometry)
+                fresh_image, fresh_geometry = window.capture()
+                fresh = recognizer.inspect(cv2.cvtColor(np.asarray(fresh_image), cv2.COLOR_RGB2BGR))
+                valid = fresh_geometry == geometry and fresh['state'] == state
+                if valid and state == 'management_panel':
+                    button = 'collect' if action == 'collect_once' else 'cancel'
+                    valid = (fresh['panel']['state'] == panel['state'] and
+                             max(abs(a-b) for a,b in zip(point, fresh['panel'][button]['client_point'])) <= 5)
+                    point = fresh['panel'][button]['client_point']
+                elif valid and action == 'open_management':
+                    valid = bool(fresh.get('entry') and
+                                 max(abs(a-b) for a,b in zip(point, fresh['entry']['client_point'])) <= 5)
+                    if valid: point = fresh['entry']['client_point']
+                if not valid:
+                    time.sleep(.2)
+                    continue
+                event = window.click_client(point, fresh_geometry, press_ms=250)
                 report["actions"].append({"type": action, **event})
                 last_action = time.monotonic()
                 last_action_kind = action
                 if action == "open_management":
-                    entry_clicked = True
+                    entry_attempts += 1
+                    report["entry_attempts"] = entry_attempts
+                    report["actions"][-1]["attempt"] = entry_attempts
+                    report["waiting"] = {"message": f"等待经营面板打开；已尝试{entry_attempts}/3次，不重复领取奖励。"}
                 elif action == "collect_once":
                     collect_clicked = True
                 elif action == "close_management":

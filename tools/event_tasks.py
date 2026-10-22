@@ -1,4 +1,5 @@
 """Event battle entry point with shared AP accounting and isolated execution."""
+from frame_store import next_path, report_write, persist_references
 import argparse
 import json
 from pathlib import Path
@@ -48,7 +49,7 @@ def main():
         if image_path is None:
             image, _ = GameWindow.find().capture()
             image_path = args.output / 'current.png'
-            image.save(image_path)
+            image_path=next_path(image_path);image.save(image_path)
         observation = EventBattleVision().inspect_file(image_path, args.output / 'recognition')
         report = {'execute': False, 'completed': False, 'actions': [],
                   'observations': [{'image': str(image_path), 'observation': observation}]}

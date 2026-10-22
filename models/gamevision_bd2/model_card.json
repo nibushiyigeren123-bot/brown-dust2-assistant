@@ -1,0 +1,26 @@
+{
+  "name": "GameVision_BD2",
+  "version": "0.1.0-candidate",
+  "tasks": [
+    "cropped_text_recognition",
+    "reference_image_matching"
+  ],
+  "device": "CPU",
+  "threads": 2,
+  "reference_frame": [
+    1280,
+    720
+  ],
+  "origin": "BrownDust2 aligned OCR and view-consistency fine-tuning",
+  "live_game_acceptance": "pending user test on 2026-10-22",
+  "models": {
+    "ocr.onnx": {
+      "bytes": 4456875,
+      "sha256": "0adf5b050c2a7492943dec42564fb738054891c8f722c8f38110eb755605acb8"
+    },
+    "visual.onnx": {
+      "bytes": 3717369,
+      "sha256": "5cd58dc5d54b63633598e2f45bbc091ba4aa00a7209246d9224488d193ae83a7"
+    }
+  }
+}

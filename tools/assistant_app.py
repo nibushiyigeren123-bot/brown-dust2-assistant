@@ -3,6 +3,7 @@ import argparse
 import importlib
 import json
 import os
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
 import subprocess
 import sys
 import time
@@ -26,8 +27,16 @@ def worker(task_id, arguments):
         raise ValueError('该功能尚无可执行模块')
     output = Path(arguments[arguments.index('--output')+1]).resolve()
     output.mkdir(parents=True, exist_ok=True)
+    from frame_store import activate, finish
+    activate(output)
+    os.environ['BD2_QUEUE_TASK'] = task_id
+    reuse_inspection = '--execute' not in arguments and output.is_relative_to((ROOT / 'evidence/inspections').resolve())
+    if reuse_inspection:
+        for name in ('run.json', 'inspection.json', 'worker_failure.json', 'worker_result.json',
+                     'control.json', 'item_problem.json'):
+            (output / name).unlink(missing_ok=True)
     # Windowed executables have no stdout by default. Keep a real UTF-8 log.
-    log = (output/'worker.log').open('a', encoding='utf-8', buffering=1)
+    log = (output/'worker.log').open('w' if reuse_inspection else 'a', encoding='utf-8', buffering=1)
     sys.stdout = sys.stderr = log
     sys.argv = [sys.argv[0], *task[5], *arguments]
     code = 0
@@ -98,6 +107,7 @@ def worker(task_id, arguments):
             report['blocked'] = True
         write_json(path, report)
     finally:
+        finish(failed=code != 0)
         (output/'worker_result.json').write_text(json.dumps({'task':task_id, 'exit_code':code, 'cache_date':worker_day,
             'execute':'--execute' in arguments},ensure_ascii=False,indent=2),encoding='utf-8')
         log.flush()
@@ -195,16 +205,26 @@ def self_check(output):
 
 
 def main():
+    if '--worker' not in sys.argv:
+        from assistant_lifetime import bind_assistant_lifetime
+        bind_assistant_lifetime()
     from app_icon import initialize_app_identity
     initialize_app_identity()
     from local_cache import migrate_legacy_cache, ensure_local_defaults
     ensure_local_defaults(ROOT)
     migrate_legacy_cache(ROOT)
+    from date_rollover import synchronize_date
+    synchronize_date(ROOT)
     if '--worker' in sys.argv:
         index=sys.argv.index('--worker')
         return worker(sys.argv[index+1],sys.argv[index+2:])
     parser=argparse.ArgumentParser()
     parser.add_argument('--self-check',type=Path)
+    parser.add_argument('--model-self-check', type=Path)
+    parser.add_argument('--model-check-image', type=Path)
+    parser.add_argument('--model-check-text')
+    parser.add_argument('--model-check-hold', type=float, default=0)
+    parser.add_argument('--open-process-log',type=Path,help='Open a retained local workflow log without running any task')
     parser.add_argument('--preview-output',type=Path)
     parser.add_argument('--preview-run',type=Path)
     parser.add_argument('--preview-process-output',type=Path)
@@ -212,6 +232,10 @@ def main():
     args=parser.parse_args()
     if args.preview_run and not args.preview_output:
         parser.error('--preview-run requires --preview-output')
+    if args.model_self_check:
+        from model_checks import check_embedded_model
+        check_embedded_model(args.model_self_check, args.model_check_image, args.model_check_text, args.model_check_hold)
+        return 0
     if args.self_check:
         args.self_check.mkdir(parents=True,exist_ok=True)
         self_check(args.self_check)
@@ -221,6 +245,15 @@ def main():
     app=WorkbenchApp(root)
     app.table.selection_set(args.preview_task)
     app.update_selection()
+    if args.open_process_log:
+        folder = args.open_process_log.resolve(strict=True)
+        folder.relative_to((ROOT / 'evidence/workbench_runs').resolve())
+        if not (folder / 'workflow.json').is_file():
+            raise ValueError('未找到原队列记录，未执行任何任务。')
+        app.output, app.running_task_id = folder, 'workflow'
+        app.log_context = '原运行日志 · 热修后查看，未重跑任务'
+        app.collect_receipts(final=True)
+        app.open_process_window()
     if args.preview_run:
         app.table.selection_set(args.preview_task)
         app.execute.set(True)

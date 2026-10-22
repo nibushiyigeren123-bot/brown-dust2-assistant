@@ -1,4 +1,5 @@
 """Read-only event, reward and guild recognition. No desktop input here."""
+from frame_store import write_encoded_png
 import json
 import re
 from pathlib import Path
@@ -124,7 +125,7 @@ class Phase08Vision:
         return candidates[0] if len(candidates)==1 else None
 
     def inspect_file(self,path,output,payload=None):
-        path, output = Path(path).resolve(strict=True), Path(output).resolve()
+        path, output = Path(path).resolve(), Path(output).resolve()
         payload = payload if payload is not None else windows_ocr(path,output/'ocr')
         image = read_image(path)
         result = self.inspect(image,payload)
@@ -145,7 +146,7 @@ class Phase08Vision:
                 crop=cv2.copyMakeBorder(crop,10,10,10,10,cv2.BORDER_CONSTANT,value=0)
                 crop=cv2.resize(crop,None,fx=scale,fy=scale,interpolation=cv2.INTER_CUBIC)
                 target=output/f'{path.stem}_{key}_{scale}.png'
-                cv2.imencode('.png',crop)[1].tofile(str(target))
+                write_encoded_png(target, cv2.imencode('.png',crop)[1])
                 data=windows_ocr(target,output/'ocr',language='en-US')
                 value=compact(''.join(line['text'] for line in data['lines']))
                 pattern = r'^(\d+)/\d+$' if key=='free_ap' else r'^(\d+)$'

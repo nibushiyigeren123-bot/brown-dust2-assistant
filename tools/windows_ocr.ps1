@@ -26,7 +26,10 @@ if ($null -eq $engine) { throw 'Simplified Chinese Windows OCR is not installed'
 $stream = New-Object Windows.Storage.Streams.InMemoryRandomAccessStream
 $writer = New-Object Windows.Storage.Streams.DataWriter($stream)
 try {
-    $writer.WriteBytes([IO.File]::ReadAllBytes($InputPath))
+    if ($InputPath -eq '__BD2_PIPE__') {
+        $inputBytes = [Convert]::FromBase64String([Console]::In.ReadToEnd())
+    } else { $inputBytes = [IO.File]::ReadAllBytes($InputPath) }
+    $writer.WriteBytes($inputBytes)
     $null = Await-Result ($writer.StoreAsync()) ([uint32])
     $null = $writer.DetachStream()
 } finally {
@@ -49,7 +52,10 @@ try {
     $payload = @{ language=$engine.RecognizerLanguage.LanguageTag; width=$bitmap.PixelWidth;
                   height=$bitmap.PixelHeight; lines=$lines }
     $json = ConvertTo-Json -InputObject $payload -Depth 8
-    [IO.File]::WriteAllText($OutputPath, $json, (New-Object Text.UTF8Encoding($false)))
+    if ($OutputPath -eq '__BD2_PIPE__') {
+        [Console]::OutputEncoding = New-Object Text.UTF8Encoding($false)
+        [Console]::Out.Write($json)
+    } else { [IO.File]::WriteAllText($OutputPath, $json, (New-Object Text.UTF8Encoding($false))) }
 } finally {
     if ($null -ne $bitmap) { $bitmap.Dispose() }
     $stream.Dispose()

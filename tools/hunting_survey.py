@@ -1,5 +1,6 @@
 """Navigation-only resource survey. Never opens quick hunt, claims or buys."""
 from pathlib import Path
+from frame_store import next_path
 import time
 from daily_vision import DailyVision, inspect_frame
 from hunting_resources import retain_observation
@@ -15,7 +16,7 @@ def survey_resources(window, config, output, root, on_frame=None):
         nonlocal sequence
         check_execution_day(config['cache_date']);check_requested_stop()
         image,geo=window.capture();path=output/f'frame_{sequence:03d}.png';sequence+=1
-        image.save(path)
+        path=next_path(path);image.save(path)
         obs=inspect_frame(path,vision,config,output/'ocr')
         if on_frame:on_frame(obs,path)
         return obs,geo,path

@@ -110,7 +110,8 @@ class ReceiptLog:
         else:
             self.wait_times.pop(path, None)
         for key, level, label in (('error', 'error', '执行异常：'), ('stopped', 'warning', '停止原因：'),
-                                  ('pending_input', 'warning', '等待核对：'), ('pending', 'warning', '未决操作：')):
+                                  ('pending_input', 'warning', '等待核对：'), ('pending', 'warning', '未决操作：'),
+                                  ('retained_pending', 'warning', '保留的原日期未决记录（未重发）：')):
             self.scalar(path, module, key, report.get(key), level, label)
         self.scalar(path, module, 'completed', '已完成' if report.get('completed') else None, 'success', '回执确认：')
 
@@ -216,7 +217,7 @@ class ReceiptLog:
                 for error in summary['errors']:
                     self.emit(error['module'], 'error', readable(error['reason']))
                     self.emit(error['module'], 'warning', ('尚有未决：' + '；'.join(
-                        f"{entry['module']} / {entry.get('op_id') or '无操作ID'} / {entry['ledger']}" for entry in error['pending']))
+                        f"{entry.get('cache_date') or '日期待核对'} {'历史未决' if entry.get('historical') else '未决'} / {entry['module']} / {entry.get('op_id') or '无操作ID'} / {entry['ledger']}" for entry in error['pending']))
                         if error['pending'] else '本项回执未列出未决；请结合运行记录核对。')
                     self.emit(error['module'], 'info', '运行记录：' + str(error.get('output') or self.output))
                     self.emit(error['module'], 'warning', error['action'])

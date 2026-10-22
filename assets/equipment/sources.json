@@ -475,5 +475,25 @@
       463
     ],
     "kind": "anchor"
+  },
+  "bag_consumables_title": {
+    "file": "bag_consumables_title.png",
+    "box": [
+      187,
+      20,
+      252,
+      48
+    ],
+    "sha256": "af2382ef517b29ff98832c50b297783c66f0dbabc4d539daca7a5bf8141f543f"
+  },
+  "bag_consumables_selected": {
+    "file": "bag_consumables_selected.png",
+    "box": [
+      103,
+      88,
+      126,
+      117
+    ],
+    "sha256": "4d89cda9605fdff6b91d60b2fc3b6523b538820ae7c4cf7fb47bb8e88f036984"
   }
 }

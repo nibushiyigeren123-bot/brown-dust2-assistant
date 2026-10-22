@@ -21,6 +21,8 @@ except (AttributeError, OSError):
 class SettingsWindow:
     def __init__(self, root, path):
         self.root, self.path = root, Path(path).resolve()
+        from date_rollover import synchronize_date
+        synchronize_date(self.path.parent.parent)
         self.original = self.path.read_bytes()
         self.config = load_config(self.path)
         self.event_path = self.path.with_name('event_and_rewards.json')
@@ -367,7 +369,9 @@ class SettingsWindow:
 
     def collect(self):
         c, f = copy.deepcopy(self.config), self.fields
-        c['cache_date'] = f['cache_date'].get().strip()
+        from game_calendar import game_day
+        c['cache_date'] = game_day().isoformat()
+        f['cache_date'].set(c['cache_date'])
         h = c['hunting']
         h['enabled'] = f['hunt_enabled'].get()
         h['daily_task_status'] = 'unknown'  # Status is observed from the task page, never entered here.
@@ -388,7 +392,8 @@ class SettingsWindow:
             from game_calendar import check_execution_day
             check_execution_day(config['cache_date'])
             next_hash=hashlib.sha256(json.dumps(config,sort_keys=True,ensure_ascii=False).encode('utf-8')).hexdigest()
-            for ledger_path in (ROOT/'runtime').glob('*.json'):
+            from local_cache import iter_cache_records
+            for ledger_path in iter_cache_records(self.path.parent.parent / 'runtime'):
                 data=json.loads(ledger_path.read_text(encoding='utf-8'))
                 pending=data.get('pending') or {}
                 if (data.get('cache_date')==config['cache_date']
@@ -414,11 +419,6 @@ class SettingsWindow:
                     event_config = self.collect_event(event_config)
                 elif self.fields['guild_enabled'].get() or self.fields['event_enabled'].get():
                     raise RuntimeError('缺少公会配置，请完整解压新版程序。')
-                old_date = self.config['cache_date']
-                if old_date != config['cache_date']:
-                    for path in (self.path.parent.parent / 'runtime').glob('*.json'):
-                        if json.loads(path.read_text(encoding='utf-8')).get('pending'):
-                            raise RuntimeError('有尚未核对的操作，暂不能更换缓存日期。')
                 try:
                     if event_config:
                         event_config['cache_date'] = config['cache_date']
