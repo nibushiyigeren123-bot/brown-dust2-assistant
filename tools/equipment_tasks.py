@@ -40,7 +40,8 @@ class EquipmentLedger:
     def submit_refine(self, observation, image):
         if self.data['pending'] or self.progress.state['refine_submitted']:
             raise RuntimeError('Refinement already submitted; observe its receipt without retrying')
-        if observation.get('score') is None or observation['score'] == 24:
+        # [门禁] 与既有装备规则一致：只接受1..23完整纯数字，不限定为旧样本20分。
+        if type(observation.get('score')) is not int or not 1<=observation['score']<24:
             raise RuntimeError('Refinement score missing or already at 24')
         before, cost = observation['before'], observation['cost']
         if any(type(v) is not int for v in (*before.values(), *cost.values())):
@@ -75,6 +76,17 @@ class EquipmentLedger:
                                         'saved': True, 'worn_hidden': True}
         self.save()
 
+    def record_detail_filter(self,qualities,before,grid,geometry):
+        """[新筛选契约] 应用前单选全帧+确认后普通网格，不要求改动穿戴显示设置。"""
+        from equipment_receipts import image_receipt,verify_detail_filter
+        proof={'basis':'detail_filter_applied','qualities':qualities,
+               'before':image_receipt(before),'grid':image_receipt(grid),'geometry':geometry}
+        if self.data['pending'] or not verify_detail_filter(EquipmentVision(),proof):
+            raise RuntimeError('详情路线筛选应用证据不足，未建立分解资格。')
+        self.data['selected_quality']=qualities[0]
+        self.data['detail_filter_evidence']=proof
+        self.save()
+
     def submit_decompose(self, observation, image):
         if self.data['pending']:
             raise RuntimeError('Reconcile existing submission without retrying')
@@ -84,7 +96,9 @@ class EquipmentLedger:
         inventory = observation.get('inventory_count')
         if inventory is not None and (type(inventory) is not int or not 0 <= inventory <= 2000):
             raise RuntimeError('Invalid auxiliary inventory count')
-        if inventory is None or observation.get('visual_receipt', {}).get('basis') == 'filtered_selectable_item':
+        # [新basis] 即使库存数字可读，也必须验证完整详情单件图像链，不能仅信任传入布尔值。
+        if (inventory is None or observation.get('visual_receipt', {}).get('basis')
+                in ('filtered_selectable_item','detail_single_item')):
             from equipment_receipts import verify_selection
             try:
                 verified = verify_selection(EquipmentVision(), observation, image)
@@ -105,6 +119,10 @@ class EquipmentLedger:
         before = pending['observation'].get('inventory_count')
         if not result_evidence:
             return False
+        # [新basis结算] 确认/输入/结果/返回原图链一律重核；库存减少不能替代证据。
+        if pending['observation'].get('visual_receipt',{}).get('basis')=='detail_single_item':
+            from equipment_receipts import verify_visual_settlement
+            if not verify_visual_settlement(pending,result_evidence,image):return False
         known_counts = type(before) is int and type(inventory_count) is int
         if known_counts:
             if before - inventory_count != 1:

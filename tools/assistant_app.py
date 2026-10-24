@@ -17,12 +17,21 @@ from project_paths import ROOT
 from task_feedback import worker_feedback
 
 
-from module_catalog import task_rows
+from module_catalog import task_rows, BY_ID
 TASKS = task_rows()
 
 
+def resolve_worker_task(task_id):
+    """[兼容] 可见任务只保留11项；旧workflow的日奖ID仍精确分发原worker参数。"""
+    task=next((row for row in TASKS if row[0]==task_id),None)
+    if task is None and task_id in BY_ID:
+        module=BY_ID[task_id]
+        task=(module.id,module.name,'历史兼容',module.description,module.worker,list(module.arguments))
+    return task
+
+
 def worker(task_id, arguments):
-    task = next((t for t in TASKS if t[0] == task_id), None)
+    task = resolve_worker_task(task_id)
     if task is None or task[4] is None:
         raise ValueError('该功能尚无可执行模块')
     output = Path(arguments[arguments.index('--output')+1]).resolve()
@@ -39,19 +48,54 @@ def worker(task_id, arguments):
     log = (output/'worker.log').open('w' if reuse_inspection else 'a', encoding='utf-8', buffering=1)
     sys.stdout = sys.stderr = log
     sys.argv = [sys.argv[0], *task[5], *arguments]
+    # [单图导航] 外层保留worker目录，内层--image诊断写inspection.json；只读不触碰游戏。
+    if task_id == 'navigation' and '--image' in arguments and '--execute' not in arguments:
+        position=sys.argv.index('--output')+1
+        sys.argv[position]=str(output/'inspection.json')
     code = 0
     worker_day = None
     os.environ.setdefault('BD2_CONTROL_FILE', str(output / 'control.json'))
     os.environ.setdefault('BD2_ITEM_PROBLEM_FILE', str(output / 'item_problem.json'))
     try:
+        # [功能] 仅安装本worker的步骤识图包装；候选只路由局部复核，原动作/账本门禁保持。
+        # 禁用、缺缓存或模型异常由包装层回到原流程；此处不启动模型服务或游戏任务。
+        try:
+            from step_vision_hooks import install as install_step_vision
+            install_step_vision(ROOT, task_id)
+        except Exception:
+            # 可选插件未完整打包也回原流程；不得把此情形声称步骤模型已启用。
+            traceback.print_exc()
         from local_cache import load_local_config
         from game_calendar import game_day
         navigation_first = task_id in ('navigation', 'workflow')
         worker_day = game_day().isoformat() if navigation_first else load_local_config(ROOT / 'config/daily_tasks.json')['cache_date']
+        if task_id != 'workflow' and '--image' not in arguments:
+            from window_access import preflight
+            from pending_daily import exclusive_ledger
+            with exclusive_ledger(ROOT / 'runtime/game_control'):
+                preflight(focus='--execute' in arguments)
         if '--execute' in arguments:
-            # Every single-module entry, including a resumed queue item, gets a
-            # fresh home check before cache/pending/config or module decisions.
+            # [功能] 启动前确认游戏日；普通模块先回主页，合法公会未决交本人先读当前页。
             os.environ['BD2_EXECUTION_GAME_DAY'] = game_day().isoformat()
+            guild_recovery = False
+            if task_id == 'guild':
+                # [分支] 合法公会pending先交本人读当前页，避免通用导航关闭待核实收据。
+                # 未知协议在任何导航前阻断；本人run还会复核，不能只信CLI标志。
+                from local_cache import cache_path
+                from daily_tasks import guild_pending_phase, PendingConflictError
+                from pending_daily import exclusive_ledger
+                with exclusive_ledger(ROOT / 'runtime/game_control'):
+                    ledger = cache_path(ROOT, {'cache_date': worker_day}, 'guild')
+                    data = json.loads(ledger.read_text(encoding='utf-8')) if ledger.exists() else {}
+                    # [校验] 未知结构/阶段不能交给通用导航；锁内读取不改原账本。
+                    if not isinstance(data, dict):
+                        raise PendingConflictError('Guild ledger is not an object; retain it for review')
+                    if data.get('pending') is not None:
+                        if guild_pending_phase(data, game_day().isoformat(), path=ledger, directory=ROOT/'runtime') is None:
+                            raise PendingConflictError('Guild pending identity invalid; recovery blocked before navigation')
+                        guild_recovery = True
+                        # [调用] 仅给公会模块传显式恢复开关，模块内部仍须再次校验。
+                        sys.argv.append('--recover-pending')
             if task_id == 'event':
                 from event_battle_runtime import reconcile_visible_pending
                 recovered = reconcile_visible_pending(ROOT, output / 'pending_recovery')
@@ -67,7 +111,8 @@ def worker(task_id, arguments):
                 if reconciled is not None and not reconciled.get('reconciled'):
                     (output / 'run.json').write_text(json.dumps(dict(reconciled, blocked=True), ensure_ascii=False, indent=2), encoding='utf-8')
                     raise RuntimeError(reconciled.get('stopped') or '狩猎未决结果尚未核实。')
-            if not navigation_first:
+            if not navigation_first and not guild_recovery:
+                # [分支] 无公会pending沿用原启动归主页流程；恢复时直接读当前画面。
                 from common_navigation import ensure_main_menu
                 from game_window import GameWindow
                 from pending_daily import exclusive_ledger
@@ -113,6 +158,12 @@ def worker(task_id, arguments):
             report['blocked'] = True
         write_json(path, report)
     finally:
+        # [状态] 任务结束释放本批CPU会话和包装，避免复用其他模块的步骤上下文。
+        try:
+            from step_vision_hooks import uninstall as uninstall_step_vision
+            uninstall_step_vision(output)
+        except Exception:
+            traceback.print_exc()
         finish(failed=code != 0)
         (output/'worker_result.json').write_text(json.dumps({'task':task_id, 'exit_code':code, 'cache_date':worker_day,
             'execute':'--execute' in arguments},ensure_ascii=False,indent=2),encoding='utf-8')
@@ -146,16 +197,18 @@ def self_check(output):
         from pass_reward_vision import PassRewardVision
         from event_battle_vision import EventBattleVision
         from event_battle_flow import EventBattleController
-        from module_catalog import default_plan, validate_plan
+        from module_catalog import MODULES, default_plan, validate_plan
         from equipment_rules import decompose_candidate_allowed
         for cls in (EquipmentVision, TaskRewardVision, PassRewardVision, EventBattleVision):
             cls()
         assert callable(EventBattleController.step) and callable(EventBattleController.commit)
-        assert len(validate_plan(default_plan())) == 12
+        # [自检] 默认队列须逐项匹配当前可执行catalog，合并女神后不再依赖旧固定12项。
+        registry_ids=[module.id for module in MODULES if module.worker]
+        assert validate_plan(default_plan())==registry_ids
         card = {'quality':'R', 'locked':False, 'equipped':False}
         assert decompose_candidate_allowed(card, ['R']) and not decompose_candidate_allowed(card, ['N', 'R'])
         report = {'frozen': bool(getattr(sys, 'frozen', False)), 'template_loaders': 9,
-                  'workbench_registry_loaded': True, 'config_validated': True, 'navigation_calibration_probe': 'synthetic_black_frame',
+                  'workbench_registry_loaded': True, 'workbench_module_count':len(registry_ids), 'config_validated': True, 'navigation_calibration_probe': 'synthetic_black_frame',
                   'equipment_rules_single_quality': True, 'personal_fixtures_shipped': False,
                   'event_battle_templates_and_controller': True,
                   'saved_image_acceptance_run': False, 'game_input': False}
@@ -197,10 +250,12 @@ def self_check(output):
     from task_reward_vision import TaskRewardVision
     TaskRewardVision()
     from pass_reward_vision import PassRewardVision
-    from module_catalog import default_plan, validate_plan
+    from module_catalog import MODULES, default_plan, validate_plan
     PassRewardVision()
-    assert len(validate_plan(default_plan())) == 12
-    report={'workbench_registry_loaded':True,'pass_reward_recognizer_loaded':True,'task_reward_recognizer_loaded':True,'frozen':bool(getattr(sys,'frozen',False)),'data_root':str(ROOT),
+    # [自检] 私有样本分支沿用同一有效catalog合同，不因样本是否随包改变队列数量。
+    registry_ids=[module.id for module in MODULES if module.worker]
+    assert validate_plan(default_plan())==registry_ids
+    report={'workbench_registry_loaded':True,'workbench_module_count':len(registry_ids),'pass_reward_recognizer_loaded':True,'task_reward_recognizer_loaded':True,'frozen':bool(getattr(sys,'frozen',False)),'data_root':str(ROOT),
             'template_loaders':5,'menu_sample':'main_menu','guild_sample':receipt['state'],
             'native_windows_ocr':True,'free_draw_skip_recognized':True,'guild_live_receipt_recognized':True,
             'hunting_stones_inventory_recognized':True,'hunting_single_price_recognized':True,
@@ -211,6 +266,28 @@ def self_check(output):
 
 
 def main():
+    # [入口] 冻结与源码共用真实缓存检查，分流在迁移/GUI/窗口发现之前。
+    if '--step-vision-self-check' in sys.argv:
+        parser=argparse.ArgumentParser()
+        parser.add_argument('--step-vision-self-check',type=Path,required=True)
+        parser.add_argument('--step-vision-image',type=Path)
+        from step_vision import self_check as step_self_check
+        args=parser.parse_args()
+        step_self_check(ROOT,args.step_vision_self_check,args.step_vision_image)
+        return 0
+    # [入口] 离线全图检查先于配置迁移；不查游戏窗口、不运行worker、不触碰真实账本。
+    if '--step-vision-check' in sys.argv:
+        parser=argparse.ArgumentParser()
+        parser.add_argument('--step-vision-check',type=Path,required=True)
+        from verify_step_vision import verify
+        return verify(ROOT,parser.parse_args().step_vision_check)
+    if '--window-check' in sys.argv:
+        # Strictly read-only: do not initialize/migrate config or roll the day.
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--window-check', type=Path, required=True)
+        args = parser.parse_args()
+        from window_access import diagnostic
+        return diagnostic(args.window_check.resolve())
     if '--worker' not in sys.argv:
         from assistant_lifetime import bind_assistant_lifetime
         bind_assistant_lifetime()
@@ -247,6 +324,16 @@ def main():
         self_check(args.self_check)
         return 0
     root=tk.Tk()
+    from window_access import process_token
+    try:
+        low_integrity = process_token(os.getpid())['integrity_rid'] < 8192
+    except Exception:
+        low_integrity = False  # Worker preflight must still verify access.
+    if low_integrity:
+        messagebox.showwarning('启动权限不兼容',
+            '当前助手以 Low 权限运行，不能正常访问普通权限游戏。\n'
+            '请核对启动进程及 EXE 的完整性标签；目录继承的 Low 标签可能让正常双击也降权。\n'
+            '任务将在窗口预检处停止；不会自动提权、修改 ACL 或重跑队列。', parent=root)
     from workbench_ui import WorkbenchApp
     app=WorkbenchApp(root)
     app.table.selection_set(args.preview_task)
@@ -299,6 +386,22 @@ if __name__=='__main__':
     try:
         raise SystemExit(main())
     except Exception:
+        # [异常出口] 步骤诊断失败只写调用者指定目录，非零退出避免冻结入口弹模态框。
+        diagnostic_flag=next((flag for flag in ('--step-vision-self-check','--step-vision-check') if flag in sys.argv),None)
+        if diagnostic_flag:
+            failure=traceback.format_exc()
+            try:
+                output=Path(sys.argv[sys.argv.index(diagnostic_flag)+1]).resolve()
+                output.mkdir(parents=True,exist_ok=True)
+                (output/'step_vision_error.json').write_text(json.dumps({
+                    'completed':False,'diagnostic':diagnostic_flag,'error':failure,
+                    'game_input':False,'worker_started':False},ensure_ascii=False,indent=2),encoding='utf-8')
+            except Exception:
+                pass
+            raise SystemExit(2)
+        if '--window-check' in sys.argv:
+            # A broken diagnostic must not fall back to a GUI or runtime writes.
+            raise SystemExit(2)
         target=ROOT/'evidence/launcher_startup_error.txt'
         target.parent.mkdir(parents=True,exist_ok=True)
         target.write_text(traceback.format_exc(),encoding='utf-8')

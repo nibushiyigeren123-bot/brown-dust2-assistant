@@ -17,6 +17,9 @@ class Phase08Vision:
         self.folder = ROOT / 'assets/phase08'
         self.specs = json.loads((self.folder / 'sources.json').read_text(encoding='utf-8'))
         self.templates = {name:read_image(self.folder / spec['file']) for name,spec in self.specs.items()}
+        # [返回控件] 缓存轻量独立控件识别器；胜利标题不能单独授权返回或统计输入。
+        from return_navigation_vision import ReturnNavigationVision
+        self.return_navigation = ReturnNavigationVision()
 
     def anchor(self, image, name, pad=5, threshold=0.78, foreground=True, color_glyph=False):
         image = cv2.resize(image, (1280,720), interpolation=cv2.INTER_AREA)
@@ -78,8 +81,13 @@ class Phase08Vision:
         if victory:
             stage = self.stage(doc,(930,105,1180,155))
             if stage:
+                # [末次退出] 只有真正返回按钮与VICTORY双锚可见才供点；统计遮罩或自动战斗均不猜点。
+                exit_control = self.return_navigation.inspect(image)
+                verified_return = (exit_control['return_button']['normalized_point']
+                                   if exit_control and exit_control['state']=='event_victory_final' else None)
                 return {'state':'event_victory',**stage,'victory_anchor':victory,
-                        'auto_progress':self.progress(doc),'points':{'return':[965,674]}}
+                        'auto_progress':self.progress(doc),'points':{'return':verified_return},
+                        'return_control':exit_control if verified_return else None}
         progress = self.progress(doc)
         if progress:
             return {'state':'event_auto_running','auto_progress':progress}

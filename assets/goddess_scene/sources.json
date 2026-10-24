@@ -1,0 +1,200 @@
+{
+  "durable_source": "evidence/v95/r6/user_unmarked_reference.png",
+  "anchors": {
+    "statue_wing": {
+      "file": "statue_wing.png",
+      "box": [
+        516,
+        145,
+        575,
+        207
+      ],
+      "sha256": "9efea5784b074a8ebb7488a451ee17d25699af6771e59d00c11bcbde61236d95",
+      "padding": 48,
+      "ui": false,
+      "threshold": 0.88,
+      "min_brightness": 175
+    },
+    "statue_feathers": {
+      "file": "statue_feathers.png",
+      "box": [
+        535,
+        174,
+        571,
+        205
+      ],
+      "sha256": "6254277a6170fe83a7adbff4c3511f8bf1f1b457f762f92a9690bd268ecd83b0",
+      "padding": 48,
+      "ui": false,
+      "threshold": 0.88,
+      "min_brightness": 175
+    },
+    "dpad_up": {
+      "file": "dpad_up.png",
+      "box": [
+        185,
+        536,
+        203,
+        551
+      ],
+      "sha256": "a85d3c2e4510ab4f4729075c9797a51e07d91125d55f51b231a7791fa3129fb7",
+      "padding": 6,
+      "ui": true,
+      "threshold": 0.9,
+      "min_brightness": 175
+    },
+    "dpad_left": {
+      "file": "dpad_left.png",
+      "box": [
+        141,
+        580,
+        157,
+        594
+      ],
+      "sha256": "b086807075e80bde91130cfc7f19d1f3a195a602a3b0106d3eb1a2b03809adf8",
+      "padding": 6,
+      "ui": true,
+      "threshold": 0.9,
+      "min_brightness": 175
+    },
+    "dpad_right": {
+      "file": "dpad_right.png",
+      "box": [
+        229,
+        580,
+        245,
+        594
+      ],
+      "sha256": "56d1e0e4fb83f0bc3062857d81a47156be840048b674c5ec71a17a21e1a6585d",
+      "padding": 6,
+      "ui": true,
+      "threshold": 0.9,
+      "min_brightness": 175
+    },
+    "dpad_down": {
+      "file": "dpad_down.png",
+      "box": [
+        185,
+        623,
+        203,
+        638
+      ],
+      "sha256": "39cb3ea28922e77a77a06c9e1c19c76c90708735ef8f39586ae49c93cb633026",
+      "padding": 6,
+      "ui": true,
+      "threshold": 0.9,
+      "min_brightness": 175
+    },
+    "bottom_monitor": {
+      "file": "bottom_monitor.png",
+      "box": [
+        517,
+        651,
+        546,
+        680
+      ],
+      "sha256": "16b8833fffa3ff9d5b918df83d8528552d8670706ddb1b22205dea2edc037088",
+      "padding": 6,
+      "ui": true,
+      "threshold": 0.9,
+      "min_brightness": 175
+    },
+    "bottom_star": {
+      "file": "bottom_star.png",
+      "box": [
+        590,
+        648,
+        624,
+        681
+      ],
+      "sha256": "556ac01a38b958bdc1b57281b9572e376408aa2c5449bb6c32e5d4b37bc12191",
+      "padding": 6,
+      "ui": true,
+      "threshold": 0.9,
+      "min_brightness": 175
+    },
+    "bottom_hand": {
+      "file": "bottom_hand.png",
+      "box": [
+        673,
+        650,
+        698,
+        681
+      ],
+      "sha256": "13c03496a75937c8cc02b543d9d13f121a9ebaa670c0cfceb44c762ef903d7e0",
+      "padding": 6,
+      "ui": true,
+      "threshold": 0.9,
+      "min_brightness": 175
+    },
+    "bottom_social": {
+      "file": "bottom_social.png",
+      "box": [
+        751,
+        651,
+        778,
+        680
+      ],
+      "sha256": "f983016f8bdc2ba278ad8cc1983aab1e63cd9a99ec1c8457011de91cbdd215e9",
+      "padding": 6,
+      "ui": true,
+      "threshold": 0.9,
+      "min_brightness": 175
+    },
+    "home_house": {
+      "file": "home_house.png",
+      "box": [
+        1186,
+        24,
+        1211,
+        49
+      ],
+      "sha256": "47ee877b5f85903035d1bd52697c54d3ff8acb7700b465ec5ac54eec687a4dc4",
+      "padding": 6,
+      "ui": true,
+      "threshold": 0.9,
+      "min_brightness": 175,
+      "mask_file": "home_house_mask.png",
+      "ignored_badge_box": [
+        18,
+        0,
+        25,
+        11
+      ]
+    },
+    "home_key": {
+      "file": "home_key.png",
+      "box": [
+        1191,
+        55,
+        1205,
+        69
+      ],
+      "sha256": "5cf9c0a87794e9c2c648d920195ed26e04c2ca4bf80e73619c6352e6891988fa",
+      "padding": 6,
+      "ui": true,
+      "threshold": 0.9,
+      "min_brightness": 175,
+      "mask_file": "home_key_mask.png",
+      "ignored_badge_box": null
+    }
+  },
+  "groups": {
+    "statue": [
+      "statue_wing",
+      "statue_feathers"
+    ],
+    "dpad": [
+      "dpad_up",
+      "dpad_left",
+      "dpad_right",
+      "dpad_down"
+    ],
+    "bottom_four": [
+      "bottom_monitor",
+      "bottom_star",
+      "bottom_hand",
+      "bottom_social"
+    ]
+  }
+}

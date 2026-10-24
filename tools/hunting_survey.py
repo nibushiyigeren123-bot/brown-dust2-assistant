@@ -10,6 +10,7 @@ from runtime_policy import network_wait_seconds, wait_observed
 
 
 def survey_resources(window, config, output, root, on_frame=None):
+    """导航读取米饭与火把，两帧同类同余额才缓存；未知不当0，始终不打开快猎。"""
     output=Path(output);output.mkdir(parents=True,exist_ok=True)
     vision=DailyVision(); sequence=0; actions=[]; resources={}
     def capture():
@@ -39,13 +40,19 @@ def survey_resources(window, config, output, root, on_frame=None):
             obs,geo,path=click(point,'hunt_map','select_hunting_category',lambda o:o['state']=='hunt_map' and o.get('resource')==resource)
         def signature(o):
             return tuple(o.get(k) for k in ('resource','free_available','free_capacity','owned_extra','extra_display'))
-        previous=obs
+        previous=obs;previous_path=path
         for attempt in range(4):
             fresh,geo,path=capture()
-            if fresh['state']=='hunt_map' and fresh.get('resource')==resource and type(fresh.get('free_available')) is int and signature(fresh)==signature(previous):
+            if (previous['state']=='hunt_map' and fresh['state']=='hunt_map'
+                    and fresh.get('resource')==resource and type(fresh.get('free_available')) is int
+                    and fresh['free_available']>=0 and signature(fresh)==signature(previous)):
+                # 保存两帧精简余额证据，独立于运行面板只保留最近16帧的滚动观察。
+                fields=('state','resource','free_available','free_capacity','owned_extra','extra_display')
+                fresh['confirmed_balance']=[{key:previous.get(key) for key in fields},{key:fresh.get(key) for key in fields}]
+                fresh['confirmation_images']=[str(previous_path),str(path)]
                 retain_observation(root,fresh,path,config['cache_date']);resources[resource]=fresh;obs=fresh
                 break
-            previous=fresh
+            previous=fresh;previous_path=path
         else:raise RuntimeError('未连续读清资源余额：'+resource)
     result={'resources':resources,'actions':actions,'completed':True,'consumes':False}
     from local_cache import save

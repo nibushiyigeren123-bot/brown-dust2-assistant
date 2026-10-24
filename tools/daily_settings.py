@@ -27,7 +27,9 @@ class SettingsWindow:
         self.config = load_config(self.path)
         self.event_path = self.path.with_name('event_and_rewards.json')
         self.event_original = self.event_path.read_bytes() if self.event_path.exists() else None
-        self.event_config = json.loads(self.event_original) if self.event_original else None
+        # [配置读取] 校验角色开关类型；旧文件缺字段仅在内存默认关闭。
+        from event_reward_rules import validate_config as validate_event_config
+        self.event_config = validate_event_config(json.loads(self.event_original)) if self.event_original else None
         self.fields = {}
         root.title('棕色尘埃2 · 日常设置')
         root.geometry('820x780')
@@ -63,6 +65,13 @@ class SettingsWindow:
         self.activity_tab = ttk.Frame(notebook, padding=15)
         notebook.add(self.activity_tab, text='活动战斗')
         self.build_activity(self.activity_tab)
+        # [设置入口] 合并队列仍只有通行证奖励；此页签单独控制当期角色阶段。
+        self.rewards_tab = ttk.Frame(notebook, padding=15)
+        notebook.add(self.rewards_tab, text='通行证奖励')
+        self.check(self.rewards_tab, 'character_pass_enabled', '是否有当期角色通行证',
+                   (self.event_config or {}).get('rewards', {}).get('character_pass_enabled', False), 0)
+        ttk.Label(self.rewards_tab, text='开启：领完活动通行证后继续角色通行证，再返回主页。\n关闭：领完活动通行证直接返回主页。',
+                  wraplength=650, justify='left').grid(row=1, column=0, columnspan=2, sticky='w', pady=16)
         bottom = ttk.Frame(frame)
         bottom.pack(side='bottom', fill='x', before=notebook, pady=(14, 0))
         self.saved = tk.StringVar(value='未启动游戏操作')
@@ -127,13 +136,14 @@ class SettingsWindow:
     def build_goddess(self, parent):
         c = self.config['goddess']
         self.check(parent, 'goddess_enabled', '启用女神像互动', c['enabled'], 0)
-        self.check(parent, 'positioned', '运行前，我会让角色站在女神像旁', c['user_positioned_near_statue'], 1)
-        self.check(parent, 'check_in', '签到：识别拍手图标后互动一次', 'check_in' in c['actions'], 2)
-        self.check(parent, 'daily_reward', '日常奖励：其他挑战完成、可互动时再领取', 'daily_reward' in c['actions'], 3)
-        text = ('每次互动后重新检查图标，每天两类各一次。\n\n'
-                '录像中，签到后拍手变成感叹号，领奖后入口消失。\n'
-                '剩余奖励尚未开放时保留待领状态，可在挑战后再检查。\n\n'
-                '工具不会移动角色寻找女神像。')
+        # [功能] 广场入口与F控件直接核对，不要求用户声明角色站位。
+        self.check(parent, 'check_in', '签到：识别右下F叹号后互动一次', 'check_in' in c['actions'], 2)
+        self.check(parent, 'daily_reward', '日常奖励：识别右下F拍手后领取', 'daily_reward' in c['actions'], 3)
+        # [说明] 与合并执行合同一致：同次访问按实际F图标处理，不要求站位声明或第二次访问。
+        text = ('同次进入广场，按右下F图标处理已启用项目；每次互动后重新检查。\n\n'
+                '叹号表示签到，拍手表示日常奖励；已有真实完成记录不重复点击。\n'
+                '点击叹号后等待拍手，连续5秒未出现拍手便正常返回；未核实的奖励保留未领取。\n\n'
+                '若先出现拍手，先领取并继续检查叹号；不根据人物与女神像距离阻断。')
         ttk.Label(parent, text=text, wraplength=650, justify='left').grid(row=4, column=0, columnspan=2, sticky='nw', pady=20)
 
     def build_mirror(self, parent):
@@ -177,6 +187,8 @@ class SettingsWindow:
         from event_reward_rules import validate_config
         c = copy.deepcopy(config)
         c['guild']['enabled'] = bool(self.fields['guild_enabled'].get())
+        # [保存接线] 只有保存设置时才向配置补写此布尔字段，执行入口读取同一字段。
+        c['rewards']['character_pass_enabled'] = self.fields['character_pass_enabled'].get()
         e = c['event']
         values = dict(enabled=bool(self.fields['event_enabled'].get()),
                  mode={'普通':'normal', '挑战':'challenge'}[self.fields['event_mode'].get()],
@@ -378,7 +390,8 @@ class SettingsWindow:
         h['daily_target'] = {'category':'狩猎场', 'stage':'野猪洞穴',
                              'difficulty':f['hunt_difficulty'].get().strip(),'free_only':True}
         g = c['goddess']
-        g['enabled'], g['user_positioned_near_statue'] = f['goddess_enabled'].get(), f['positioned'].get()
+        # [兼容] 旧站位字段不再参与执行，保留磁盘旧值避免无关配置迁移。
+        g['enabled'] = f['goddess_enabled'].get()
         g['actions'] = [key for key in ('check_in','daily_reward') if f[key].get()]
         m = c['mirror']
         m['enabled'], m['free_only'], m['auto_skip'] = f['mirror_enabled'].get(), f['mirror_free'].get(), f['mirror_skip'].get()
@@ -417,7 +430,7 @@ class SettingsWindow:
                 event_config = load_local_config(event_path) if event_before else None
                 if event_config:
                     event_config = self.collect_event(event_config)
-                elif self.fields['guild_enabled'].get() or self.fields['event_enabled'].get():
+                elif any(self.fields[key].get() for key in ('guild_enabled', 'event_enabled', 'character_pass_enabled')):
                     raise RuntimeError('缺少公会配置，请完整解压新版程序。')
                 try:
                     if event_config:

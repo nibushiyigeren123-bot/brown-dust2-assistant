@@ -10,11 +10,12 @@ import time
 from pathlib import Path
 from local_cache import cache_path, load_local_config
 
-from module_catalog import BY_ID, default_plan, validate_plan
+from module_catalog import BY_ID, default_plan, validate_plan, normalize_plan
 from pending_daily import exclusive_ledger
 from project_paths import ROOT
 from task_feedback import STATES
 from game_calendar import check_execution_day
+from window_access import preflight as window_preflight
 
 
 def save(path, value):
@@ -41,6 +42,10 @@ def evaluate_result(report, exit_code, execute):
         latest = observations[-1] if observations else {}
         observation = latest.get('observation', latest)
         return 'inspected' if observation.get('state') not in (None, 'unknown') else 'needs_review'
+    # [结束门禁] 只接受共享校验确认的正常不可用回执；证据不全保留待核对。
+    from daily_availability import normal_unavailable_reason
+    if normal_unavailable_reason(report):return 'skipped'
+    if report.get('unavailable') in ('free_resources_exhausted','no_hand_after_check_in','mirror_resource_limit'):return 'needs_review'
     if report.get('pending') or (report.get('progress') or {}).get('pending') or report.get('completed') is not True or report.get('module_completed') is False:
         return 'needs_review'
     if report.get('unavailable') == 'season_settlement':
@@ -133,6 +138,9 @@ def run(args):
         state.pop('stop_kind', None)
     else:
         plan = json.loads(args.manifest.read_text(encoding='utf-8')) if args.manifest else default_plan()
+        # [兼容] 仅新计划合并旧女神两行；续跑来源逐项保持原ID与证据身份。
+        if not plan.get('continuation'):
+            plan = normalize_plan(plan)
         tasks = validate_plan(plan)
         source_errors = []
         if plan.get('continuation'):
@@ -170,6 +178,23 @@ def run(args):
     save(state_path, state)
     try:
         with exclusive_ledger(ROOT / 'runtime/workflow_control'):
+            # Stop/pause win over preflight; no module is marked running yet.
+            if not stop_path.is_file() and not pause_path.is_file():
+                verify_config()
+                with exclusive_ledger(ROOT / 'runtime/game_control'):
+                    state['window_preflight'] = window_preflight(focus=args.execute)
+                save(state_path, state)
+                # [续跑起点] 直接resume只处理queued，但仍须统一导航确认起点，不重放旧失败任务。
+                if args.execute and args.resume:
+                    from common_navigation import ensure_main_menu
+                    from game_window import GameWindow
+                    from runtime_policy import network_wait_seconds
+                    with exclusive_ledger(ROOT/'runtime/game_control'):
+                        resumed=ensure_main_menu(GameWindow.find(),output/('resume_return_'+str(time.time_ns())),
+                                                 execute=True,timeout=network_wait_seconds())
+                    state['resume_return_verified']=resumed.get('completed') is True
+                    if not state['resume_return_verified']:
+                        raise ExecutionControlError('续跑起点未确认主页，后续项目保持未运行。','navigation')
             for index in range(state['cursor'], len(state['tasks'])):
                 item = state['tasks'][index]
                 state['cursor'] = index
@@ -230,6 +255,8 @@ def run(args):
                     child = json.loads(result_path.read_text(encoding='utf-8'))
                     if not isinstance(child, dict):
                         raise ValueError('模块回执不是对象。')
+                    if child.get('control_kind') == 'window_access':
+                        raise ExecutionControlError(child.get('error') or child.get('stopped') or '游戏窗口访问失败。', 'window_access')
                     status = evaluate_result(child, code, args.execute)
                     if status == 'verified' and key == 'navigation':
                         views = child.get('observations') or []
@@ -288,6 +315,12 @@ def run(args):
                         except Exception as error:
                             item['recovery_reason'] = str(error)
                         save(state_path, state)
+                        # [边界] 普通错误只有确认返回主页后才可继续；返程失败不重试业务。
+                        if not item.get('recovery_return_verified'):
+                            state.update(status='needs_review',stop_kind='navigation',
+                                         reason='返回主页未核实，后续项目保持未运行：'+item.get('recovery_reason','未知原因'))
+                            save(state_path,state)
+                            break
                     continue
                 observations = child.get('observations') or []
                 latest = observations[-1] if observations else {}
@@ -318,6 +351,11 @@ def run(args):
                                     pending=pending_receipts(ROOT))
                 verify_day()
                 state['cursor'] = index + 1
+                # [边界] 业务成功也不能掩盖返回失败；未知页面不得启动下一业务。
+                if args.execute and not item.get('return_verified'):
+                    state.update(status='needs_review',stop_kind='navigation',reason=item['reason'])
+                    save(state_path,state)
+                    break
                 save(state_path, state)
             else:
                 verify_day()

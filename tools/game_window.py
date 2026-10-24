@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 from ctypes import wintypes
 from dataclasses import dataclass
+from window_access import access_failure
 
 try:
     ctypes.windll.user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
@@ -17,6 +18,18 @@ import win32gui
 import win32process
 import win32ui
 import pywintypes
+from functools import wraps
+
+
+def window_api(operation):
+    @wraps(operation)
+    def checked(*args, **kwargs):
+        try:
+            return operation(*args, **kwargs)
+        except (pywintypes.error, OSError) as error:
+            access_failure("Windows 窗口接口失败：" + str(error))
+    return checked
+
 from PIL import Image
 
 _capture_api = ctypes.WinDLL('user32', use_last_error=True)
@@ -45,6 +58,7 @@ class GameWindow:
     title: str
 
     @classmethod
+    @window_api
     def find(cls):
         matches = []
 
@@ -55,14 +69,15 @@ class GameWindow:
 
         win32gui.EnumWindows(visit, None)
         if len(matches) != 1:
-            raise RuntimeError(f"Expected one visible BrownDust II window; found {len(matches)}")
+            access_failure(f"Expected one visible BrownDust II window; found {len(matches)}")
         return matches[0]
 
+    @window_api
     def geometry(self):
         if not win32gui.IsWindow(self.hwnd) or win32gui.IsIconic(self.hwnd):
-            raise RuntimeError("Game window closed or minimized")
+            access_failure("Game window closed or minimized")
         if win32process.GetWindowThreadProcessId(self.hwnd)[1] != self.pid:
-            raise RuntimeError("Game window identity changed")
+            access_failure("Game window identity changed")
         _, _, width, height = win32gui.GetClientRect(self.hwnd)
         if width <= 0 or height <= 0:
             raise RuntimeError("Empty client area")
@@ -70,6 +85,7 @@ class GameWindow:
         return {"hwnd": self.hwnd, "pid": self.pid, "title": self.title,
                 "width": width, "height": height, "origin": list(origin)}
 
+    @window_api
     def capture(self):
         # A render transition can briefly return a black PrintWindow bitmap.
         # Retry observation only; never repeat a click or battle submission.
@@ -79,8 +95,10 @@ class GameWindow:
             try:
                 return self._capture_once()
             except RuntimeError as error:
-                if 'capture is black' not in str(error).lower() or attempt == 4:
+                if 'capture is black' not in str(error).lower():
                     raise
+                if attempt == 4:
+                    access_failure(str(error))
                 current = self.geometry()
                 if expected is not None and current != expected:
                     raise RuntimeError('Window changed during black-frame observation; capture stopped') from error
@@ -117,7 +135,7 @@ class GameWindow:
             ctypes.set_last_error(0)
             ok = _capture_api.PrintWindow(self.hwnd, memory_dc.GetSafeHdc(), 3)
             if not ok:
-                raise RuntimeError(f"PrintWindow did not capture the client (Win32 error {ctypes.get_last_error()})")
+                access_failure(f"PrintWindow did not capture the client (Win32 error {ctypes.get_last_error()})")
             image = Image.frombuffer("RGB", (width, height), bitmap.GetBitmapBits(True), "raw", "BGRX", 0, 1)
             if image.getextrema() == ((0, 0), (0, 0), (0, 0)):
                 raise RuntimeError("Game capture is black")
@@ -131,6 +149,7 @@ class GameWindow:
             source_dc.DeleteDC()
             win32gui.ReleaseDC(self.hwnd, dc_handle)
 
+    @window_api
     def focus_client(self, expected_geometry):
         """Activate the verified game without sending mouse or keyboard input."""
         check_requested_stop()
@@ -157,7 +176,7 @@ class GameWindow:
                         thread = win32process.GetWindowThreadProcessId(hwnd)[0]
                         if thread != caller and thread not in attached:
                             if not ctypes.windll.user32.AttachThreadInput(caller, thread, True):
-                                raise RuntimeError('Could not attach the verified game focus queue')
+                                access_failure('Could not attach the verified game focus queue')
                             attached.append(thread)
                     win32gui.BringWindowToTop(self.hwnd)
                     win32gui.SetForegroundWindow(self.hwnd)
@@ -168,10 +187,11 @@ class GameWindow:
         while win32gui.GetForegroundWindow() != self.hwnd and time.monotonic() < deadline:
             time.sleep(0.02)
         if win32gui.GetForegroundWindow() != self.hwnd:
-            raise RuntimeError("Could not foreground the game")
+            access_failure("Could not foreground the game")
         if self.geometry() != expected_geometry:
             raise RuntimeError("Window changed while activating; capture again")
 
+    @window_api
     def recover_input(self, expected_geometry):
         """One native restore of this same window; caller must re-observe before input."""
         check_requested_stop()
@@ -192,7 +212,16 @@ class GameWindow:
         self.focus_client(restored)
         return {'hwnd':self.hwnd,'pid':self.pid,'method':'native_minimize_restore','geometry':restored}
 
-    def click_client(self, point, expected_geometry, *, press_ms=100, native_motion=False):
+    @window_api
+    def click_client(self, point, expected_geometry, *, press_ms=100, native_motion=False,
+                     submission_state=None):
+        # [输入阶段] 由实际输入后端报告边界；validating只证明尚未尝试鼠标按下。
+        if submission_state is not None:
+            if type(submission_state) is not dict:
+                raise ValueError('submission_state must be a dictionary')
+            submission_state.clear()
+            submission_state.update(protocol='game_window_click_v1', phase='validating',
+                backend='SendInput' if native_motion else 'mouse_event')
         if type(press_ms) is not int or not 100<=press_ms<=350:
             raise ValueError('Supported mouse press is 100 to 350 milliseconds')
         if type(native_motion) is not bool:
@@ -229,9 +258,15 @@ class GameWindow:
                 hit = win32gui.WindowFromPoint(position)
                 if hit != self.hwnd and win32gui.GetAncestor(hit, win32con.GA_ROOT) != self.hwnd:
                     raise RuntimeError("Game click target became covered before mouse press")
+                # [提交边界] 即使系统调用抛错，也不能断言按下没有被游戏接收。
+                if submission_state is not None:
+                    submission_state['phase'] = 'mouse_down_attempted'
                 accepted.append(send_mouse(position, 2))
                 native_pressed = True
             else:
+                # [提交边界] 在调用系统按下接口之前先保守标记，异常时保留未决。
+                if submission_state is not None:
+                    submission_state['phase'] = 'mouse_down_attempted'
                 win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
             try:
                 # Keep a short press visible to a game's frame-based input loop.
@@ -259,4 +294,7 @@ class GameWindow:
         if native_motion:
             event.update(input_backend='SendInput_absolute_virtual_desktop',
                          input_packets_accepted=accepted, cursor_restored=False)
+        # [输出] 这里只确认按下/松开路径返回；奖励到账仍必须由上层视觉核实。
+        if submission_state is not None:
+            submission_state['phase'] = 'submitted'
         return event

@@ -115,5 +115,59 @@
       1167,
       684
     ]
+  },
+  "goddess_f_key": {
+    "file": "goddess_f_key.png",
+    "box_1280": [
+      935,
+      622,
+      948,
+      635
+    ],
+    "search_padding": 3,
+    "crop_space": "normalized_1280x720; INTER_AREA; excludes account area"
+  },
+  "goddess_f_key_legacy": {
+    "file": "goddess_f_key_legacy.png",
+    "box_1280": [
+      935,
+      622,
+      948,
+      635
+    ],
+    "search_padding": 3,
+    "crop_space": "normalized_1280x720; INTER_AREA; excludes account area"
+  },
+  "goddess_scene_prompt": {
+    "file": "goddess_scene_prompt.png",
+    "box_1280": [
+      641,
+      97,
+      736,
+      115
+    ],
+    "search_padding": 8,
+    "crop_space": "normalized_1280x720; INTER_AREA; excludes account area"
+  },
+  "goddess_scene_team": {
+    "file": "goddess_scene_team.png",
+    "box_1280": [
+      1110,
+      90,
+      1175,
+      109
+    ],
+    "search_padding": 8,
+    "crop_space": "normalized_1280x720; INTER_AREA; excludes account area"
+  },
+  "goddess_f_key_v95": {
+    "file": "goddess_f_key_v95.png",
+    "box_1280": [
+      935,
+      622,
+      948,
+      635
+    ],
+    "sha256": "263a86e19d6aa2b3eb92d959f4fa0b9f437a7ff79cee15612278b65ad2a71a6a"
   }
 }

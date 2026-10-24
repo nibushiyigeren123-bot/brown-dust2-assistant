@@ -33,6 +33,7 @@ def main():
     parser.add_argument('--data-root', type=Path, default=ROOT)
     parser.add_argument('--prepare-only', action='store_true', help='只核对设置并取消返回，不提交战斗')
     parser.add_argument('--reconcile-pending', action='store_true', help='只回收已提交批次的结果，不重新开战')
+    parser.add_argument('--entry-only',action='store_true',help='只核实解锁入口、进入活动中心并返回，不读取或写入业务账本')
     args = parser.parse_args()
     if args.image and args.execute:
         parser.error('保存的截图仅允许只读检查')
@@ -40,6 +41,8 @@ def main():
         parser.error('设置预览包含导航，请显式使用 --execute --prepare-only')
     if args.reconcile_pending and (not args.execute or args.prepare_only):
         parser.error('回执恢复需要 --execute，且不能与设置预览同时使用')
+    if args.entry_only and (not args.execute or args.prepare_only or args.reconcile_pending):
+        parser.error('入口验收需要 --execute --entry-only，且不能与预览或回执恢复混用')
     args.output.mkdir(parents=True, exist_ok=True)
     if args.execute:
         from event_battle_runtime import run

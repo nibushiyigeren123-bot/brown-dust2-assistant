@@ -14,7 +14,8 @@ def refine_candidates(cards):
         if card.get('quality') != 'UR' or not re.fullmatch(r'\d+', badge):
             continue
         score = int(badge)
-        if not 0 <= score < 24:
+        # [筛选] 当前用户规则仅1至23；0与24排除，加号等非纯数字已在上方拒绝。
+        if not 1 <= score < 24:
             continue
         eligible.append(card)
     return eligible

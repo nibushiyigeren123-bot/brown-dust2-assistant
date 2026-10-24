@@ -1,0 +1,1853 @@
+{
+  "schema_version": 1,
+  "fingerprint": "e850522b2c67134ffe8da9058ae3ade00e32c3400c8df57e2b7ea0896718a112",
+  "cache_sha256": "31e142c6ac536169e721559ab5380d6b42ccbc68e634ee173a59b21e57ddc90a",
+  "global_count": 56,
+  "shared_count": 55,
+  "supplemental_count": 1,
+  "local_count": 137,
+  "provider": [
+    "CPUExecutionProvider"
+  ],
+  "elapsed_seconds": 1.3304517999931704,
+  "rows": [
+    {
+      "key": "main_menu",
+      "state": "main_menu",
+      "kind": "global",
+      "self_similarity": 0.9999997615814209,
+      "nearest_other_states": [
+        {
+          "key": "settings_house_present",
+          "state": "settings_house_present",
+          "score": 0.8791901469230652
+        },
+        {
+          "key": "reward",
+          "state": "reward",
+          "score": 0.5534705519676208
+        },
+        {
+          "key": "scene_with_home",
+          "state": "scene_with_home",
+          "score": 0.5532815456390381
+        }
+      ]
+    },
+    {
+      "key": "management_panel",
+      "state": "management_panel",
+      "kind": "global",
+      "self_similarity": 1.000000238418579,
+      "nearest_other_states": [
+        {
+          "key": "event_quick_dialog|normal",
+          "state": "event_quick_dialog",
+          "score": 0.6731382012367249
+        },
+        {
+          "key": "goddess_scene",
+          "state": "goddess_scene",
+          "score": 0.6057041883468628
+        },
+        {
+          "key": "goddess_check_in_result",
+          "state": "goddess_check_in_result",
+          "score": 0.5525502562522888
+        }
+      ]
+    },
+    {
+      "key": "page_with_back",
+      "state": "page_with_back",
+      "kind": "global",
+      "self_similarity": 0.9999997615814209,
+      "nearest_other_states": [
+        {
+          "key": "pass_levels|season",
+          "state": "pass_levels",
+          "score": 0.981191098690033
+        },
+        {
+          "key": "pass_tasks|season",
+          "state": "pass_tasks",
+          "score": 0.8687461018562317
+        },
+        {
+          "key": "pass_levels|special",
+          "state": "pass_levels",
+          "score": 0.7748361825942993
+        }
+      ]
+    },
+    {
+      "key": "daily_tasks|daily",
+      "state": "daily_tasks",
+      "kind": "global",
+      "self_similarity": 0.9999999403953552,
+      "nearest_other_states": [
+        {
+          "key": "weekly_tasks|weekly",
+          "state": "weekly_tasks",
+          "score": 0.8785642385482788
+        },
+        {
+          "key": "event_quick_dialog|normal",
+          "state": "event_quick_dialog",
+          "score": 0.6941543221473694
+        },
+        {
+          "key": "equipment_filter",
+          "state": "equipment_filter",
+          "score": 0.6290804147720337
+        }
+      ]
+    },
+    {
+      "key": "weekly_tasks|weekly",
+      "state": "weekly_tasks",
+      "kind": "global",
+      "self_similarity": 0.9999996423721313,
+      "nearest_other_states": [
+        {
+          "key": "daily_tasks|daily",
+          "state": "daily_tasks",
+          "score": 0.8785642385482788
+        },
+        {
+          "key": "equipment_filter",
+          "state": "equipment_filter",
+          "score": 0.7147989273071289
+        },
+        {
+          "key": "event_quick_dialog|normal",
+          "state": "event_quick_dialog",
+          "score": 0.7135299444198608
+        }
+      ]
+    },
+    {
+      "key": "pass_levels|special",
+      "state": "pass_levels",
+      "kind": "global",
+      "self_similarity": 0.9999998807907104,
+      "nearest_other_states": [
+        {
+          "key": "pass_tasks|special",
+          "state": "pass_tasks",
+          "score": 0.8510385155677795
+        },
+        {
+          "key": "page_with_back",
+          "state": "page_with_back",
+          "score": 0.7748361825942993
+        },
+        {
+          "key": "pass_tasks|season",
+          "state": "pass_tasks",
+          "score": 0.7248375415802002
+        }
+      ]
+    },
+    {
+      "key": "pass_tasks|special",
+      "state": "pass_tasks",
+      "kind": "global",
+      "self_similarity": 1.000000238418579,
+      "nearest_other_states": [
+        {
+          "key": "pass_levels|special",
+          "state": "pass_levels",
+          "score": 0.8510385155677795
+        },
+        {
+          "key": "pass_levels|season",
+          "state": "pass_levels",
+          "score": 0.78126060962677
+        },
+        {
+          "key": "page_with_back",
+          "state": "page_with_back",
+          "score": 0.7686249613761902
+        }
+      ]
+    },
+    {
+      "key": "equipment_bag",
+      "state": "equipment_bag",
+      "kind": "global",
+      "self_similarity": 1.0,
+      "nearest_other_states": [
+        {
+          "key": "equipment_decompose_selection",
+          "state": "equipment_decompose_selection",
+          "score": 0.9071605801582336
+        },
+        {
+          "key": "signin_pass",
+          "state": "signin_pass",
+          "score": 0.5733574628829956
+        },
+        {
+          "key": "scene_with_home",
+          "state": "scene_with_home",
+          "score": 0.5103444457054138
+        }
+      ]
+    },
+    {
+      "key": "equipment_grid",
+      "state": "equipment_grid",
+      "kind": "global",
+      "self_similarity": 0.9999998211860657,
+      "nearest_other_states": [
+        {
+          "key": "scene_with_home",
+          "state": "scene_with_home",
+          "score": 0.5498641729354858
+        },
+        {
+          "key": "goddess_reward_result",
+          "state": "goddess_reward_result",
+          "score": 0.5308641195297241
+        },
+        {
+          "key": "settings_house_present",
+          "state": "settings_house_present",
+          "score": 0.5220612287521362
+        }
+      ]
+    },
+    {
+      "key": "equipment_filter",
+      "state": "equipment_filter",
+      "kind": "global",
+      "self_similarity": 1.0000001192092896,
+      "nearest_other_states": [
+        {
+          "key": "event_quick_dialog|normal",
+          "state": "event_quick_dialog",
+          "score": 0.7168247699737549
+        },
+        {
+          "key": "weekly_tasks|weekly",
+          "state": "weekly_tasks",
+          "score": 0.7147989273071289
+        },
+        {
+          "key": "equipment_detail",
+          "state": "equipment_detail",
+          "score": 0.7125768065452576
+        }
+      ]
+    },
+    {
+      "key": "equipment_detail",
+      "state": "equipment_detail",
+      "kind": "global",
+      "self_similarity": 1.0000001192092896,
+      "nearest_other_states": [
+        {
+          "key": "equipment_filter",
+          "state": "equipment_filter",
+          "score": 0.7125768065452576
+        },
+        {
+          "key": "event_auto_dialog|challenge",
+          "state": "event_auto_dialog",
+          "score": 0.6277956962585449
+        },
+        {
+          "key": "event_quick_dialog|normal",
+          "state": "event_quick_dialog",
+          "score": 0.6229050159454346
+        }
+      ]
+    },
+    {
+      "key": "equipment_decompose_selection",
+      "state": "equipment_decompose_selection",
+      "kind": "global",
+      "self_similarity": 1.0,
+      "nearest_other_states": [
+        {
+          "key": "equipment_bag",
+          "state": "equipment_bag",
+          "score": 0.9071605801582336
+        },
+        {
+          "key": "signin_pass",
+          "state": "signin_pass",
+          "score": 0.537854790687561
+        },
+        {
+          "key": "scene_with_home",
+          "state": "scene_with_home",
+          "score": 0.47746050357818604
+        }
+      ]
+    },
+    {
+      "key": "equipment_decompose_confirmation",
+      "state": "equipment_decompose_confirmation",
+      "kind": "global",
+      "self_similarity": 1.0000001192092896,
+      "nearest_other_states": [
+        {
+          "key": "event_auto_dialog|challenge",
+          "state": "event_auto_dialog",
+          "score": 0.670353889465332
+        },
+        {
+          "key": "pass_levels|special",
+          "state": "pass_levels",
+          "score": 0.6280652284622192
+        },
+        {
+          "key": "event_quick_dialog|normal",
+          "state": "event_quick_dialog",
+          "score": 0.626114010810852
+        }
+      ]
+    },
+    {
+      "key": "equipment_decompose_result",
+      "state": "equipment_decompose_result",
+      "kind": "global",
+      "self_similarity": 0.9999998211860657,
+      "nearest_other_states": [
+        {
+          "key": "event_reward",
+          "state": "event_reward",
+          "score": 0.6400313377380371
+        },
+        {
+          "key": "hunt_reward",
+          "state": "hunt_reward",
+          "score": 0.5975184440612793
+        },
+        {
+          "key": "reward_overlay",
+          "state": "reward_overlay",
+          "score": 0.5686436891555786
+        }
+      ]
+    },
+    {
+      "key": "hunt_map",
+      "state": "hunt_map",
+      "kind": "global",
+      "self_similarity": 1.0,
+      "nearest_other_states": [
+        {
+          "key": "hunt_reward",
+          "state": "hunt_reward",
+          "score": 0.5508034229278564
+        },
+        {
+          "key": "main_menu",
+          "state": "main_menu",
+          "score": 0.5196923017501831
+        },
+        {
+          "key": "settings_house_present",
+          "state": "settings_house_present",
+          "score": 0.46342897415161133
+        }
+      ]
+    },
+    {
+      "key": "gacha_page|costume",
+      "state": "gacha_page",
+      "kind": "global",
+      "self_similarity": 0.9999998807907104,
+      "nearest_other_states": [
+        {
+          "key": "settings_house_present",
+          "state": "settings_house_present",
+          "score": 0.5624281764030457
+        },
+        {
+          "key": "page_with_circle_back",
+          "state": "page_with_circle_back",
+          "score": 0.5491186380386353
+        },
+        {
+          "key": "goddess_options",
+          "state": "goddess_options",
+          "score": 0.546997606754303
+        }
+      ]
+    },
+    {
+      "key": "gacha_page|equipment",
+      "state": "gacha_page",
+      "kind": "global",
+      "self_similarity": 1.0000004768371582,
+      "nearest_other_states": [
+        {
+          "key": "pass_levels|special",
+          "state": "pass_levels",
+          "score": 0.7244658470153809
+        },
+        {
+          "key": "pass_tasks|special",
+          "state": "pass_tasks",
+          "score": 0.6355962157249451
+        },
+        {
+          "key": "signin_event",
+          "state": "signin_event",
+          "score": 0.5790929794311523
+        }
+      ]
+    },
+    {
+      "key": "reward",
+      "state": "reward",
+      "kind": "global",
+      "self_similarity": 1.0,
+      "nearest_other_states": [
+        {
+          "key": "main_menu",
+          "state": "main_menu",
+          "score": 0.5534705519676208
+        },
+        {
+          "key": "event_reward",
+          "state": "event_reward",
+          "score": 0.5462551116943359
+        },
+        {
+          "key": "reward_overlay",
+          "state": "reward_overlay",
+          "score": 0.5176125168800354
+        }
+      ]
+    },
+    {
+      "key": "pass_levels|season",
+      "state": "pass_levels",
+      "kind": "global",
+      "self_similarity": 0.9999998807907104,
+      "nearest_other_states": [
+        {
+          "key": "page_with_back",
+          "state": "page_with_back",
+          "score": 0.981191098690033
+        },
+        {
+          "key": "pass_tasks|season",
+          "state": "pass_tasks",
+          "score": 0.8824678659439087
+        },
+        {
+          "key": "pass_tasks|special",
+          "state": "pass_tasks",
+          "score": 0.78126060962677
+        }
+      ]
+    },
+    {
+      "key": "pass_tasks|season",
+      "state": "pass_tasks",
+      "kind": "global",
+      "self_similarity": 0.9999997615814209,
+      "nearest_other_states": [
+        {
+          "key": "pass_levels|season",
+          "state": "pass_levels",
+          "score": 0.8824678659439087
+        },
+        {
+          "key": "page_with_back",
+          "state": "page_with_back",
+          "score": 0.8687461018562317
+        },
+        {
+          "key": "pass_levels|special",
+          "state": "pass_levels",
+          "score": 0.7248375415802002
+        }
+      ]
+    },
+    {
+      "key": "reward_overlay",
+      "state": "reward_overlay",
+      "kind": "global",
+      "self_similarity": 0.9999999403953552,
+      "nearest_other_states": [
+        {
+          "key": "event_reward",
+          "state": "event_reward",
+          "score": 0.6076775193214417
+        },
+        {
+          "key": "equipment_decompose_result",
+          "state": "equipment_decompose_result",
+          "score": 0.5686436891555786
+        },
+        {
+          "key": "mirror_lobby",
+          "state": "mirror_lobby",
+          "score": 0.5552544593811035
+        }
+      ]
+    },
+    {
+      "key": "menu_overlay",
+      "state": "menu_overlay",
+      "kind": "global",
+      "self_similarity": 0.9999997019767761,
+      "nearest_other_states": [
+        {
+          "key": "equipment_filter",
+          "state": "equipment_filter",
+          "score": 0.6267415285110474
+        },
+        {
+          "key": "page_with_back",
+          "state": "page_with_back",
+          "score": 0.6243140697479248
+        },
+        {
+          "key": "signin_pass",
+          "state": "signin_pass",
+          "score": 0.6229003667831421
+        }
+      ]
+    },
+    {
+      "key": "event_hub",
+      "state": "event_hub",
+      "kind": "global",
+      "self_similarity": 1.0000003576278687,
+      "nearest_other_states": [
+        {
+          "key": "page_with_circle_back",
+          "state": "page_with_circle_back",
+          "score": 0.9822027683258057
+        },
+        {
+          "key": "event_auto_running",
+          "state": "event_auto_running",
+          "score": 0.6401498317718506
+        },
+        {
+          "key": "goddess_options|v85_confirmed_f",
+          "state": "goddess_options",
+          "score": 0.6250693798065186
+        }
+      ]
+    },
+    {
+      "key": "event_preparation|normal",
+      "state": "event_preparation",
+      "kind": "global",
+      "self_similarity": 0.9999998807907104,
+      "nearest_other_states": [
+        {
+          "key": "event_quick_dialog|normal",
+          "state": "event_quick_dialog",
+          "score": 0.6243528127670288
+        },
+        {
+          "key": "event_reward",
+          "state": "event_reward",
+          "score": 0.594527006149292
+        },
+        {
+          "key": "mirror_lobby",
+          "state": "mirror_lobby",
+          "score": 0.5896809101104736
+        }
+      ]
+    },
+    {
+      "key": "event_quick_dialog|normal",
+      "state": "event_quick_dialog",
+      "kind": "global",
+      "self_similarity": 1.0,
+      "nearest_other_states": [
+        {
+          "key": "event_auto_dialog|challenge",
+          "state": "event_auto_dialog",
+          "score": 0.8947583436965942
+        },
+        {
+          "key": "mirror_auto_dialog",
+          "state": "mirror_auto_dialog",
+          "score": 0.7466095089912415
+        },
+        {
+          "key": "equipment_filter",
+          "state": "equipment_filter",
+          "score": 0.7168247699737549
+        }
+      ]
+    },
+    {
+      "key": "event_reward",
+      "state": "event_reward",
+      "kind": "global",
+      "self_similarity": 1.0000001192092896,
+      "nearest_other_states": [
+        {
+          "key": "equipment_decompose_result",
+          "state": "equipment_decompose_result",
+          "score": 0.6400313377380371
+        },
+        {
+          "key": "hunt_reward",
+          "state": "hunt_reward",
+          "score": 0.6369312405586243
+        },
+        {
+          "key": "reward_overlay",
+          "state": "reward_overlay",
+          "score": 0.6076775193214417
+        }
+      ]
+    },
+    {
+      "key": "equipment_refine",
+      "state": "equipment_refine",
+      "kind": "global",
+      "self_similarity": 0.9999998807907104,
+      "nearest_other_states": [
+        {
+          "key": "equipment_detail",
+          "state": "equipment_detail",
+          "score": 0.579800009727478
+        },
+        {
+          "key": "event_quick_dialog|normal",
+          "state": "event_quick_dialog",
+          "score": 0.5677182674407959
+        },
+        {
+          "key": "mirror_result",
+          "state": "mirror_result",
+          "score": 0.5617910623550415
+        }
+      ]
+    },
+    {
+      "key": "goddess_collection",
+      "state": "goddess_collection",
+      "kind": "global",
+      "self_similarity": 1.000000238418579,
+      "nearest_other_states": [
+        {
+          "key": "page_with_back",
+          "state": "page_with_back",
+          "score": 0.5041275024414062
+        },
+        {
+          "key": "pass_levels|season",
+          "state": "pass_levels",
+          "score": 0.4702947735786438
+        },
+        {
+          "key": "gacha_page|equipment",
+          "state": "gacha_page",
+          "score": 0.4688713252544403
+        }
+      ]
+    },
+    {
+      "key": "goddess_options",
+      "state": "goddess_options",
+      "kind": "global",
+      "self_similarity": 1.000000238418579,
+      "nearest_other_states": [
+        {
+          "key": "scene_with_home",
+          "state": "scene_with_home",
+          "score": 0.935105562210083
+        },
+        {
+          "key": "goddess_reward_result",
+          "state": "goddess_reward_result",
+          "score": 0.9329972863197327
+        },
+        {
+          "key": "goddess_check_in_result",
+          "state": "goddess_check_in_result",
+          "score": 0.9159051775932312
+        }
+      ]
+    },
+    {
+      "key": "goddess_reward_result",
+      "state": "goddess_reward_result",
+      "kind": "global",
+      "self_similarity": 1.0,
+      "nearest_other_states": [
+        {
+          "key": "goddess_options",
+          "state": "goddess_options",
+          "score": 0.9329972863197327
+        },
+        {
+          "key": "scene_with_home",
+          "state": "scene_with_home",
+          "score": 0.9249898195266724
+        },
+        {
+          "key": "goddess_check_in_result",
+          "state": "goddess_check_in_result",
+          "score": 0.8923405408859253
+        }
+      ]
+    },
+    {
+      "key": "scene_with_home",
+      "state": "scene_with_home",
+      "kind": "global",
+      "self_similarity": 1.000000238418579,
+      "nearest_other_states": [
+        {
+          "key": "goddess_options",
+          "state": "goddess_options",
+          "score": 0.935105562210083
+        },
+        {
+          "key": "goddess_reward_result",
+          "state": "goddess_reward_result",
+          "score": 0.9249898195266724
+        },
+        {
+          "key": "goddess_check_in_result",
+          "state": "goddess_check_in_result",
+          "score": 0.9025254845619202
+        }
+      ]
+    },
+    {
+      "key": "goddess_scene",
+      "state": "goddess_scene",
+      "kind": "global",
+      "self_similarity": 1.0000001192092896,
+      "nearest_other_states": [
+        {
+          "key": "goddess_check_in_result",
+          "state": "goddess_check_in_result",
+          "score": 0.9472289085388184
+        },
+        {
+          "key": "goddess_loot_result",
+          "state": "goddess_loot_result",
+          "score": 0.9435863494873047
+        },
+        {
+          "key": "goddess_options",
+          "state": "goddess_options",
+          "score": 0.8734244108200073
+        }
+      ]
+    },
+    {
+      "key": "mirror_lobby",
+      "state": "mirror_lobby",
+      "kind": "global",
+      "self_similarity": 1.0,
+      "nearest_other_states": [
+        {
+          "key": "event_victory|challenge",
+          "state": "event_victory",
+          "score": 0.6624342203140259
+        },
+        {
+          "key": "goddess_check_in_result",
+          "state": "goddess_check_in_result",
+          "score": 0.647064745426178
+        },
+        {
+          "key": "goddess_options|v85_confirmed_f",
+          "state": "goddess_options",
+          "score": 0.6422337889671326
+        }
+      ]
+    },
+    {
+      "key": "mirror_ready",
+      "state": "mirror_ready",
+      "kind": "global",
+      "self_similarity": 1.000000238418579,
+      "nearest_other_states": [
+        {
+          "key": "mirror_lobby",
+          "state": "mirror_lobby",
+          "score": 0.5438612103462219
+        },
+        {
+          "key": "goddess_check_in_result",
+          "state": "goddess_check_in_result",
+          "score": 0.502346396446228
+        },
+        {
+          "key": "goddess_options|v85_confirmed_f",
+          "state": "goddess_options",
+          "score": 0.49515676498413086
+        }
+      ]
+    },
+    {
+      "key": "mirror_auto_dialog",
+      "state": "mirror_auto_dialog",
+      "kind": "global",
+      "self_similarity": 1.000000238418579,
+      "nearest_other_states": [
+        {
+          "key": "event_quick_dialog|normal",
+          "state": "event_quick_dialog",
+          "score": 0.7466095089912415
+        },
+        {
+          "key": "event_auto_dialog|challenge",
+          "state": "event_auto_dialog",
+          "score": 0.7185600996017456
+        },
+        {
+          "key": "weekly_tasks|weekly",
+          "state": "weekly_tasks",
+          "score": 0.6987155675888062
+        }
+      ]
+    },
+    {
+      "key": "mirror_result",
+      "state": "mirror_result",
+      "kind": "global",
+      "self_similarity": 1.0,
+      "nearest_other_states": [
+        {
+          "key": "pass_tasks|season",
+          "state": "pass_tasks",
+          "score": 0.5804062485694885
+        },
+        {
+          "key": "event_quick_dialog|normal",
+          "state": "event_quick_dialog",
+          "score": 0.5783466100692749
+        },
+        {
+          "key": "menu_overlay",
+          "state": "menu_overlay",
+          "score": 0.569902777671814
+        }
+      ]
+    },
+    {
+      "key": "mirror_result_footer",
+      "state": "mirror_result_footer",
+      "kind": "global",
+      "self_similarity": 1.0000001192092896,
+      "nearest_other_states": [
+        {
+          "key": "event_victory|challenge",
+          "state": "event_victory",
+          "score": 0.5532450675964355
+        },
+        {
+          "key": "mirror_ready",
+          "state": "mirror_ready",
+          "score": 0.41680389642715454
+        },
+        {
+          "key": "page_with_back",
+          "state": "page_with_back",
+          "score": 0.33027493953704834
+        }
+      ]
+    },
+    {
+      "key": "goddess_loot_result",
+      "state": "goddess_loot_result",
+      "kind": "global",
+      "self_similarity": 1.0000001192092896,
+      "nearest_other_states": [
+        {
+          "key": "goddess_check_in_result",
+          "state": "goddess_check_in_result",
+          "score": 0.953099250793457
+        },
+        {
+          "key": "goddess_scene",
+          "state": "goddess_scene",
+          "score": 0.9435863494873047
+        },
+        {
+          "key": "goddess_options",
+          "state": "goddess_options",
+          "score": 0.8829505443572998
+        }
+      ]
+    },
+    {
+      "key": "hunt_dialog",
+      "state": "hunt_dialog",
+      "kind": "global",
+      "self_similarity": 0.9999998211860657,
+      "nearest_other_states": [
+        {
+          "key": "mirror_auto_dialog",
+          "state": "mirror_auto_dialog",
+          "score": 0.6638572216033936
+        },
+        {
+          "key": "event_auto_dialog|challenge",
+          "state": "event_auto_dialog",
+          "score": 0.6233831644058228
+        },
+        {
+          "key": "equipment_decompose_confirmation",
+          "state": "equipment_decompose_confirmation",
+          "score": 0.6205084323883057
+        }
+      ]
+    },
+    {
+      "key": "hunt_reward",
+      "state": "hunt_reward",
+      "kind": "global",
+      "self_similarity": 1.0,
+      "nearest_other_states": [
+        {
+          "key": "event_reward",
+          "state": "event_reward",
+          "score": 0.6369312405586243
+        },
+        {
+          "key": "draw_result",
+          "state": "draw_result",
+          "score": 0.6053048968315125
+        },
+        {
+          "key": "equipment_decompose_result",
+          "state": "equipment_decompose_result",
+          "score": 0.5975184440612793
+        }
+      ]
+    },
+    {
+      "key": "guild_check_in_receipt",
+      "state": "guild_check_in_receipt",
+      "kind": "global",
+      "self_similarity": 1.000000238418579,
+      "nearest_other_states": [
+        {
+          "key": "guild_page",
+          "state": "guild_page",
+          "score": 0.5761480331420898
+        },
+        {
+          "key": "event_defeat",
+          "state": "event_defeat",
+          "score": 0.4572334289550781
+        },
+        {
+          "key": "equipment_detail",
+          "state": "equipment_detail",
+          "score": 0.4471280872821808
+        }
+      ]
+    },
+    {
+      "key": "guild_page",
+      "state": "guild_page",
+      "kind": "global",
+      "self_similarity": 1.0000001192092896,
+      "nearest_other_states": [
+        {
+          "key": "guild_check_in_receipt",
+          "state": "guild_check_in_receipt",
+          "score": 0.5761480331420898
+        },
+        {
+          "key": "equipment_refine",
+          "state": "equipment_refine",
+          "score": 0.48385727405548096
+        },
+        {
+          "key": "pass_tasks|special",
+          "state": "pass_tasks",
+          "score": 0.4788155257701874
+        }
+      ]
+    },
+    {
+      "key": "free_confirmation",
+      "state": "free_confirmation",
+      "kind": "global",
+      "self_similarity": 0.9999996423721313,
+      "nearest_other_states": [
+        {
+          "key": "management_panel",
+          "state": "management_panel",
+          "score": 0.5177514553070068
+        },
+        {
+          "key": "signin_event",
+          "state": "signin_event",
+          "score": 0.4843903183937073
+        },
+        {
+          "key": "settings_house_present",
+          "state": "settings_house_present",
+          "score": 0.4749239683151245
+        }
+      ]
+    },
+    {
+      "key": "draw_animation",
+      "state": "draw_animation",
+      "kind": "global",
+      "self_similarity": 0.9999998211860657,
+      "nearest_other_states": [
+        {
+          "key": "draw_result",
+          "state": "draw_result",
+          "score": 0.2869419753551483
+        },
+        {
+          "key": "hunt_dialog",
+          "state": "hunt_dialog",
+          "score": 0.2446170449256897
+        },
+        {
+          "key": "hunt_reward",
+          "state": "hunt_reward",
+          "score": 0.19518236815929413
+        }
+      ]
+    },
+    {
+      "key": "draw_result",
+      "state": "draw_result",
+      "kind": "global",
+      "self_similarity": 1.0,
+      "nearest_other_states": [
+        {
+          "key": "hunt_reward",
+          "state": "hunt_reward",
+          "score": 0.6053048968315125
+        },
+        {
+          "key": "settings_house_present",
+          "state": "settings_house_present",
+          "score": 0.5437432527542114
+        },
+        {
+          "key": "event_reward",
+          "state": "event_reward",
+          "score": 0.4994591772556305
+        }
+      ]
+    },
+    {
+      "key": "settings_house_present",
+      "state": "settings_house_present",
+      "kind": "global",
+      "self_similarity": 0.9999995827674866,
+      "nearest_other_states": [
+        {
+          "key": "main_menu",
+          "state": "main_menu",
+          "score": 0.8791901469230652
+        },
+        {
+          "key": "scene_with_home",
+          "state": "scene_with_home",
+          "score": 0.5888307690620422
+        },
+        {
+          "key": "goddess_loot_result",
+          "state": "goddess_loot_result",
+          "score": 0.5850110054016113
+        }
+      ]
+    },
+    {
+      "key": "signin_event",
+      "state": "signin_event",
+      "kind": "global",
+      "self_similarity": 1.0,
+      "nearest_other_states": [
+        {
+          "key": "pass_levels|special",
+          "state": "pass_levels",
+          "score": 0.5817918181419373
+        },
+        {
+          "key": "gacha_page|equipment",
+          "state": "gacha_page",
+          "score": 0.5790929794311523
+        },
+        {
+          "key": "pass_tasks|special",
+          "state": "pass_tasks",
+          "score": 0.5378292202949524
+        }
+      ]
+    },
+    {
+      "key": "signin_pass",
+      "state": "signin_pass",
+      "kind": "global",
+      "self_similarity": 1.000000238418579,
+      "nearest_other_states": [
+        {
+          "key": "pass_levels|special",
+          "state": "pass_levels",
+          "score": 0.6294931769371033
+        },
+        {
+          "key": "menu_overlay",
+          "state": "menu_overlay",
+          "score": 0.6229003667831421
+        },
+        {
+          "key": "page_with_circle_back",
+          "state": "page_with_circle_back",
+          "score": 0.5831649303436279
+        }
+      ]
+    },
+    {
+      "key": "page_with_circle_back",
+      "state": "page_with_circle_back",
+      "kind": "global",
+      "self_similarity": 1.000000238418579,
+      "nearest_other_states": [
+        {
+          "key": "event_hub",
+          "state": "event_hub",
+          "score": 0.9822027683258057
+        },
+        {
+          "key": "goddess_options|v85_confirmed_f",
+          "state": "goddess_options",
+          "score": 0.6342594623565674
+        },
+        {
+          "key": "goddess_options",
+          "state": "goddess_options",
+          "score": 0.6097144484519958
+        }
+      ]
+    },
+    {
+      "key": "event_defeat",
+      "state": "event_defeat",
+      "kind": "global",
+      "self_similarity": 1.0,
+      "nearest_other_states": [
+        {
+          "key": "event_victory|challenge",
+          "state": "event_victory",
+          "score": 0.5115318298339844
+        },
+        {
+          "key": "page_with_circle_back",
+          "state": "page_with_circle_back",
+          "score": 0.4722822308540344
+        },
+        {
+          "key": "event_hub",
+          "state": "event_hub",
+          "score": 0.4674726128578186
+        }
+      ]
+    },
+    {
+      "key": "event_preparation|challenge",
+      "state": "event_preparation",
+      "kind": "global",
+      "self_similarity": 1.0000003576278687,
+      "nearest_other_states": [
+        {
+          "key": "event_reward",
+          "state": "event_reward",
+          "score": 0.5847400426864624
+        },
+        {
+          "key": "event_quick_dialog|normal",
+          "state": "event_quick_dialog",
+          "score": 0.5763767957687378
+        },
+        {
+          "key": "pass_tasks|special",
+          "state": "pass_tasks",
+          "score": 0.5425177812576294
+        }
+      ]
+    },
+    {
+      "key": "event_auto_dialog|challenge",
+      "state": "event_auto_dialog",
+      "kind": "global",
+      "self_similarity": 1.0,
+      "nearest_other_states": [
+        {
+          "key": "event_quick_dialog|normal",
+          "state": "event_quick_dialog",
+          "score": 0.8947583436965942
+        },
+        {
+          "key": "mirror_auto_dialog",
+          "state": "mirror_auto_dialog",
+          "score": 0.7185600996017456
+        },
+        {
+          "key": "equipment_filter",
+          "state": "equipment_filter",
+          "score": 0.7084352970123291
+        }
+      ]
+    },
+    {
+      "key": "event_auto_running",
+      "state": "event_auto_running",
+      "kind": "global",
+      "self_similarity": 1.0000001192092896,
+      "nearest_other_states": [
+        {
+          "key": "event_hub",
+          "state": "event_hub",
+          "score": 0.6401498317718506
+        },
+        {
+          "key": "page_with_circle_back",
+          "state": "page_with_circle_back",
+          "score": 0.5946155786514282
+        },
+        {
+          "key": "settings_house_present",
+          "state": "settings_house_present",
+          "score": 0.5224547386169434
+        }
+      ]
+    },
+    {
+      "key": "event_victory|challenge",
+      "state": "event_victory",
+      "kind": "global",
+      "self_similarity": 0.9999998807907104,
+      "nearest_other_states": [
+        {
+          "key": "mirror_lobby",
+          "state": "mirror_lobby",
+          "score": 0.6624342203140259
+        },
+        {
+          "key": "scene_with_home",
+          "state": "scene_with_home",
+          "score": 0.5776770114898682
+        },
+        {
+          "key": "goddess_reward_result",
+          "state": "goddess_reward_result",
+          "score": 0.5668291449546814
+        }
+      ]
+    },
+    {
+      "key": "goddess_check_in_result",
+      "state": "goddess_check_in_result",
+      "kind": "global",
+      "self_similarity": 1.0000001192092896,
+      "nearest_other_states": [
+        {
+          "key": "goddess_loot_result",
+          "state": "goddess_loot_result",
+          "score": 0.953099250793457
+        },
+        {
+          "key": "goddess_scene",
+          "state": "goddess_scene",
+          "score": 0.9472289085388184
+        },
+        {
+          "key": "goddess_options",
+          "state": "goddess_options",
+          "score": 0.9159051775932312
+        }
+      ]
+    },
+    {
+      "key": "goddess_options|v85_confirmed_f",
+      "state": "goddess_options",
+      "kind": "global",
+      "self_similarity": 1.0000001192092896,
+      "nearest_other_states": [
+        {
+          "key": "goddess_check_in_result",
+          "state": "goddess_check_in_result",
+          "score": 0.8905282020568848
+        },
+        {
+          "key": "goddess_reward_result",
+          "state": "goddess_reward_result",
+          "score": 0.8710140585899353
+        },
+        {
+          "key": "scene_with_home",
+          "state": "scene_with_home",
+          "score": 0.8687776923179626
+        }
+      ]
+    },
+    {
+      "key": "assets/daily_pending/hunt_title.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/daily_pending/hunt_map_quick.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/daily_pending/hunt_reward.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/daily_pending/goddess_hand.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/daily_pending/goddess_reward_ready.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/daily_pending/goddess_reward_loot.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/daily_pending/mirror_auto_title.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/daily_pending/mirror_auto_entry.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/daily_pending/mirror_battle.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/daily_pending/mirror_result_title.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/daily_pending/mirror_result_leave.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/daily_pending/goddess_f_key.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/daily_pending/goddess_f_key_legacy.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/daily_pending/goddess_scene_prompt.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/daily_pending/goddess_scene_team.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/detail_single_scissors.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/detail_single_close.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/quality_UR.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/quality_R.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/grid_title.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/filter_button.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/detail_refine.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/detail_score20.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/refine_title.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/refine_single.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/refine_score20.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/refine_score_label.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/refine_material_label.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/filter_title.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/filter_r_only.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/filter_worn_off.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/filter_saved_toast.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/detail_r_gun.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/detail_unlocked.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/detail_wear_available.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/decompose_confirm_one.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/decompose_confirm_warning.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/decompose_confirm_button.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/decompose_result_rewards.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/decompose_result_title.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/filter_quality_default.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/filter_worn_default.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/filter_other_default.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/grid_quick_filter_default.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/quality_R_plain.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/filter_n_only.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/grid_empty.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/bag_consumables_title.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/equipment/bag_consumables_selected.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/event_battle/auto_off.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/event_prepare/home_loyal_maid.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/event_prepare/hub_loyal_maid.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/free_draw/costume_title.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/free_draw/equipment_title.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/free_draw/costume_tab.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/free_draw/equipment_tab.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/free_draw/batch_free.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/free_draw/paid_label.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/free_draw/confirm_title.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/free_draw/free_word.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/free_draw/confirm_button.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/free_draw/cancel_button.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/free_draw/back.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/free_draw/result_badge.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/free_draw/equipment_result_badge.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/free_draw/home_entry.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/free_draw/skip_light.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/free_draw/animation_loop_light.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/free_draw/skip_dark.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/free_draw/animation_loop_dark.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/goddess_entry/library_title.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/goddess_entry/square_logo.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/goddess_entry/square_logo_active.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/goddess_entry/square_team.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/hunting_options/stone_0.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/hunting_options/stone_1.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/hunting_options/stone_2.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/hunting_options/stone_3.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/hunting_options/stone_4.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/hunting_options/home_hunt_label.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/hunting_resources/rice.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/hunting_resources/torch.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/m00/signin_event.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/m00/signin_pass.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/card_logo.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/lobby_score.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/lobby_wine.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/multiplier_title.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/editor_value_1.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/editor_value_10.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/editor_value_11.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/editor_value_15.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/editor_value_18.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/editor_value_39.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/editor_value_40.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/auto_value_1.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/auto_value_10.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/auto_value_15.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/auto_value_40.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/price_value_1.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/price_value_10.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/price_value_15.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/price_value_40.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/mirror_entry/lobby_trophy.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/pass_rewards/identity_special.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/pass_rewards/identity_season.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/pass_rewards/tab_special_tasks.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/pass_rewards/tab_special_levels.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/pass_rewards/tab_season_tasks.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/pass_rewards/tab_season_levels.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/phase08/guild_entry.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/phase08/guild_title.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/phase08/guild_success.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/phase08/guild_success_live.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/phase08/victory.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/phase08/cost_5.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/phase08/cost_1.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/phase08/unit_1.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/return_navigation/white_back.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/return_navigation/circle_back.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/return_navigation/library_back.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/return_navigation/management_title.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/return_navigation/management_cancel.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/return_navigation/hunt_title.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/return_navigation/hunt_cancel.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/return_navigation/event_quick_title.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/return_navigation/event_quick_cancel.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/return_navigation/event_auto_title.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/return_navigation/event_auto_cancel.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/task_rewards/daily.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/task_rewards/weekly.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/ui_foreground/house.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/ui_foreground/friends.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/ui_foreground/bag.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/step_vision/local_reward_title.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/step_vision/local_reward_hint.png",
+      "kind": "local"
+    },
+    {
+      "key": "assets/step_vision/local_scene_home.png",
+      "kind": "local"
+    }
+  ],
+  "scope": "真实CPU预读与参考集内混淆；不是独立泛化测试",
+  "game_input": false
+}

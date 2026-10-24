@@ -105,6 +105,45 @@ class TaskRewardRun:
             states = ('main_menu',)
         self.transition_target = {'states': states, 'pass_id': identity} if states else None
 
+    def _cancel_before_input(self, owned, submission_state, error):
+        """[功能] 只撤销本次明确未尝试按下的意图；不结算奖励、不吞停止异常。"""
+        if (submission_state.get('protocol') != 'game_window_click_v1'
+                or submission_state.get('phase') != 'validating'
+                or submission_state.get('backend') not in ('mouse_event', 'SendInput')
+                or self.ledger.get('pending') != owned):
+            return
+        try:
+            # [身份核对] 调用者持有game_control锁；仍读新账本，防止覆盖另一份意图或其他字段。
+            fresh = json.loads(self.path.read_text(encoding='utf-8'))
+            if not isinstance(fresh, dict) or fresh.get('pending') != owned:
+                return
+            cancelled = {'type': 'cancelled_before_input', 'intent': owned,
+                         'submission_state': dict(submission_state), 'reason': str(error)}
+            fresh['pending'] = None
+            fresh.setdefault('events', []).append(cancelled)
+            save(self.path, fresh)
+        except Exception as cleanup_error:
+            # [写盘失败] 原pending仍在；保存诊断后让原控制异常继续传播，绝不宣称可重试。
+            self.report['pending_cleanup_error'] = str(cleanup_error)
+            return
+        self.ledger.clear()
+        self.ledger.update(fresh)
+        self.report.setdefault('cancelled_inputs', []).append(cancelled)
+        self.report.pop('pending_input', None)
+
+    def _persist_input_receipt(self, owned, event, submission_state):
+        """[功能] 在等待视觉回执前落盘实际输入结果；输入成功不等于领奖成功。"""
+        if self.ledger.get('pending') != owned:
+            raise RuntimeError('领奖输入后未决身份已改变，保留记录待核对。')
+        fresh = json.loads(self.path.read_text(encoding='utf-8'))
+        if not isinstance(fresh, dict) or fresh.get('pending') != owned:
+            raise RuntimeError('领奖输入后磁盘未决身份已改变，保留记录待核对。')
+        fresh['pending'] = {**owned, 'input_receipt': event,
+                            'submission_state': dict(submission_state)}
+        save(self.path, fresh)
+        self.ledger.clear()
+        self.ledger.update(fresh)
+
     def click(self, point, state, label, claim=False):
         obs, geo, _, path = self.capture()
         expected_pass = label[len('claim_pass_'):].split('_')[0] if label.startswith('claim_pass_') else None
@@ -117,16 +156,29 @@ class TaskRewardRun:
             raise RuntimeError('移焦后页面或可领取状态已改变，未提交。')
         intent = {'type': label, 'point': point, 'state': state, 'evidence': str(path)}
         self.report['pending_input'] = intent
+        owned = None
         if claim:
-            self.ledger['pending'] = {'module': getattr(self, 'module_id', 'task_rewards'), **intent}
+            owned = {'module': getattr(self, 'module_id', 'task_rewards'), **intent}
+            self.ledger['pending'] = owned
             save(self.path, self.ledger)
         save(self.args.output / 'run.json', self.report)
         # Use the shared game input path, including focus, occlusion, geometry
         # and user mouse movement checks. Page response is observed below.
         click_options = {'native_motion': True} if state == 'reward_overlay' and not claim else {}
-        event = self.window.click_client(
-            [point[0] * geo['width'] / 1280, point[1] * geo['height'] / 720],
-            geo, press_ms=250, **click_options)
+        submission_state = {}
+        try:
+            # [接线] 只有领奖请求传探针；未知后端或进入前失败没有撤销依据。
+            if claim:
+                click_options['submission_state'] = submission_state
+            event = self.window.click_client(
+                [point[0] * geo['width'] / 1280, point[1] * geo['height'] / 720],
+                geo, press_ms=250, **click_options)
+        except Exception as error:
+            if claim:
+                self._cancel_before_input(owned, submission_state, error)
+            raise
+        if claim:
+            self._persist_input_receipt(owned, event, submission_state)
         self.report['actions'].append({**intent, **event})
         self.report.pop('pending_input', None)
         self.expect_after(label)

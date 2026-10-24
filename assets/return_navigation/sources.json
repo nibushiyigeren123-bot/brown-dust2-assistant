@@ -188,5 +188,565 @@
       561
     ],
     "sha256": "3b4a6d3c0b7904695df3e06d919b31410e74243e63405d38dacbe36764544aae"
+  },
+  "mirror_auto_dialog_title": {
+    "file": "mirror_auto_dialog_title.png",
+    "box": [
+      595,
+      173,
+      685,
+      196
+    ],
+    "sha256": "395d7f71b2d0f695ac94ad82fc8403fa45a379921d556014ff348f5d63bd83c1",
+    "navigation_contract": {
+      "state": "mirror_auto_dialog",
+      "action": "cancel_panel",
+      "point": [
+        535,
+        541
+      ],
+      "keys": [
+        "mirror_auto_dialog_title",
+        "mirror_auto_dialog_identity",
+        "mirror_auto_dialog_cancel"
+      ]
+    }
+  },
+  "mirror_auto_dialog_identity": {
+    "file": "mirror_auto_dialog_identity.png",
+    "box": [
+      395,
+      207,
+      548,
+      227
+    ],
+    "sha256": "241676fb0ad7e26bf1f648f52e3265703cc524d7ff95b3e3c0e8f6ed6dc438b6"
+  },
+  "mirror_auto_dialog_cancel": {
+    "file": "mirror_auto_dialog_cancel.png",
+    "box": [
+      487,
+      527,
+      584,
+      556
+    ],
+    "sha256": "4d7ec69ed13eda5d594b4f626cfcf940307a4eb90bb0028727b1a4c44c681cfe"
+  },
+  "mirror_multiplier_dialog_title": {
+    "file": "mirror_multiplier_dialog_title.png",
+    "box": [
+      543,
+      211,
+      735,
+      235
+    ],
+    "sha256": "77a92ea8acca0e1ed1afaa30af7185dd4cb7f0395595e30620ef3a8a0dd9fa93",
+    "navigation_contract": {
+      "state": "mirror_multiplier_dialog",
+      "action": "cancel_panel",
+      "point": [
+        537,
+        504
+      ],
+      "keys": [
+        "mirror_multiplier_dialog_title",
+        "mirror_multiplier_dialog_cancel"
+      ]
+    }
+  },
+  "mirror_multiplier_dialog_cancel": {
+    "file": "mirror_multiplier_dialog_cancel.png",
+    "box": [
+      488,
+      490,
+      586,
+      518
+    ],
+    "sha256": "4c09430ea23757cdf5ac34fa2b60f1dae08e06fbb7d24519d8c6df4f8ddb6d84"
+  },
+  "mirror_result_title": {
+    "file": "mirror_result_title.png",
+    "box": [
+      576,
+      215,
+      703,
+      240
+    ],
+    "sha256": "fa2cc2b5678a5b86611c9262c0519831d66b33fc21add1ca7d22ec2e664a97a1",
+    "navigation_contract": {
+      "state": "mirror_result",
+      "action": "close_panel",
+      "point": [
+        793,
+        204
+      ],
+      "keys": [
+        "mirror_result_title",
+        "mirror_result_close"
+      ]
+    }
+  },
+  "mirror_result_close": {
+    "file": "mirror_result_close.png",
+    "box": [
+      783,
+      193,
+      804,
+      215
+    ],
+    "sha256": "9f780fc24bbc869e532d7217517ec154c117e57d68f45241223d9fbb96f15337"
+  },
+  "mirror_result_footer_title": {
+    "file": "mirror_result_footer_title.png",
+    "box": [
+      918,
+      22,
+      1042,
+      72
+    ],
+    "sha256": "ca1388b3cb169f8e86665a27349e34961133e48d134ac0e05cdaf600276995d7",
+    "navigation_contract": {
+      "state": "mirror_result_footer",
+      "action": "click_back",
+      "point": [
+        1140,
+        672
+      ],
+      "keys": [
+        "mirror_result_footer_title",
+        "mirror_result_footer_leave"
+      ]
+    }
+  },
+  "mirror_result_footer_leave": {
+    "file": "mirror_result_footer_leave.png",
+    "box": [
+      1074,
+      659,
+      1215,
+      689
+    ],
+    "sha256": "e32d0fab1cd1acb37aa846860bed721269b3450f187d908fa36c8c91c94f5264"
+  },
+  "event_defeat_title": {
+    "file": "event_defeat_title.png",
+    "box": [
+      581,
+      306,
+      701,
+      360
+    ],
+    "sha256": "68739a5eeeadc70418022e1592a7aa2f958bfb34d7804a5867806cc7f3001d0f",
+    "navigation_contract": {
+      "state": "event_defeat",
+      "action": "click_back",
+      "point": [
+        576,
+        663
+      ],
+      "keys": [
+        "event_defeat_title",
+        "event_defeat_back"
+      ]
+    }
+  },
+  "event_defeat_back": {
+    "file": "event_defeat_back.png",
+    "box": [
+      520,
+      649,
+      636,
+      679
+    ],
+    "sha256": "a02e259cd094d5deec32de7729ec32dbf7c4dd2a4ba8f03285661c9b991996c3"
+  },
+  "event_reward_title": {
+    "file": "event_reward_title.png",
+    "box": [
+      585,
+      208,
+      693,
+      239
+    ],
+    "sha256": "0ca4d9ee5fb1d37bf51bc3e93c887dea50b7cf433dbec916272272a0fd5215fa",
+    "navigation_contract": {
+      "state": "event_reward",
+      "action": "close_panel",
+      "point": [
+        50,
+        360
+      ],
+      "keys": [
+        "event_reward_title",
+        "event_reward_prompt",
+        "event_reward_ribbon"
+      ]
+    }
+  },
+  "event_reward_prompt": {
+    "file": "event_reward_prompt.png",
+    "box": [
+      557,
+      650,
+      696,
+      671
+    ],
+    "sha256": "fbb4c3f0bbbc73a4a44e96f95b33409468bb0473757c1ba265b31727901659e4"
+  },
+  "event_reward_ribbon": {
+    "file": "event_reward_ribbon.png",
+    "box": [
+      100,
+      300,
+      225,
+      416
+    ],
+    "sha256": "43cfa2f04a750c72f20f32e4bc02f2b7b807f72f0a7995fa79bd81715bdc1a48"
+  },
+  "pass_levels_special_identity": {
+    "file": "pass_levels_special_identity.png",
+    "box": [
+      212,
+      181,
+      352,
+      316
+    ],
+    "sha256": "1f3797d80600b0b8b01db918f9a73a5e540830f8ef5a28a6f313e4cf6e71b369",
+    "navigation_contract": {
+      "state": "pass_levels_special",
+      "action": "close_panel",
+      "point": [
+        50,
+        360
+      ],
+      "keys": [
+        "pass_levels_special_identity",
+        "pass_levels_special_tabs"
+      ],
+      "threshold": 0.96
+    }
+  },
+  "pass_levels_special_tabs": {
+    "file": "pass_levels_special_tabs.png",
+    "box": [
+      1037,
+      179,
+      1086,
+      539
+    ],
+    "sha256": "9dc417d9471f4d279913cf741bda1390a283c157c125d33d67bb7d4cbb01c918"
+  },
+  "pass_tasks_special_identity": {
+    "file": "pass_tasks_special_identity.png",
+    "box": [
+      212,
+      181,
+      352,
+      316
+    ],
+    "sha256": "8d281cc398b29d5cf6e4124de937b251c70ca5d1ebb557212c56109c55eede18",
+    "navigation_contract": {
+      "state": "pass_tasks_special",
+      "action": "close_panel",
+      "point": [
+        50,
+        360
+      ],
+      "keys": [
+        "pass_tasks_special_identity",
+        "pass_tasks_special_tabs"
+      ],
+      "threshold": 0.96
+    }
+  },
+  "pass_tasks_special_tabs": {
+    "file": "pass_tasks_special_tabs.png",
+    "box": [
+      1037,
+      179,
+      1086,
+      539
+    ],
+    "sha256": "6a1969d78469ad2e2dd22749e360a78793f2174e201a14978e8175649fde34bf"
+  },
+  "pass_levels_season_identity": {
+    "file": "pass_levels_season_identity.png",
+    "box": [
+      212,
+      181,
+      352,
+      316
+    ],
+    "sha256": "abf9a5440d49b5661e376098ff262dbdba8d479b5e960679e1add27222e7dad3",
+    "navigation_contract": {
+      "state": "pass_levels_season",
+      "action": "close_panel",
+      "point": [
+        50,
+        360
+      ],
+      "keys": [
+        "pass_levels_season_identity",
+        "pass_levels_season_tabs"
+      ],
+      "threshold": 0.96
+    }
+  },
+  "pass_levels_season_tabs": {
+    "file": "pass_levels_season_tabs.png",
+    "box": [
+      1037,
+      179,
+      1086,
+      539
+    ],
+    "sha256": "49f6a10bf5fcfdc017a5eb649dce812905bb8f948e33cc4764d6d767dee50202"
+  },
+  "pass_tasks_season_identity": {
+    "file": "pass_tasks_season_identity.png",
+    "box": [
+      212,
+      181,
+      352,
+      316
+    ],
+    "sha256": "f5bb6e34daa4c0fcf9f6c0c8fb6ea585eea79fe872be0a4f761d50e216668170",
+    "navigation_contract": {
+      "state": "pass_tasks_season",
+      "action": "close_panel",
+      "point": [
+        50,
+        360
+      ],
+      "keys": [
+        "pass_tasks_season_identity",
+        "pass_tasks_season_tabs"
+      ],
+      "threshold": 0.96
+    }
+  },
+  "pass_tasks_season_tabs": {
+    "file": "pass_tasks_season_tabs.png",
+    "box": [
+      1037,
+      179,
+      1086,
+      539
+    ],
+    "sha256": "ea1fa7804de1535e38816581c094d7779d8f8b589a4695d16f12a9d148f05aee"
+  },
+  "free_confirmation_title": {
+    "file": "free_confirmation_title.png",
+    "box": [
+      587,
+      282,
+      691,
+      306
+    ],
+    "sha256": "222b5fe387554ce43b819446252888119a1d32571793ee46d6e3a20e3223f891",
+    "navigation_contract": {
+      "state": "free_confirmation",
+      "action": "cancel_panel",
+      "point": [
+        583,
+        432
+      ],
+      "keys": [
+        "free_confirmation_title",
+        "free_confirmation_cancel"
+      ]
+    }
+  },
+  "free_confirmation_cancel": {
+    "file": "free_confirmation_cancel.png",
+    "box": [
+      530,
+      416,
+      636,
+      447
+    ],
+    "sha256": "1592722de946bcdcbf82bc329653d342b6822ea321ebdb126c0d283d1bbdd892"
+  },
+  "guild_check_in_receipt_success": {
+    "file": "guild_check_in_receipt_success.png",
+    "box": [
+      609,
+      276,
+      670,
+      295
+    ],
+    "sha256": "31e529f7b8b66361ca80a24adf188c1b84f7ca195e18e96fe181633878b22897",
+    "navigation_contract": {
+      "state": "guild_check_in_receipt",
+      "action": "close_panel",
+      "point": [
+        760,
+        498
+      ],
+      "keys": [
+        "guild_check_in_receipt_success",
+        "guild_check_in_receipt_destination",
+        "guild_check_in_receipt_identity"
+      ]
+    }
+  },
+  "guild_check_in_receipt_destination": {
+    "file": "guild_check_in_receipt_destination.png",
+    "box": [
+      573,
+      487,
+      705,
+      506
+    ],
+    "sha256": "1414f92376258cbb86d8de9af4e85eb760a4b5b4de9c9cc518c98df360467688"
+  },
+  "guild_check_in_receipt_identity": {
+    "file": "guild_check_in_receipt_identity.png",
+    "box": [
+      500,
+      82,
+      570,
+      105
+    ],
+    "sha256": "e2dbb7200917ffe6acea50856aa7f6b8d701a3811fe40ea363a84d7e7545ff79"
+  },
+  "rank_promotion_identity": {
+    "file": "rank_promotion_identity.png",
+    "box": [
+      605,
+      500,
+      668,
+      518
+    ],
+    "sha256": "20dd8cd5bc8dc631682288784734381a57e6f8d07d478573941d490142041ba8",
+    "navigation_contract": {
+      "state": "rank_promotion",
+      "action": "close_panel",
+      "point": [
+        640,
+        670
+      ],
+      "keys": [
+        "rank_promotion_identity",
+        "rank_promotion_confirm"
+      ]
+    }
+  },
+  "rank_promotion_confirm": {
+    "file": "rank_promotion_confirm.png",
+    "box": [
+      570,
+      653,
+      711,
+      689
+    ],
+    "sha256": "c4ad62764243d11d0cf2402eb8166a5b495e1688ad1a52aed896c534ea3afc56"
+  },
+  "battle_statistics_title": {
+    "file": "battle_statistics_title.png",
+    "box": [
+      335,
+      175,
+      409,
+      195
+    ],
+    "sha256": "1994fd068a1c8c9787d1353761c6d1fd14b1e5e422b1951883f3b601eabcd8c9",
+    "navigation_contract": {
+      "state": "battle_statistics",
+      "action": "close_panel",
+      "point": [
+        946,
+        163
+      ],
+      "keys": [
+        "battle_statistics_title",
+        "battle_statistics_close"
+      ]
+    }
+  },
+  "battle_statistics_close": {
+    "file": "battle_statistics_close.png",
+    "box": [
+      937,
+      154,
+      955,
+      173
+    ],
+    "sha256": "07aad69d54a49a3c637e942ebac32590a0f179fe90e6978336140603348110d8"
+  },
+  "event_victory_final_title": {
+    "file": "event_victory_final_title.png",
+    "box": [
+      913,
+      23,
+      1045,
+      71
+    ],
+    "sha256": "6a1f36b8733ae6f2f8cb8e446b795bf8057d3c9919218bda796e42563e2f20f1",
+    "navigation_contract": {
+      "state": "event_victory_final",
+      "action": "click_back",
+      "point": [
+        1040,
+        674
+      ],
+      "keys": [
+        "event_victory_final_title",
+        "event_victory_final_return"
+      ]
+    }
+  },
+  "event_victory_final_return": {
+    "file": "event_victory_final_return.png",
+    "box": [
+      985,
+      658,
+      1097,
+      689
+    ],
+    "sha256": "a14216c484356781ac9f35663c7c43853429863f058c76f303b060ac9293eb99"
+  },
+  "event_hub_normal_label": {
+    "file": "event_hub_normal_label.png",
+    "box": [
+      419,
+      629,
+      479,
+      646
+    ],
+    "sha256": "7ddb8b3fd5f72fb1673fa0d50ee593ef220c68f08a3d91814ef3b4fa033f85ab",
+    "navigation_contract": {
+      "state": "event_hub",
+      "action": "click_back",
+      "point": [
+        115,
+        33
+      ],
+      "keys": [
+        "event_hub_normal_label",
+        "event_hub_challenge_label",
+        "event_hub_visible_back"
+      ]
+    }
+  },
+  "event_hub_challenge_label": {
+    "file": "event_hub_challenge_label.png",
+    "box": [
+      544,
+      629,
+      607,
+      646
+    ],
+    "sha256": "fa52822ac1ad91aab30945d11aebf38cec06e8f61b714ce9fb55a644e997ecbc"
+  },
+  "event_hub_visible_back": {
+    "file": "event_hub_visible_back.png",
+    "box": [
+      94,
+      11,
+      136,
+      55
+    ],
+    "sha256": "9487148d742eab3f7fafe405e2e6404b4e0cb00db5767930e868de4ad2baae97"
   }
 }

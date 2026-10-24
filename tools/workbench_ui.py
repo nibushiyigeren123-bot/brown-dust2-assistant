@@ -15,7 +15,7 @@ from process_window import ProcessWindow
 from task_progress import ProgressReader, progress_text
 from cache_cleanup import automatic_cleanup_enabled, set_automatic_cleanup, clear_old_cache, cleanup_summary
 
-from module_catalog import MODULES, BY_ID, default_plan, validate_plan
+from module_catalog import MODULES, BY_ID, default_plan, normalize_plan, validate_plan
 from project_paths import ROOT
 from game_calendar import game_day
 from date_rollover import synchronize_date, require_current_cache
@@ -43,7 +43,7 @@ class WorkbenchApp:
         self.auto_cleanup = tk.BooleanVar(value=automatic_cleanup_enabled(ROOT))
         self.cleanup_day = None
         self.queue_summary = tk.StringVar()
-        root.title('棕色尘埃2辅助 · 日常作战台 0.2.15')
+        root.title('棕色尘埃2辅助 · 日常作战台 1.0.0')
         root.geometry('1360x900'); root.minsize(1150, 800); root.configure(bg=BG)
         style = ttk.Style(root); style.theme_use('clam')
         style.configure('.', font=('Microsoft YaHei UI', 10), background=BG, foreground=TEXT)
@@ -70,19 +70,21 @@ class WorkbenchApp:
         style.map('TCombobox', fieldbackground=[('readonly', '#303949'), ('disabled', '#252b35')], foreground=[('readonly', TEXT), ('disabled', MUTED)], selectbackground=[('readonly', '#303949')], selectforeground=[('readonly', TEXT)])
         root.option_add('*TCombobox*Listbox.background', PANEL)
         root.option_add('*TCombobox*Listbox.foreground', TEXT)
-        self.execute = tk.BooleanVar(value=False)
+        # [功能] 作战台仅提供执行入口；离线截图诊断保留在命令行。
+        self.execute = tk.BooleanVar(value=True)
         from runtime_policy import network_wait_seconds
         self.wait_choices = {'标准 · 60秒': 60, '耐心 · 120秒': 120, '慢速 · 300秒': 300}
         current_wait = network_wait_seconds()
         self.network_wait = tk.StringVar(value=next((name for name, seconds in self.wait_choices.items() if seconds == current_wait), f'自定义 · {current_wait:g}秒'))
-        self.status = tk.StringVar(value='就绪 · 先核对配置，再选择识别或执行')
+        self.status = tk.StringVar(value='就绪 · 先核对配置，再执行勾选项目')
         self.context = tk.StringVar()
         self.title = tk.StringVar(value='02  当前步骤')
         self.description = tk.StringVar()
         self.scope = tk.StringVar()
-        self.mode_label = tk.StringVar(value='只读模式 · 不发送游戏输入')
+        self.mode_label = tk.StringVar(value='实机操作 · 按配置和账本逐段核对')
         self.plan_path = ROOT / 'config/workflow_plan.json'
-        self.plan = json.loads(self.plan_path.read_text(encoding='utf-8')) if self.plan_path.exists() else default_plan()
+        # [兼容] 旧保存计划只在本次视图中合并，不修改旧运行证据。
+        self.plan = normalize_plan(json.loads(self.plan_path.read_text(encoding='utf-8')) if self.plan_path.exists() else default_plan())
         self.order = self.plan.get('tasks', default_plan()['tasks'])[:]
         self.selected = set(self.plan.get('selected', self.order))
         self.make_header()
@@ -107,10 +109,7 @@ class WorkbenchApp:
         self.banner = BrandBanner(self.root, self.context, self.settings)
         self.banner.pack(fill='x', padx=20, pady=(12, 8))
         mode = ttk.Frame(self.root, padding=(28, 0, 28, 12)); mode.pack(fill='x')
-        self.read_radio = ttk.Radiobutton(mode, text='只读检查', variable=self.execute, value=False, command=self.update_selection)
-        self.read_radio.pack(side='left')
-        self.execute_radio = ttk.Radiobutton(mode, text='实机执行', variable=self.execute, value=True, command=self.update_selection)
-        self.execute_radio.pack(side='left', padx=(18, 0))
+        # [界面] 单一执行入口，网络等待仍由用户选择。
         ttk.Label(mode, text='网络等待', style='Muted.TLabel').pack(side='left', padx=(28, 8))
         self.network_combo = ttk.Combobox(mode, textvariable=self.network_wait, values=list(self.wait_choices), width=16, state='readonly')
         self.network_combo.pack(side='left')
@@ -310,7 +309,7 @@ class WorkbenchApp:
             if not module.worker:
                 self.scope.set('停用入口 · 按后续样本扩展')
             elif module.id == 'navigation':
-                self.scope.set('只读：仅识别当前画面，不会关闭弹窗。\n实机：连续确认主页后即完成导航；领奖与任务核对由所选模块负责。')
+                self.scope.set('连续确认主页后即完成导航；领奖与任务核对由所选模块负责。')
             elif module.id == 'guild':
                 enabled = self.event.get('guild', {}).get('enabled', False)
                 self.scope.set(('配置已启用' if enabled else '配置未启用 · 日常设置 → 公会签到') + '\n加入队列与启用分别设置；本游戏日只进入一次，邮箱手动。')
@@ -328,7 +327,7 @@ class WorkbenchApp:
             elif module.id == 'task_rewards':
                 self.scope.set('每次检查每日 + 每周\n只领取已完成项目和当前已达标区间奖励。')
             elif module.id == 'equipment':
-                self.scope.set('按游戏日核对精炼、分解与初始化；已完成不重做。\n核对UR20分候选、R单选、未锁未穿戴及恰好1件；未读清即停步。')
+                self.scope.set('按游戏日核对精炼、分解与初始化；已完成不重做。\n精炼：UR完整纯数字1至23分。\n分解：R优先/N后备、未锁未穿戴且恰好1件。')
             elif module.id == 'rewards':
                 self.scope.set('本期两本通行证 · 任务后复查等级\n两本任务与等级奖励分别复查；领取后核对回执。')
             else:
@@ -339,7 +338,6 @@ class WorkbenchApp:
         self.mode_label.set('实机操作 · 按配置和账本逐段核对' if self.execute.get() else '只读模式 · 不发送游戏输入')
         self.queue_button.configure(text='连续执行勾选队列' if self.execute.get() else '只读检查勾选队列', state='disabled' if running else 'normal')
         self.single_button.configure(text='执行选中单段' if self.execute.get() else '只识别选中项', state='normal' if module and module.worker and not running else 'disabled')
-        self.read_radio.configure(state='disabled' if running else 'normal'); self.execute_radio.configure(state='disabled' if running else 'normal')
         self.network_combo.configure(state='disabled' if running else 'readonly')
         self.cleanup_button.configure(state='disabled' if running else 'normal')
         self.cleanup_toggle.configure(state='disabled' if running else 'normal')

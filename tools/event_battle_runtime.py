@@ -1,6 +1,7 @@
 """Own event input, double-frame submit checks and the shared AP journal."""
 from frame_store import next_path, report_write, persist_references
 import copy
+import hashlib
 import json
 import time
 import uuid
@@ -21,12 +22,70 @@ from task_rewards import save
 
 
 OBSERVATION_KEYS = ('state', 'event_id', 'mode', 'stage', 'unit_cost', 'quantity',
-                    'total_cost', 'free_only', 'free_ap', 'owned_extra_ap')
+                    'total_cost', 'free_only', 'free_ap', 'free_ap_capacity', 'owned_extra_ap',
+                    'cleared_stage_evidence')
 
 
 def stable_observation(first, second):
-    return all(first.get(key) == second.get(key) for key in OBSERVATION_KEYS)
+    """[双帧] 核对身份与通关语义，排除匹配浮点分数，避免画面微动阻断稳定确认。"""
+    def value(observation,key):
+        value=observation.get(key)
+        if key=='cleared_stage_evidence' and isinstance(value,dict):
+            return {k:value.get(k) for k in ('kind','event_id','mode','stage')}
+        return value
+    return all(value(first,key) == value(second,key) for key in OBSERVATION_KEYS)
 
+
+
+def checkpoint_frame(path, observation):
+    """[证据] 先将关键原帧从内存封存，再记录磁盘实际字节哈希与观察，避免恢复时原图已经释放。"""
+    persist_references(str(path))
+    return {'image': str(path), 'sha256': hashlib.sha256(Path(path).read_bytes()).hexdigest(),
+            'observation': copy.deepcopy(observation)}
+
+
+def verify_result_checkpoint(pending, vision, output):
+    """[恢复核对] 不扫描历史；逐张核对本pending引用原图、原输入、最终胜利和返回回执。"""
+    checkpoint = pending.get('result_checkpoint') if isinstance(pending, dict) else None
+    if not checkpoint:
+        return None
+    keys = ('event_id', 'mode', 'method', 'start_stage', 'quantity', 'cost', 'unit_cost',
+            'free_ap', 'free_only', 'cache_date', 'op_id', 'input_receipt')
+    receipt = checkpoint.get('return_receipt') or {}
+    if (checkpoint.get('schema_version') != 1 or receipt.get('input_kind') != 'left_click'
+            or not receipt.get('client_point') or not receipt.get('screen_point')
+            or type(receipt.get('press_ms')) is not int or receipt['press_ms'] <= 0):
+        raise RuntimeError('活动检查点版本或原返回输入回执不完整。')
+    if (any(checkpoint.get(key) != pending.get(key) for key in keys)
+            or pending.get('method') != 'continuous' or not checkpoint.get('return_receipt')):
+        raise RuntimeError('活动检查点身份或原回执不符，保留pending。')
+    frames = checkpoint.get('victory_frames')
+    if not isinstance(frames, list) or len(frames) != 2 or frames[0]['image'] == frames[1]['image']:
+        raise RuntimeError('活动最终胜利检查点缺少两张独立原帧。')
+    # [实图] 提交原图确认活动和费用；胜利原图重新识别末关，两张一致才恢复只收尾权限。
+    observed = []
+    for index, frame in enumerate([checkpoint.get('submit_frame', {}), *frames]):
+        path = Path(frame.get('image', ''))
+        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != frame.get('sha256'):
+            raise RuntimeError('活动检查点原图不存在或哈希不符。')
+        current = vision.inspect_file(path, Path(output) / f'checkpoint_{index}')
+        if not stable_observation(frame.get('observation', {}), current):
+            raise RuntimeError('活动检查点原图重识别与原观察不符。')
+        observed.append(current)
+    submit = observed[0]
+    if (submit.get('state') != 'event_auto_dialog' or submit.get('event_id') != pending['event_id']
+            or submit.get('mode') != pending['mode'] or submit.get('stage') != pending['start_stage']
+            or submit.get('total_cost') != pending['cost'] or submit.get('free_only') != pending['free_only']
+            or submit.get('free_ap') != pending['free_ap'] or submit.get('free_ap_capacity') != 5):
+        raise RuntimeError('活动检查点提交原图与原批次不符。')
+    if not stable_observation(observed[1], observed[2]):
+        raise RuntimeError('活动检查点最终胜利双帧不稳定。')
+    for victory in observed[1:]:
+        if (victory.get('state') != 'event_victory' or victory.get('mode') != pending['mode']
+                or victory.get('event_id') not in (None, pending['event_id'])
+                or victory.get('stage') != pending['start_stage'] + pending['quantity'] - 1):
+            raise RuntimeError('活动检查点不是原批次最终胜利。')
+    return checkpoint
 
 def wait_home_event(window, vision, root, output, report, expected_day):
     """Observe the automatic carousel; never click an unidentified card."""
@@ -44,8 +103,9 @@ def wait_home_event(window, vision, root, output, report, expected_day):
         observation = vision.inspect_file(entry, output / 'recognition')
         report['observations'].append({'image': str(entry), 'geometry': geometry, 'observation': observation})
         point = observation.get('points', {}).get('enter_event')
-        identity = observation.get('event_id')
-        signature = (identity, point, geometry) if observation.get('state') == 'main_menu' and identity and point else None
+        evidence=observation.get('event_entry_evidence',{})
+        signature = ('解锁',point,geometry) if (observation.get('state')=='main_menu' and point
+            and evidence.get('recognition')=='fixed_carousel_unlock_keyword' and evidence.get('keyword')=='解锁') else None
         if signature is not None and signature == previous:
             report.pop('waiting', None)
             report['event_entry_images'] = [r['image'] for r in report['observations'][-2:]]
@@ -53,11 +113,53 @@ def wait_home_event(window, vision, root, output, report, expected_day):
             save(output / 'run.json', report)
             return observation
         previous = copy.deepcopy(signature)
-        report['waiting'] = {'message': '等待主页轮播显示已识别的活动标题',
+        report['waiting'] = {'message': '等待主页右下活动卡字幕出现解锁',
                              'timeout_seconds': network_wait_seconds(root), 'frames': index}
         save(output / 'run.json', report)
         time.sleep(.5)
-    raise RuntimeError('等待主页活动轮播超时，未稳定识别当期活动标题，未进入活动。')
+    raise RuntimeError('等待主页活动轮播超时，固定字幕区域未稳定读到解锁，未进入活动。')
+
+
+def enter_and_verify_event_hub(window,vision,root,output,report,expected_day,expected_id):
+    """[两阶段导航] 主页解锁双帧只准许进入；中心标题与控件双帧独立建立事件身份。"""
+    observation=wait_home_event(window,vision,root,output,report,expected_day)
+    original=report['observations'][-1];geometry=original['geometry']
+    window.focus_client(geometry);check_requested_stop()
+    if game_day().isoformat()!=expected_day:raise RuntimeError('进入活动前已换日。')
+    image,fresh_geometry=window.capture();path=next_path(output/'event_entry_preclick.png');image.save(path)
+    fresh=vision.inspect_file(path,output/'recognition')
+    evidence=fresh.get('event_entry_evidence',{})
+    if (fresh_geometry!=geometry or fresh.get('state')!='main_menu'
+            or fresh.get('points',{}).get('enter_event')!=observation['points']['enter_event']
+            or evidence.get('keyword')!='解锁' or evidence.get('recognition')!='fixed_carousel_unlock_keyword'):
+        raise RuntimeError('活动入口在按下前改变，未执行点击。')
+    report['event_entry_preclick']=checkpoint_frame(path,fresh);save(output/'run.json',report)
+    point=fresh['points']['enter_event'];check_requested_stop()
+    receipt=window.click_client([point[0]*geometry['width']/1280,point[1]*geometry['height']/720],geometry,press_ms=250)
+    report['event_entry_receipt']=receipt
+    report['returned_to_main_menu']=False
+    report['actions'].append({'type':'enter_event','scope':'nonconsuming_entry_only','evidence':str(path),**receipt})
+    save(output/'run.json',report)
+    deadline=time.monotonic()+network_wait_seconds(root);previous=None;previous_frame=None;index=0
+    while time.monotonic()<deadline:
+        check_requested_stop()
+        if game_day().isoformat()!=expected_day:raise RuntimeError('核实活动中心时已换日。')
+        image,current_geometry=window.capture();path=next_path(output/f'event_hub_{index:03}.png');image.save(path);index+=1
+        current=vision.inspect_file(path,output/'recognition')
+        report['observations'].append({'image':str(path),'geometry':current_geometry,'observation':current})
+        valid=(current.get('state')=='event_hub' and current.get('title_verified') is True
+            and bool(current.get('event_id')) and all(current.get('points',{}).get(mode) for mode in ('normal','challenge')))
+        signature=(current.get('event_id'),current_geometry) if valid else None
+        if signature is not None and signature==previous:
+            if expected_id not in ('auto_current','configure_current_event',current['event_id']):
+                raise RuntimeError('活动中心实际身份与显式配置不符，未绑定账本。')
+            verified={'observation':current,'entry_receipt':receipt,
+                'hub_frames':[previous_frame,checkpoint_frame(path,current)]}
+            report['verified_event_hub']=verified;save(output/'run.json',report)
+            return verified
+        previous=signature;previous_frame=checkpoint_frame(path,current) if valid else None
+        save(output/'run.json',report);time.sleep(.25)
+    raise RuntimeError('进入后未双帧核实活动中心身份，未绑定账本或提交战斗。')
 
 
 class EventBattleRun:
@@ -67,10 +169,14 @@ class EventBattleRun:
         self.ledger, self.path, self.window, self.report = ledger, ledger_path, window, report
         event = copy.deepcopy(config['event'])
         event.setdefault('battle_method', 'quick' if event.get('quick_battle', {}).get('enabled') else 'continuous')
-        self.controller = (EventBattleController.resume_pending(event, ledger)
-                           if getattr(args, 'reconcile_pending', False)
-                           else EventBattleController(event, ledger))
+        # [恢复] 新检查点必须先由宿主核原图；旧pending不伪造胜利，不获得准备页收尾权限。
         self.vision, self.sequence = EventBattleVision(), 0
+        verified = (verify_result_checkpoint(ledger.get('pending'), self.vision, args.output)
+                    if getattr(args, 'reconcile_pending', False) else None)
+        self.controller = (EventBattleController.resume_pending(event, ledger, verified)
+                           if getattr(args, 'reconcile_pending', False)
+                           else EventBattleController.from_verified_hub(event,ledger,report['verified_event_hub'])
+                           if report.get('verified_event_hub') else EventBattleController(event, ledger))
         self.last_change = time.monotonic()
         self.started = self.last_change
         self.signature = None
@@ -180,11 +286,23 @@ class EventBattleRun:
                 if self.args.prepare_only and decision['action'] == 'submit_event_batch':
                     self.preview_return(fresh, fresh_geometry, fresh_path)
                     break
+                # [持久化] 最终胜利在返回输入前封存双帧；崩溃后只允许核对此操作，不生成新submit。
+                if decision['action'] == 'return_final':
+                    pending = self.ledger['pending']
+                    if not pending.get('input_receipt') or not pending.get('submit_frame'):
+                        raise RuntimeError('原提交实图或输入回执不完整，保留最终胜利现场。')
+                    keys = ('event_id', 'mode', 'method', 'start_stage', 'quantity', 'cost', 'unit_cost',
+                            'free_ap', 'free_only', 'cache_date', 'op_id', 'input_receipt')
+                    pending['result_checkpoint'] = {key: copy.deepcopy(pending[key]) for key in keys}
+                    pending['result_checkpoint'].update(schema_version=1,
+                        submit_frame=copy.deepcopy(pending['submit_frame']),
+                        victory_frames=[checkpoint_frame(path, observation), checkpoint_frame(fresh_path, fresh)])
                 self.controller.commit(decision)
                 if decision['action'] == 'submit_event_batch':
                     pending = self.ledger['pending']
                     pending.update(evidence=str(fresh_path), op_id=uuid.uuid4().hex,
-                                   cache_date=self.config['cache_date'])
+                                   cache_date=self.config['cache_date'],
+                                   submit_frame=checkpoint_frame(fresh_path, fresh))
                 # Every consuming intent and settlement is durable before any next action.
                 self.persist()
                 if decision['action'] == 'settle_event_batch':
@@ -211,6 +329,9 @@ class EventBattleRun:
                     if decision['action'] in safe_entries else None)
                 if decision['action'] == 'submit_event_batch':
                     self.ledger['pending']['input_receipt'] = receipt
+                # [回执] 只有宿主实际返回输入成功后才记录；没有回执的检查点不能从准备页恢复。
+                if decision['action'] == 'return_final':
+                    self.ledger['pending']['result_checkpoint']['return_receipt'] = copy.deepcopy(receipt)
                 self.last_change = time.monotonic()
                 self.persist()
                 time.sleep(.6)
@@ -253,7 +374,11 @@ def reconcile_visible_pending(root, output):
         image, _ = GameWindow.find().capture()
         probe = output / 'existing_result.png'; probe=next_path(probe);image.save(probe)
         observation = EventBattleVision().inspect_file(probe, output / 'probe_ocr')
-    if observation['state'] not in ('event_reward', 'event_victory', 'event_auto_running', 'event_defeat'):
+    # [恢复入口] 已有持久化检查点的准备页交给run逐图核验；没有检查点仍保留旧pending。
+    selected = json.loads(found[0].read_text(encoding='utf-8'))
+    has_checkpoint = bool((selected.get('pending') or {}).get('result_checkpoint'))
+    if observation['state'] not in ('event_reward', 'event_victory', 'event_auto_running', 'event_defeat') and not (
+            observation['state'] in ('event_preparation','event_hub') and has_checkpoint):
         return None
     return run(Namespace(data_root=root, output=output, prepare_only=False, reconcile_pending=True))
 
@@ -299,16 +424,18 @@ def run(args):
             config = load_config(root / 'config/event_and_rewards.json')
             if config['cache_date'] != game_day().isoformat():
                 raise RuntimeError('已回到主菜单；活动缓存不是当前游戏日。')
-            if not config['event']['enabled']:
+            if not config['event']['enabled'] and not getattr(args,'entry_only',False):
                 report.update(completed=True, skipped=True, skip_reason='活动在设置中停用，已跳过。')
                 return report
             vision = EventBattleVision()
             effective = copy.deepcopy(config)
-            event_id = effective['event']['event_id']
-            if event_id in ('auto_current', 'configure_current_event'):
-                observation = wait_home_event(window, vision, root, output, report, config['cache_date'])
-                event_id = observation['event_id']
-                effective['event']['event_id'] = event_id
+            verified=enter_and_verify_event_hub(window,vision,root,output,report,config['cache_date'],effective['event']['event_id'])
+            event_id=verified['observation']['event_id'];effective['event']['event_id']=event_id
+            if getattr(args,'entry_only',False):
+                home=ensure_main_menu(window,output/'entry_only_return',execute=True,timeout=network_wait_seconds(root))
+                report.update(completed=bool(home['completed']),returned_to_main_menu=bool(home['completed']),
+                    entry_verified=True,scope='event_entry_hub_identity_and_return_no_battle_no_ledger',return_navigation=home)
+                return report
             path = event_ledger_path(root, effective)
             if not args.prepare_only:
                 guard_foreign_pending(root / 'runtime', path, module='event')
@@ -329,6 +456,14 @@ def run(args):
         report['completed'] = False
         if runner:
             runner.persist()
+        elif report.get('event_entry_receipt'):
+            # [未绑定身份] 非停止故障才尝试安全返回；真实用户停止不能继续发导航输入。
+            from execution_control import ExecutionControlError
+            if not isinstance(error,ExecutionControlError):
+                try:
+                    returned=ensure_main_menu(window,output/'unbound_identity_return',execute=True,timeout=network_wait_seconds(root))
+                    report['returned_to_main_menu']=bool(returned['completed']);report['return_navigation']=returned
+                except Exception as return_error:report['return_error']=str(return_error)
         return report
     finally:
         save(output / 'run.json', report)

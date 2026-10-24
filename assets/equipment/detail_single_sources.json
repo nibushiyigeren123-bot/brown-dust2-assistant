@@ -1,0 +1,26 @@
+{
+  "detail_single_scissors": {
+    "file": "detail_single_scissors.png",
+    "box": [
+      333,
+      476,
+      365,
+      504
+    ],
+    "sha256": "c64f59514769dddefc16891074ea988dede1109b7794773e5dc5c6d48a5b4d79",
+    "source_kind": "PrintWindow",
+    "kind": "detail_local_control"
+  },
+  "detail_single_close": {
+    "file": "detail_single_close.png",
+    "box": [
+      936,
+      205,
+      959,
+      230
+    ],
+    "sha256": "7ca196a9003a82527966bef25f3d1ed83bf4d3178ac734e0a29ba89c6be68ca8",
+    "source_kind": "PrintWindow",
+    "kind": "detail_local_control"
+  }
+}

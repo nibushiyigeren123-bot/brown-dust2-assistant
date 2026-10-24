@@ -21,6 +21,14 @@ def main(target=None):
     deps = BUILD_ROOT / 'deps'
     if deps.is_dir():
         sys.path.insert(0, str(deps))
+    # PyInstaller may report success while omitting unavailable Win32 modules.
+    # Reject that build environment before creating a broken application.
+    import importlib
+    for dependency in ('win32api', 'win32gui', 'win32process', 'win32security', 'win32ui', 'cv2', 'PIL.Image', 'tkinter'):
+        try:
+            importlib.import_module(dependency)
+        except ImportError as error:
+            raise RuntimeError(f'构建环境缺少 {dependency}；请使用已安装运行依赖的 Python 环境。') from error
     import PyInstaller.__main__
     target = Path(target).resolve() if target is not None else PROJECT / '发布/BD2Assistant'
     if target.exists():
@@ -66,9 +74,10 @@ def main(target=None):
     if (PROJECT / 'NOTICE.md').is_file():
         shutil.copy2(PROJECT / 'NOTICE.md', target / 'NOTICE.md')
     (target / 'build_info.json').write_text(json.dumps({
-        'application_version':'0.2.15', 'python':sys.version,
+        'application_version':'1.0.0', 'python':sys.version,
         'pyinstaller':importlib.metadata.version('pyinstaller'), 'kind':'portable_onedir',
-        'entry':'BD2Assistant.exe', 'data_root':'beside_executable', 'default_mode':'read_only',
+        # [元数据] GUI仅显示执行入口；启动界面不自动运行，用户点击后才启动worker。
+        'entry':'BD2Assistant.exe', 'data_root':'beside_executable', 'default_mode':'execute_after_user_click',
         'config_source':'generic_templates', 'personal_fixtures_shipped':False,
     }, ensure_ascii=False, indent=2), encoding='utf-8')
     print(json.dumps({'executable':str(target / 'BD2Assistant.exe')}, ensure_ascii=False))

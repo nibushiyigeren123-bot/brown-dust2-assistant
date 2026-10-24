@@ -44,7 +44,7 @@ def validate_config(config):
     date.fromisoformat(config['cache_date'])
     hunt, goddess, mirror = (config[k] for k in ('hunting', 'goddess', 'mirror'))
     date.fromisoformat(config['execute_not_before'])
-    for settings, fields in ((hunt, ('enabled','free_only')), (goddess, ('enabled','user_positioned_near_statue')),
+    for settings, fields in ((hunt, ('enabled','free_only')), (goddess, ('enabled',)),
                              (mirror, ('enabled','free_only','auto_skip','keep_existing_team'))):
         if any(type(settings[field]) is not bool for field in fields):
             raise ValueError('Switch values must be true or false')
@@ -115,13 +115,103 @@ TASK_CLAIM_INDEPENDENT = frozenset(('navigation', 'management', 'free_draw',
     'guild', 'hunting', 'goddess', 'mirror', 'equipment', 'event', 'rewards'))
 
 
+GUILD_INDEPENDENT = frozenset(('navigation', 'management', 'free_draw',
+    'hunting', 'goddess', 'mirror', 'equipment', 'event', 'rewards', 'task_rewards'))
+
+
+def guild_pending_phase(data, current_day, *, path, directory):
+    """[功能] 只读分类当日公会未决协议，返回合法phase或None。
+
+    [输入] 必须是原协议的五字段账本、精确布尔值和唯一规范路径。
+    [状态] 识别不等于结算；独立任务只能保留非消费pending，不能清账。
+    """
+    # [校验] 拒绝多余字段、旧日期及整数冒充布尔值，避免扩展协议被误认成免费入场。
+    if (not isinstance(data, dict)
+            or set(data) != {'schema_version', 'cache_date', 'pending', 'issued', 'completed'}
+            or type(data.get('schema_version')) is not int or data['schema_version'] != 1
+            or data.get('cache_date') != current_day
+            or type(data.get('issued')) is not bool
+            or data.get('completed') is not False):
+        return None
+    pending = data.get('pending')
+    if (not isinstance(pending, dict) or set(pending) != {'module', 'phase'}
+            or pending['module'] != 'guild'):
+        return None
+    phase = pending['phase']
+    # [输出] 前两种阶段未见收据；已见收据必须issued=True，只能由公会本人续接。
+    if (not isinstance(phase, str) or phase not in (
+            'entry_attempted', 'no_receipt_return_pending', 'receipt_seen_return_pending')
+            or data['issued'] is not (phase == 'receipt_seen_return_pending')):
+        return None
+    try:
+        # [校验] 由cache_path选择平铺/按日账本；两份并存会抛错，不能任挑一份恢复。
+        date.fromisoformat(current_day)
+        canonical = cache_path(Path(directory).resolve().parent,
+                               {'cache_date': current_day}, 'guild')
+        if Path(path).resolve() != canonical.resolve():
+            return None
+    except (OSError, RuntimeError, TypeError, ValueError):
+        return None
+    return phase
+
+
+# [隔离白名单] 这两类领奖只能影响自身；rewards与旧character_pass入口属于同一所有者。
+PASS_CLAIM_INDEPENDENT = frozenset(('navigation', 'management', 'free_draw',
+    'guild', 'hunting', 'goddess', 'mirror', 'equipment', 'event', 'task_rewards'))
+
+
+def valid_claim_input_metadata(pending):
+    """[校验] 兼容旧意图；新输入回执必须成对完整，未知扩展不能放宽未决门禁。"""
+    if 'input_receipt' not in pending and 'submission_state' not in pending:
+        return True
+    receipt, state = pending.get('input_receipt'), pending.get('submission_state')
+    return (isinstance(receipt, dict) and bool(receipt)
+            and isinstance(state, dict)
+            and set(state) == {'protocol', 'phase', 'backend'}
+            and state['protocol'] == 'game_window_click_v1'
+            and state['phase'] == 'submitted'
+            and state['backend'] in ('mouse_event', 'SendInput'))
+
+
+def isolated_pass_claim(data, pending, current_day, *, path, directory):
+    """[功能] 只读验证固定全部获得按钮的非消费意图；保留原账本，不重放也不结算。"""
+    owner = pending.get('module')
+    if (owner not in ('pass_rewards', 'character_pass')
+            or data.get('cache_date') != current_day
+            or ('schema_version' in data and (type(data['schema_version']) is not int
+                                             or data['schema_version'] != 1))
+            or pending.get('cache_date', current_day) != current_day
+            or set(pending) - {'module', 'type', 'point', 'state', 'evidence', 'cache_date',
+                               'input_receipt', 'submission_state'}
+            or not valid_claim_input_metadata(pending)):
+        return False
+    try:
+        canonical = cache_path(Path(directory).resolve().parent, {'cache_date': current_day}, owner)
+    except (OSError, RuntimeError):
+        return False
+    if Path(path).resolve() != canonical.resolve():
+        return False
+    identities = ('character',) if owner == 'character_pass' else ('special', 'season')
+    claims = {'claim_pass_' + identity + '_' + tab: 'pass_' + tab
+              for identity in identities for tab in ('tasks', 'levels')}
+    point, evidence = pending.get('point'), pending.get('evidence')
+    return (isinstance(pending.get('type'), str)
+            and claims.get(pending.get('type')) is not None
+            and pending.get('state') == claims[pending['type']]
+            and isinstance(point, list) and point == [966, 511]
+            and all(type(value) is int for value in point)
+            and isinstance(evidence, str) and bool(evidence.strip()) and Path(evidence).is_file())
+
+
 def isolated_task_claim(data, pending, current_day, *, path, directory):
     """Recognize only the existing non-consuming daily/weekly claim protocol."""
     if (type(data.get('schema_version')) is not int or data['schema_version'] != 1
             or data.get('cache_date') != current_day
             or pending.get('module') != 'task_rewards'
             or pending.get('cache_date', current_day) != current_day
-            or set(pending) - {'module', 'type', 'point', 'state', 'evidence', 'cache_date'}):
+            or set(pending) - {'module', 'type', 'point', 'state', 'evidence', 'cache_date',
+                               'input_receipt', 'submission_state'}
+            or not valid_claim_input_metadata(pending)):
         return False
     from local_cache import cache_path
     try:
@@ -159,7 +249,7 @@ def guard_foreign_pending(directory, selected_path, *, module=None):
         except (OSError, ValueError) as error:
             stop_execution(f'本地记录无法核对，保留现场：{path}；{error}', 'ledger_invalid')
         pending = data.get('pending')
-        if not pending:
+        if pending is None:
             continue
         if not isinstance(pending, dict) or not pending.get('module'):
             stop_execution(f'未决身份不完整，保留原记录：{path}', 'ledger_invalid')
@@ -175,11 +265,23 @@ def guard_foreign_pending(directory, selected_path, *, module=None):
             retained.append({'module': owner, 'ledger': str(path), 'op_id': pending.get('op_id'),
                              'cache_date': record_day, 'historical': True})
             continue
+        phase = guild_pending_phase(data, game_day().isoformat(), path=path, directory=directory)
+        if module in GUILD_INDEPENDENT and phase in ('entry_attempted', 'no_receipt_return_pending'):
+            # [分支] 只解除白名单独立任务的阻断；原pending与账本字节完全保留。
+            retained.append({'module': owner, 'ledger': str(path),
+                             'cache_date': record_day, 'independent': True,
+                             'reason': 'non_consuming_guild_pending_retained'})
+            continue
         if module in TASK_CLAIM_INDEPENDENT and isolated_task_claim(
                 data, pending, game_day().isoformat(), path=path, directory=directory):
             retained.append({'module': owner, 'ledger': str(path), 'op_id': pending.get('op_id'),
                              'cache_date': record_day, 'independent': True,
                              'reason': 'non_consuming_daily_weekly_claim_retained'})
+            continue
+        if module in PASS_CLAIM_INDEPENDENT and isolated_pass_claim(
+                data, pending, game_day().isoformat(), path=path, directory=directory):
+            retained.append({'module': owner, 'ledger': str(path), 'cache_date': record_day,
+                             'independent': True, 'reason': 'non_consuming_pass_claim_retained'})
             continue
         independent = (owner == 'event' and module in EVENT_INDEPENDENT
             and data.get('schema_version') == 1
@@ -195,7 +297,7 @@ def guard_foreign_pending(directory, selected_path, *, module=None):
         if independent:
             retained.append({'module': owner, 'ledger': str(path), 'op_id': pending['op_id']})
             continue
-        label = {'task_rewards':'每日／每周领奖', 'pass_rewards':'通行证领奖',
+        label = {'task_rewards':'每日／每周领奖', 'pass_rewards':'通行证领奖', 'character_pass':'角色通行证领奖',
                  'guild':'公会签到', 'event':'活动战斗', 'equipment':'装备',
                  'hunting':'狩猎', 'goddess':'女神像', 'mirror':'镜中之战'}.get(owner, owner)
         reason = f'{label}存在待核实操作，本项受阻；保留原回执，不重发；缓存：{path}'
@@ -297,10 +399,22 @@ class DailyController:
         self.difficulty_changes = 0
         self.active_hunt_plan = None
         self.checked_free_sweeps = set()
+        # 本次双帧总览和耗尽跳过仅驻留本次控制器，不写入战斗完成账本。
+        self.resource_survey = {}
+        self.exhausted_hunt_plans = set()
+        self.exhausted_free_plans = {}
+        self.goddess_check_in_sent = False
+        self.goddess_pending_absent_since = None
+        self.goddess_absent_count = 0
+        self.goddess_absent_first = None
         self.resolved_this_run = set()
         self.goddess_scene_attempts = 0
         self.goddess_no_available_since = None
+        self.goddess_no_available_count = 0
+        self.goddess_no_available_first = None
         self.goddess_scene_transition_since = None
+        # [绝对期限] 从进入广场的真实回执起算，未知/遮挡不重置；恢复未决另从首帧起算。
+        self.goddess_button_deadline = None
         self.goddess_collection_attempts = 0
         self.goddess_collection_transition_since = None
         self.mirror_collection_attempts = 0
@@ -311,6 +425,8 @@ class DailyController:
         self.mirror_multiplier_changes = 0
         self.mirror_multiplier_opens = 0
         self.mirror_multiplier_confirms = 0
+        # [证据] 资源结束只保留本轮首帧，不向战斗账本补写完成或消费。
+        self.mirror_resource_first = None
 
     @staticmethod
     def stop(reason, status='needs_configuration'):
@@ -338,6 +454,9 @@ class DailyController:
         return self.click(kind, point, cleanup=True)
 
     def after_action(self, action):
+        # 只有本次实际点击后的回调标记可启用无拍手的观察等待；重启旧pending不继承。
+        if action['type']=='interact_statue' and action.get('task')=='check_in':
+            self.goddess_check_in_sent = True
         if action.get('cleanup'):
             self.cleanup_clicks += 1
         if action.get('adjustment'):
@@ -355,6 +474,10 @@ class DailyController:
         if action['type'] == 'enter_goddess_square':
             self.goddess_scene_attempts += 1
             self.goddess_scene_transition_since = time.monotonic()
+            if action.get('input_receipt'):
+                self.goddess_button_deadline = time.monotonic()+5
+        if action['type']=='interact_statue' and action.get('input_receipt'):
+            self.goddess_button_deadline = time.monotonic()+5
         mirror_navigation={'open_mirror_collection':'mirror_collection_attempts',
                            'enter_mirror_card':'mirror_card_attempts',
                            'enter_mirror_arena':'mirror_portal_attempts',
@@ -368,11 +491,27 @@ class DailyController:
         if action['type'].startswith('adjust_mirror_multiplier_'):
             self.mirror_multiplier_changes+=1
 
+    def goddess_window_expired(self):
+        """[截止决策] 到时仅返回，未决原封保留；没有按钮不能解释成奖励到账。"""
+        if self.goddess_button_deadline is None or time.monotonic()<self.goddess_button_deadline:return None
+        if self.ledger.data.get('pending'):
+            return {'status':'needs_review','reason':'女神像观察5秒到期，原操作仍待核实；保留pending返回主页。',
+                    'return_home_preserving_pending':True}
+        return {'status':'finished','reason':'进入广场后观察5秒未核实可用按钮，返回主页；未领取项目仍未完成。',
+                'skipped':True,'unavailable':'no_available_interaction','completion_scope':'currently_available',
+                'outcome':'goddess_button_window_expired',
+                'deferred_actions':[task for task in self.config['goddess']['actions'] if task not in self.ledger.data['goddess']['done']]}
+
     def step(self, observation):
         state = observation['state']
         if state == 'unknown':
             self.last_ready, self.ready_observations = None, 0
         pending = self.ledger.data['pending']
+        if self.module=='goddess' and pending and pending.get('module')=='goddess' and self.goddess_button_deadline is None:
+            self.goddess_button_deadline=time.monotonic()+5
+        # [连续帧] 中途换页或存在未决提交时，清掉旧余额首帧，禁止跨场景拼接耗尽证据。
+        if self.module == 'mirror' and (state != 'mirror_auto_dialog' or pending):
+            self.mirror_resource_first = None
         if pending:
             if pending['module'] != self.module:
                 return self.stop('Another module has an unresolved submitted action', 'needs_review')
@@ -412,10 +551,70 @@ class DailyController:
                     self.mirror_auto_attempts,self.mirror_portal_attempts=0,0
                 self.last_ready, self.ready_observations = None, 0
                 return {'status': 'wait', 'reason': 'Submitted action result reconciled'}
+            if self.module=='goddess':
+                expired=self.goddess_window_expired()
+                if expired:return expired
+            # [领奖未决退出] 缺少到账证据时只结束观察并请求返主页，原pending和done均不改。
+            reward_pending=(self.module=='goddess' and pending.get('task')=='daily_reward'
+                and pending.get('cost')==0 and pending.get('quantity')==1
+                and bool(pending.get('input_receipt'))
+                and pending.get('config_hash')==self.ledger.config_hash)
+            if reward_pending and state=='main_menu':
+                return {'status':'needs_review','reason':'原女神像奖励仍待核实；已在主页，保留原回执，不重新拍手。',
+                        'return_home_preserving_pending':True}
+            reward_absent=(reward_pending and state=='goddess_scene'
+                and observation.get('interaction_available') is False
+                and observation.get('interaction_control_state')=='absent')
+            if reward_absent:
+                now=time.monotonic();self.goddess_absent_count+=1
+                if self.goddess_pending_absent_since is None:self.goddess_pending_absent_since=now
+                if self.goddess_absent_count>=2 and now-self.goddess_pending_absent_since>=5:
+                    return {'status':'needs_review','reason':'拍手后连续5秒没有可核实奖励；保留原pending并返回主页，不补记到账。',
+                            'return_home_preserving_pending':True}
+                return {'status':'wait','reason':'等待原拍手的奖励证据；缺少控件不代表到账，不重发。'}
+            # 只允许本次有输入回执的签到，在F控件已消失的正确场景中等待5秒；未知不能结束意图。
+            absent = (self.module=='goddess' and pending.get('task')=='check_in'
+                      and self.goddess_check_in_sent and pending.get('input_receipt')
+                      and ((state=='goddess_scene' and observation.get('interaction_available') is False
+                            and observation.get('interaction_control_state')=='absent')
+                           or (state=='goddess_options' and observation.get('interaction_evidence',{}).get('button_verified') is True
+                               and observation.get('offers') and all(item.get('action')=='check_in' for item in observation['offers'])))
+                      and pending.get('cost')==0 and pending.get('quantity')==1
+                      and pending.get('config_hash')==self.ledger.config_hash)
+            if absent:
+                now=time.monotonic()
+                self.goddess_absent_count+=1
+                minimal={'state':state,'interaction_control_state':observation.get('interaction_control_state','visible_exclamation'),
+                         'offers':observation.get('offers',[])}
+                if self.goddess_pending_absent_since is None:
+                    self.goddess_pending_absent_since=now
+                    self.goddess_absent_first=minimal
+                if self.goddess_absent_count>=2 and now-self.goddess_pending_absent_since>=5:
+                    # 用户指定5秒无拍手即可结束本次零费用尝试：保存原意图/回执与首尾证据，不造到账。
+                    evidence={'state':'goddess_attempt_ended_without_hand',
+                              'scope':'current_zero_cost_attempt_only_unconfirmed',
+                              'stable_absence_seconds':now-self.goddess_pending_absent_since,
+                              'absence_frames':self.goddess_absent_count,
+                              'first_absence':self.goddess_absent_first,'last_absence':minimal}
+                    self.ledger.data['events'].append({'action':dict(pending),'result':evidence})
+                    self.ledger.data['pending']=None
+                    self.ledger.save()
+                    return {'status':'finished','reason':'未观察到拍手，当前零费用互动尝试结束并返回；签到与日常奖励均未补记到账。',
+                            'completion_scope':'currently_available','outcome':'zero_cost_attempt_ended_without_hand',
+                            'unavailable':'no_hand_after_check_in','skipped':True,
+                            'deferred_actions':[task for task in self.config['goddess']['actions']
+                                                if task not in self.ledger.data['goddess']['done']]}
+            else:
+                self.goddess_pending_absent_since=None
+                self.goddess_absent_count=0
+                self.goddess_absent_first=None
+                self.last_ready,self.ready_observations=None,0
             return {'status': 'wait', 'reason': 'Pending submission; observe its result without resubmitting'}
         if self.module == 'hunting':
             return self.hunting(observation)
         if self.module == 'goddess':
+            expired=self.goddess_window_expired()
+            if expired:return expired
             return self.goddess(observation)
         if self.module == 'mirror':
             return self.mirror(observation)
@@ -423,7 +622,7 @@ class DailyController:
 
     def hunting_plan(self):
         settings, progress = self.config['hunting'], self.ledger.data['hunting']
-        if not progress['daily_done']:
+        if not progress['daily_done'] and 'daily' not in self.exhausted_hunt_plans:
             check = progress.get('daily_check') or {}
             if check.get('cache_date') != self.config['cache_date']:
                 return None, {'status':'wait','reason':'执行时自动打开每日任务页，核对狩猎0/1或1/1。'}
@@ -437,12 +636,18 @@ class DailyController:
                 target['stage'] = target.get('stage') or '野猪洞穴'
                 return {'id': 'daily', 'runs': 1, **target, 'free_only': True}, None
         for plan in settings['extra_plans']:
+            if plan['id'] in self.exhausted_hunt_plans:continue
             if plan.get('runs_mode')=='all_free':
                 if plan['id'] not in self.checked_free_sweeps:return {**plan,'runs':1},None
                 continue
             remaining = plan['runs'] - progress['runs'].get(plan['id'], 0)
             if remaining > 0:
                 return {**plan, 'runs': remaining}, None
+        if self.exhausted_hunt_plans:
+            return None, {'status':'finished','reason':'免费资源已用尽，跳过当前免费计划；未补记战斗或每日完成。',
+                          'completion_scope':'available_free_resources','unavailable':'free_resources_exhausted','skipped':True,
+                          'deferred_actions':sorted(self.exhausted_hunt_plans),
+                          'free_exhaustion':list(self.exhausted_free_plans.values())}
         return None, {'status': 'finished', 'reason': 'Configured hunting plans finished'}
 
     def hunting(self, obs):
@@ -454,6 +659,16 @@ class DailyController:
                 return self.cleanup('dismiss_hunt_reward', obs['dismiss_point'])
             return self.stop('Unowned hunting reward requires review', 'needs_review')
         # Map banners are not a substitute for the verified daily task row.
+        # 战斗后资源可由正变0；两帧当前地图/弹窗归零后要求导航重读两池，不能复用启动时正余额。
+        visible_resource=obs.get('resource')
+        current_zero=(obs['state'] in ('hunt_map','hunt_dialog') and visible_resource in ('rice','torch')
+                      and type(obs.get('free_available')) is int and obs['free_available']==0)
+        surveyed_zero=(self.resource_survey.get(visible_resource,{}) or {}).get('free_available')==0
+        if current_zero and self.resource_survey and not surveyed_zero:
+            if not self.stable(('resource_became_zero',visible_resource,obs.get('free_capacity'))):
+                return {'status':'wait','reason':'当前免费资源归零，先复核第二帧，不打开快猎。'}
+            return {'status':'wait','reason':'本次免费资源已归零，导航重读米饭和火把，不继续按旧余额消费。',
+                    'requires_resource_survey':True}
         plan, end = self.hunting_plan()
         if end:
             if end['status'] == 'finished':
@@ -464,6 +679,14 @@ class DailyController:
                 if obs['state'] != 'main_menu':
                     return {'status': 'wait', 'reason': 'Waiting for main menu after hunting'}
             return end
+        # 只采纳执行入口本次两帧总览；未知不当0，额外资源计划不受免费池为0影响。
+        resource='torch' if plan['category']=='圣石洞穴' else 'rice'
+        surveyed=self.resource_survey.get(resource,{})
+        if hunt_free_only(settings,plan) and type(surveyed.get('free_available')) is int and surveyed['free_available']==0:
+            self.exhausted_hunt_plans.add(plan['id'])
+            self.exhausted_free_plans[plan['id']]={'plan_id':plan['id'],'resource':resource,
+                'free_only':True,'runs_mode':plan.get('runs_mode','fixed')}
+            return self.hunting(obs)
         if self.active_hunt_plan != plan['id']:
             self.active_hunt_plan = plan['id']
             self.difficulty_changes = 0
@@ -598,8 +821,7 @@ class DailyController:
         done = self.ledger.data['goddess']['done']
         if not settings['enabled']:
             return self.stop('Goddess interactions disabled', 'skipped')
-        if not settings['user_positioned_near_statue']:
-            return self.stop('User must stand beside the goddess statue', 'precondition_missing')
+        # [门禁] 不使用用户站位声明；画面控件与既有pending仍决定实际行动。
         if self.checkpoint!='available' and self.checkpoint not in settings['actions']:
             return self.stop('Requested goddess action is disabled', 'skipped')
         # Both launcher checkpoints sweep the enabled, currently available
@@ -607,8 +829,11 @@ class DailyController:
         wanted = settings['actions']
         if all(task in done for task in wanted):
             return {'status': 'finished', 'reason': 'Requested statue interactions verified'}
-        if (obs['state']!='goddess_scene' or obs.get('interaction_available') is not False):
+        if (obs['state']!='goddess_scene' or obs.get('interaction_available') is not False
+                or obs.get('interaction_control_state')!='absent'):
             self.goddess_no_available_since = None
+            self.goddess_no_available_count = 0
+            self.goddess_no_available_first = None
             if self.last_ready and self.last_ready[0]=='goddess_no_available':
                 self.last_ready,self.ready_observations=None,0
         if obs['state'] == 'main_menu':
@@ -633,26 +858,51 @@ class DailyController:
             return self.click('enter_goddess_square',obs['square_entry_point'])
         if obs['state'] != 'goddess_options':
             if obs['state']=='goddess_scene':
-                if obs.get('interaction_available') is False:
+                if obs.get('interaction_available') is False and obs.get('interaction_control_state')=='absent':
+                    now = time.monotonic()
+                    minimal={'state':'goddess_scene','interaction_control_state':'absent'}
+                    self.goddess_no_available_count+=1
+                    if self.goddess_no_available_since is None:
+                        self.goddess_no_available_since=now
+                        self.goddess_no_available_first=minimal
                     if not self.stable(('goddess_no_available',tuple(done))):
                         return {'status':'wait','reason':'Verify no statue interaction on a second observation'}
-                    now = time.monotonic()
-                    if self.goddess_no_available_since is None:
-                        self.goddess_no_available_since = now
-                    wait_seconds = getattr(self, 'network_wait_seconds', 60)
+                    # 用户指定正确场景内稳定无拍手等待5秒；未知场景会在上方重置计时。
+                    wait_seconds = 5
                     elapsed = now - self.goddess_no_available_since
                     if elapsed < wait_seconds:
                         return {'status':'wait',
                                 'reason':f'等待固定F互动按钮（手形或叹号）加载/重新出现 {elapsed:.0f}/{wait_seconds:g}秒；尚未领取的项目不标记完成。'}
-                    return {'status':'finished','reason':'等待后仍未识别到固定F互动按钮，未核实的女神像互动保留；不能据此声称今日奖励已经领取。',
+                    # 本次签到若已由真实回执核实，仍须把5秒未出拍手记为正常返回；保留原签到结算。
+                    event=self.ledger.data['events'][-1] if self.ledger.data['events'] else {}
+                    sent=event.get('action',{})
+                    if (self.goddess_check_in_sent and 'check_in' in done and sent.get('module')=='goddess'
+                            and sent.get('task')=='check_in' and sent.get('cost')==0 and sent.get('quantity')==1
+                            and sent.get('input_receipt')):
+                        event['result']['no_hand_wait']={'scope':'current_confirmed_check_in_no_hand',
+                            'stable_absence_seconds':elapsed,'absence_frames':self.goddess_no_available_count,
+                            'first_absence':self.goddess_no_available_first,'last_absence':minimal}
+                        self.ledger.save()
+                        return {'status':'finished','reason':'签到已由原回执核实；5秒未出拍手，已返回，日常奖励仍未领取。',
+                                'skipped':True,'unavailable':'no_hand_after_check_in',
+                                'completion_scope':'currently_available','outcome':'confirmed_check_in_no_hand',
+                                'deferred_actions':[task for task in wanted if task not in done]}
+                    # [正常缺互动] 仅保存本轮实帧等待证据，不创建到账或清除既有未决。
+                    self.ledger.data['events'].append({'action':{'module':'goddess','task':'inspect_available'},
+                        'result':{'state':'goddess_no_available_interaction','stable_absence_seconds':elapsed,
+                                  'absence_frames':self.goddess_no_available_count,
+                                  'first_absence':self.goddess_no_available_first,'last_absence':minimal}})
+                    self.ledger.save()
+                    return {'status':'finished','reason':'未找到可用互动；已连续5秒核对并返回，未核实的奖励保留。',
+                            'skipped':True,'unavailable':'no_available_interaction',
                             'completion_scope':'currently_available',
                             'deferred_actions':[task for task in wanted if task not in done]}
-                return {'status':'waiting_for_option','reason':'No verified interaction glyph; do not mark it done'}
+                return {'status':'wait','reason':'互动区域仍未知或遮挡，等待明确场景实帧；不启动无互动计时。'}
             if self.goddess_scene_transition_since is not None and time.monotonic()-self.goddess_scene_transition_since<getattr(self, 'network_wait_seconds', 45):
                 return {'status':'wait','reason':'Waiting for Fantasia Square to load'}
             if self.goddess_collection_transition_since is not None and not self.goddess_scene_attempts and time.monotonic()-self.goddess_collection_transition_since<getattr(self, 'network_wait_seconds', 8):
                 return {'status':'wait','reason':'Waiting for the card collection to open'}
-            return {'status': 'waiting_for_option', 'reason': 'No verified interaction glyph; do not mark it done'}
+            return {'status': 'wait', 'reason': '等待场景或互动区域明确；未知帧不计入5秒无互动。'}
         choices = [o for o in obs['offers'] if o['action'] in wanted and o['action'] not in done]
         if not choices:
             return {'status': 'waiting_for_option', 'reason': 'Remaining reward may require other challenges first'}
@@ -662,7 +912,31 @@ class DailyController:
         if not self.stable(('goddess', task)):
             return {'status': 'wait', 'reason': 'Verify interaction glyph on a second observation'}
         return self.click('interact_statue', obs['interaction_point'], consumes=True,
-                          module='goddess', task=task, quantity=1, cost=0)
+                          module='goddess', task=task, quantity=1, cost=0,
+                          pre_observation={'state':'goddess_options','task':task,
+                                           'glyph':choices[0].get('label'),'interaction_point':obs['interaction_point']})
+
+    def mirror_resource_end(self, reason, obs=None):
+        """[功能] 核对计划上限或两帧免费余额，返回正常结束所需的独立证据。"""
+        settings, progress = self.config['mirror'], self.ledger.data['mirror']
+        pair = []
+        if obs is not None:
+            # [门禁] 只复制读数与场景；无效/变化读数不能借上一帧直接结束。
+            keys = ('state', 'free_available', 'cost', 'multiplier', 'count', 'free_only', 'auto_skip')
+            sample = {key: obs.get(key) for key in keys}
+            # Python把False/0.0与0判相等；比较类型及值，避免混淆两帧读数。
+            signature = (reason, tuple((key, type(value), value) for key, value in sample.items()))
+            if self.mirror_resource_first is None or self.mirror_resource_first[0] != signature:
+                self.mirror_resource_first = (signature, sample)
+                return {'status': 'wait', 'reason': 'Verify mirror resource limit on a second observation'}
+            pair = [dict(self.mirror_resource_first[1]), dict(sample)]
+        evidence = {'reason': reason, 'policy': dict(settings),
+                    'progress': {'completed': progress['completed'], 'spent': progress['spent']},
+                    'confirmed_balance': pair}
+        return {'status': 'finished', 'skipped': True, 'unavailable': 'mirror_resource_limit',
+                'module_completed': False, 'completion_scope': 'currently_available',
+                'mirror_resource_end': evidence,
+                'reason': '镜中之战当前资源或配置预算不足以继续；已结算场次保留，未完成场次不补记。'}
 
     def mirror(self, obs):
         settings, progress = self.config['mirror'], self.ledger.data['mirror']
@@ -690,7 +964,25 @@ class DailyController:
                 return {'status': 'finished', 'reason': 'Configured mirror battle count reached'}
             return {'status':'wait','reason':'Waiting for mirror return screen'}
         if progress['spent'] >= settings['resource_budget']:
-            return self.stop('Mirror resource budget reached', 'budget_reached')
+            return self.mirror_resource_end('budget_reached')
+        # [先行核对] 用户仅用免费资源时，明确0先于次数、倍数和游戏开关处理。
+        # 游戏开关关闭也不能动用额外库存；正数不足仅使用当前已核对目标倍数的价格。
+        free, cost = obs.get('free_available'), obs.get('cost')
+        resource_reason = None
+        if state == 'mirror_auto_dialog' and settings['free_only'] and type(free) is int and free >= 0:
+            if free == 0:
+                resource_reason = 'free_exhausted'
+            elif (type(cost) is int and cost > 0 and type(obs.get('multiplier')) is int
+                    and obs['multiplier'] == settings['resource_multiplier'] and free < cost):
+                resource_reason = 'free_insufficient'
+        if resource_reason:
+            return self.mirror_resource_end(resource_reason, obs)
+        if not (state == 'mirror_auto_dialog' and type(cost) is int and cost > 0
+                and progress['spent'] + cost > settings['resource_budget']
+                and type(obs.get('count')) is int and obs['count'] == 1
+                and type(obs.get('multiplier')) is int and obs['multiplier'] == settings['resource_multiplier']
+                and all(obs.get(key) is settings[key] for key in ('free_only', 'auto_skip'))):
+            self.mirror_resource_first = None
         if state=='mirror_multiplier_dialog':
             value=obs.get('multiplier');target=settings['resource_multiplier']
             if type(value) is not int or not 1<=value<=40:
@@ -741,12 +1033,12 @@ class DailyController:
             return {'status': 'waiting_for_battle_screen', 'reason': 'Open mirror battle preparation with the chosen team'}
         # Normalize the game's repeat count before editing its resource multiplier.
         # The start button displays the per-battle price even when count is larger.
-        if obs.get('count') is None:
+        if type(obs.get('count')) is not int or obs['count'] <= 0:
             return self.stop('Mirror battle count could not be read', 'needs_review')
         if obs['count'] != 1:
             return self.adjust_count(obs, 1)
-        if obs.get('multiplier') != settings['resource_multiplier']:
-            if obs.get('multiplier') is None:
+        if type(obs.get('multiplier')) is not int or obs['multiplier'] != settings['resource_multiplier']:
+            if type(obs.get('multiplier')) is not int:
                 return self.stop('Mirror multiplier value could not be read','needs_review')
             if self.mirror_multiplier_opens>=3:
                 return self.stop('Mirror multiplier did not reach its configured value','needs_review')
@@ -760,9 +1052,9 @@ class DailyController:
         if type(cost) is not int or cost <= 0:
             return self.stop('Mirror start button resource cost could not be read', 'needs_review')
         if progress['spent'] + cost > settings['resource_budget']:
-            return self.stop('Next mirror battle would exceed the resource budget', 'budget_reached')
+            return self.mirror_resource_end('next_exceeds_budget', obs)
         if settings['free_only']:
-            if obs.get('free_available') is None:
+            if type(free) is not int or free < 0:
                 return self.stop('Available free mirror resource could not be read', 'needs_review')
             if obs['free_available'] < cost:
                 return self.stop('Not enough free mirror resource', 'resources_exhausted')

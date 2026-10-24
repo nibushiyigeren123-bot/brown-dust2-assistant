@@ -59,6 +59,7 @@ class QueueTests(unittest.TestCase):
                 return self.code
 
         for patcher in (patch.object(w, 'ROOT', self.root),
+                        patch.object(w, 'window_preflight', return_value={'completed': True, 'actions': []}),
                         patch.object(w, 'config_identity', side_effect=lambda _: (self.identity, self.hashes.copy())),
                         patch.object(w.subprocess, 'Popen', Worker),
                         patch('game_window.GameWindow.find', return_value=object()),

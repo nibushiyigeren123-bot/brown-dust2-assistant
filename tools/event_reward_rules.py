@@ -3,6 +3,7 @@
 Pure rules only: this module neither clicks nor reports real-game acceptance.
 """
 import json
+import copy
 import hashlib
 from pathlib import Path
 from local_cache import cache_path, load_local_config
@@ -15,6 +16,11 @@ def load_config(path):
 
 
 def validate_config(config):
+    # [兼容] 缺字段只在内存默认关闭；校验不修改调用方对象或私人配置文件。
+    config = copy.deepcopy(config)
+    enabled = config['rewards'].setdefault('character_pass_enabled', False)
+    if type(enabled) is not bool:
+        raise ValueError('是否有当期角色通行证必须是布尔值。')
     if config['schema_version'] != 1:
         raise ValueError('Unsupported schema')
     event=config['event']

@@ -13,13 +13,15 @@ class ReturnNavigationVision:
         self.images={k:cv2.imdecode(np.fromfile(str(folder/v['file']),dtype=np.uint8),cv2.IMREAD_COLOR)
                      for k,v in self.specs.items()}
         self.arrow=foreground_mask(self.images['white_back'])
+        # [退出合同] 从可追溯小图配置读取页面身份与退出控件，永不读取业务数量或消费设置。
+        self.contracts=[spec['navigation_contract'] for spec in self.specs.values()
+                        if 'navigation_contract' in spec]
 
     def inspect(self, image):
         h,w=image.shape[:2]
         if abs(w/h-16/9)>.025:return None
         norm=cv2.resize(image,(1280,720),interpolation=cv2.INTER_AREA)
         gray=cv2.cvtColor(norm,cv2.COLOR_BGR2GRAY)
-        if float((gray<35).mean())>.88:return None
         def score(key):
             a,b,c,d=self.specs[key]['box']
             patch=norm[b:d,a:c]
@@ -34,6 +36,24 @@ class ReturnNavigationVision:
             return {'state':state,'next_action':action,'return_button':{
                 'client_point':[point[0]*w/1280,point[1]*h/720],
                 'normalized_point':point,'scores':scores}}
+        # [独立复核] 标题/身份和退出按钮必须同时清晰可见；暗遮罩下的背景按钮不能授权。
+        for spec in self.contracts:
+            scores={key:round(score(key),4) for key in spec['keys']}
+            if all(np.isfinite(value) and value>=spec.get('threshold',.94) for value in scores.values()) and all(visible(key,.85) for key in spec['keys']):
+                # [通行证退出] 双锚只证明页面；旧合同空白点不能退出，必须独立找到明亮的顶部箭头。
+                # 仅修四种普通通行证合同，复用原white_back图形、顶部ROI和可见阈值；其它合同原样处理。
+                if spec['state'] in ('pass_tasks_special', 'pass_levels_special',
+                                     'pass_tasks_season', 'pass_levels_season'):
+                    match=masked_shape_match(gray[13:55,95:135],self.arrow)
+                    if match['score']<.82 or match['foreground_gray']<175:
+                        return None
+                    px,py=match['position'];hh,ww=self.arrow.shape
+                    return control(spec['state'],'click_back',[95+px+ww/2,13+py+hh/2],
+                        {**scores,'back_shape':round(match['score'],4),
+                         'back_brightness':round(match['foreground_gray'],1)})
+                return control(spec['state'],spec['action'],spec['point'],scores)
+        # [暗页边界] 双锚未成立的黑屏/暗未知页仍按原阈值拒绝，不放行通用返回猜测。
+        if float((gray<35).mean())>.88:return None
         panels=[
             ('event_quick_dialog','cancel_panel',[536,541],('event_quick_title','event_quick_cancel')),
             ('event_auto_dialog','cancel_panel',[536,549],('event_auto_title','event_auto_cancel')),

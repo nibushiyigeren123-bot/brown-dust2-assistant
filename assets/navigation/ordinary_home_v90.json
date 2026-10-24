@@ -1,0 +1,35 @@
+{
+  "normalized_size": [
+    1280,
+    720
+  ],
+  "search_margin": 5,
+  "threshold": 0.88,
+  "min_foreground_gray": 155,
+  "house": {
+    "template": "ordinary_home_glyph_v90.png",
+    "box": [
+      1185,
+      27,
+      1212,
+      52
+    ]
+  },
+  "key": {
+    "template": "ordinary_home_key_v90.png",
+    "box": [
+      1193,
+      56,
+      1205,
+      69
+    ]
+  },
+  "pair_dx": [
+    -4,
+    4
+  ],
+  "pair_dy": [
+    18,
+    30
+  ]
+}

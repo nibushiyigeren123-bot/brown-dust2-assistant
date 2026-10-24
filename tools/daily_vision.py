@@ -209,6 +209,23 @@ def fixed_map_payload(image, output, resources_only=False):
         return {'width':1280,'height':720,'lines':lines}
 
 
+def read_mirror_count(image,output):
+    """[次数复核] 仅裁完整次数标题，两种倍率都读清相同正整数才补值，不猜MIN或默认1。"""
+    normalized=cv2.resize(image,(1280,720),interpolation=cv2.INTER_AREA)
+    readings=[];values=[];output=Path(output);output.mkdir(parents=True,exist_ok=True)
+    for scale in (4,6):
+        encoded=cv2.imencode('.png',cv2.resize(normalized[447:475,592:692],None,
+            fx=scale,fy=scale,interpolation=cv2.INTER_CUBIC))[1]
+        target=output/f'mirror_count_{hashlib.sha256(encoded.tobytes()).hexdigest()[:18]}.png'
+        write_encoded_png(target,encoded)
+        payload=windows_ocr(target,output/'ocr')
+        text=compact(''.join(line['text'] for line in payload['lines']));readings.append(text)
+        match=re.fullmatch(r'自动战斗([1-9]\d{0,2})次',text)
+        values.append(int(match[1]) if match else None)
+    return {'value':values[0] if values[0] is not None and values[0]==values[1] else None,
+            'readings':readings,'source':'two_size_complete_auto_count_caption','box':[592,447,692,475]}
+
+
 def inspect_frame(path, vision, config, output, payload=None):
     path, output = Path(path), Path(output)
     image = read_image(path)
@@ -245,6 +262,10 @@ def inspect_frame(path, vision, config, output, payload=None):
                     break
                 amounts[stage]=value
             result['stone_inventory']=amounts if len(amounts)==5 else None
+    # [限定入口] 只有原弹窗标题和资源名称已证明镜中设置页时才读取次数，不用数字裁片判页面。
+    if result['state']=='mirror_auto_dialog' and result.get('count') is None:
+        evidence=read_mirror_count(image,output)
+        result['count_evidence']=evidence;result['count']=evidence['value']
     if result['state'] == 'mirror_auto_dialog' and result.get('cost') is None:
         # Read only the price to the right of the currency icon; never mistake
         # the multiplier printed at the start of the button for its total cost.
@@ -349,8 +370,13 @@ class DailyVision:
         self.resource_icons={name:read_image(resource_folder/spec['file']) for name,spec in self.resource_specs.items()}
         from goddess_entry_vision import GoddessEntryVision
         self.goddess_entry=GoddessEntryVision()
+        # 局部图形恢复会话按需CPU加载，最多缓存资源和F图形两组参考向量。
+        from local_ui_symbols import LocalSymbolRecovery
+        self.local_symbol_recovery=LocalSymbolRecovery(ROOT)
         from mirror_entry_vision import MirrorEntryVision
         self.mirror_entry=MirrorEntryVision()
+        from goddess_scene_vision import GoddessSceneVision
+        self.goddess_scene=GoddessSceneVision()
 
     def current_hunt_entry(self,image):
         if self.home_label is None:
@@ -427,6 +453,29 @@ class DailyVision:
         if yellow < 0.03 and knob >= 0.10:
             return False
         return None
+
+    def inspect_goddess_fast(self,image,square_entered=False):
+        """[五秒快路径] 三标志确认广场后核固定F图形；无OCR、模型或站位判断。"""
+        if abs(image.shape[1]/image.shape[0]-16/9)>.025:
+            return {'state':'unknown','reason':'goddess_fast_context_not_verified'}
+        from local_ui_symbols import goddess_button
+        normalized=cv2.resize(image,(1280,720),interpolation=cv2.INTER_AREA)
+        scene=self.goddess_scene.inspect(image)
+        if not scene:return {'state':'unknown','reason':'goddess_fast_three_markers_not_visible'}
+        # [原结果合同] 确认场景后仍只使用既有奖励小图，不把按钮消失当作到账。
+        if self.anchor(image,'goddess_reward_loot',foreground=False,threshold=.84):
+            return {'state':'goddess_reward_result','evidence':'recorded_reward_icon','recognition':'pixel_only_goddess_window'}
+        symbol=goddess_button(normalized,self.images,self.specs,recovery=None)
+        if symbol and symbol['kind']:
+            hand=symbol['kind']=='goddess_hand'
+            return {'state':'goddess_options','offers':[{'action':'daily_reward' if hand else 'check_in',
+                    'label':'hand' if hand else 'interaction_exclamation'}],
+                    'interaction_point':symbol['point'],'interaction_evidence':symbol,
+                    'scene_evidence':scene,'recognition':'pixel_only_goddess_window'}
+        return {'state':'goddess_scene','interaction_available':False,
+                'interaction_control_state':symbol.get('control_state','unknown') if symbol else 'unknown',
+                'interaction_button_verified':bool(symbol and symbol.get('button_verified')),
+                'evidence':'statue_dpad_four_buttons','scene_evidence':scene,'recognition':'pixel_only_goddess_window'}
 
     def inspect(self, image, payload, config):
         if abs(image.shape[1] / image.shape[0] - 16/9) > 0.035:
@@ -508,26 +557,22 @@ class DailyVision:
             return {'state': 'mirror_result_footer', 'leave_point': [1140, 672]}
         lobby=self.mirror_entry.lobby(image)
         if lobby: return lobby
-        hand = self.anchor(image, 'goddess_hand', threshold=0.73, dark=True)
-        daily_ready = self.anchor(image, 'goddess_reward_ready', threshold=0.74, dark=True)
-        # Explicit user pre-positioning is a precondition. The two glyphs occupy
-        # the interaction button, never NPC markers elsewhere on the screen.
-        if config['goddess']['user_positioned_near_statue'] and (hand or daily_ready):
-            return {'state': 'goddess_options',
-                    'offers': [{'action': 'check_in' if hand else 'daily_reward',
-                                'label': 'hand' if hand else 'interaction_exclamation'}],
-                    'interaction_point': [1280*config['goddess']['interaction_point_normalized'][0],
-                                          720*config['goddess']['interaction_point_normalized'][1]]}
-        offers = []
-        for action, labels in config['goddess']['labels'].items():
-            for label in labels:
-                match = doc.find(label, (560, 65, 1040, 270))
-                if match:
-                    offers.append({'action': action, 'label': label, 'point': match['point']})
-        if offers and self.anchor(image, 'goddess_interact', threshold=0.68, foreground=False):
-            return {'state': 'goddess_options', 'offers': offers,
-                    'interaction_point': [1280*config['goddess']['interaction_point_normalized'][0],
-                                          720*config['goddess']['interaction_point_normalized'][1]]}
+        # 只在女神场景上下文成立时检查固定F圆按钮；叹号签到、拍手领日常奖励。
+        from local_ui_symbols import goddess_button
+        normalized=cv2.resize(image,(1280,720),interpolation=cv2.INTER_AREA)
+        legacy_hand=self.anchor(image,'goddess_hand',threshold=.73,dark=True)
+        legacy_ready=self.anchor(image,'goddess_reward_ready',threshold=.74,dark=True)
+        legacy_kind='goddess_hand' if legacy_hand else 'goddess_reward_ready' if legacy_ready else None
+        # [用户场景判据] 与五秒快路径共用女神像、十字方向键、下中四钮，不再要求旧提示或房子。
+        verified_markers=self.goddess_scene.inspect(image)
+        scene_verified = bool(verified_markers)
+        symbol=goddess_button(normalized,self.images,self.specs,self.local_symbol_recovery,legacy_kind) if scene_verified else None
+        if symbol and symbol['kind']:
+            hand = symbol['kind']=='goddess_hand'
+            return {'state':'goddess_options',
+                    'offers':[{'action':'daily_reward' if hand else 'check_in',
+                               'label':'hand' if hand else 'interaction_exclamation'}],
+                    'interaction_point':symbol['point'], 'interaction_evidence':symbol}
         # Completion toast and loot are evidence only for an already submitted action.
         goddess_done = doc.find('向女神像许愿1/1完成', (700, 0, 1100, 85))
         if goddess_done:
@@ -537,15 +582,12 @@ class DailyVision:
         loot = [l for l in doc.within((30, 270, 425, 550)) if re.search(r'[×xX]\d+', l['text'])]
         if loot and doc.find('创建队伍', (1050, 55, 1230, 140)):
             return {'state': 'goddess_loot_result', 'loot': loot}
-        if (doc.find('创建队伍',(1010,65,1245,145))
-                or self.goddess_entry.match(image,'square_team',foreground=False,threshold=.85)):
-            from common_navigation import PageDiagnosis
-            verified_scene=bool(doc.find('向女神像许愿',(620,70,950,160)) or PageDiagnosis().find_home(image))
-        else:
-            verified_scene=False
+        verified_scene=scene_verified
         if verified_scene:
             return {'state':'goddess_scene','interaction_available':False,
-                    'evidence':'team_creation_UI_and_verified_scene_navigation'}
+                    'evidence':'statue_dpad_four_buttons','scene_evidence':verified_markers,
+                    'interaction_button_verified':bool(symbol and symbol['button_verified']),
+                    'interaction_control_state':symbol.get('control_state','unknown') if symbol else 'unknown'}
         map_quick = self.anchor(image, 'hunt_map_quick', threshold=0.73, foreground=False)
         if map_quick and map_quick['brightness_ratio'] >= 0.80:
             selected = doc.within((140, 10, 370, 85))
@@ -554,12 +596,23 @@ class DailyVision:
             stone_points=[line for line in doc.within((150,65,295,320))
                           if line['text'] in ('火之洞穴','水之洞穴','风之洞穴','光之洞穴','暗之洞穴')]
             normalized=cv2.resize(image,(1280,720),interpolation=cv2.INTER_AREA)
-            resource_scores={}
-            for name,spec in self.resource_specs.items():
-                a,b,c,d=spec['box'];patch=normalized[b:d,a:c]
-                resource_scores[name]=float(cv2.matchTemplate(patch,self.resource_icons[name],cv2.TM_CCOEFF_NORMED)[0,0])
-            ranked=sorted(resource_scores,key=resource_scores.get,reverse=True)
-            resource=ranked[0] if resource_scores[ranked[0]]>=.85 and resource_scores[ranked[0]]-resource_scores[ranked[1]]>=.08 else None
+            # 旧图标逐像素固定框在当前窗口偏移约9像素；仅扩展原顶部区域搜索，保留原阈值。
+            from local_ui_symbols import match_local_icon
+            # 先保留原固定位置快路径；失败才用旧小模型候选收窄类/框，最终仍须独立图形核验。
+            fixed_scores={name:float(cv2.matchTemplate(normalized[spec['box'][1]:spec['box'][3],spec['box'][0]:spec['box'][2]],
+                            self.resource_icons[name],cv2.TM_CCOEFF_NORMED)[0,0]) for name,spec in self.resource_specs.items()}
+            fixed_ranked=sorted(fixed_scores,key=fixed_scores.get,reverse=True)
+            resource_model={'model_candidate_used':False}
+            if fixed_scores[fixed_ranked[0]]>=.85 and fixed_scores[fixed_ranked[0]]-fixed_scores[fixed_ranked[1]]>=.08:
+                resource_scores=fixed_scores;resource=fixed_ranked[0]
+            else:
+                resource_model=self.local_symbol_recovery.recover(normalized,'resource',self.resource_icons,self.resource_specs)
+                resource_matches={name:match_local_icon(normalized,self.resource_icons[name],spec['box'])
+                                  for name,spec in self.resource_specs.items()}
+                resource_scores={name:match['score'] for name,match in resource_matches.items()}
+                ranked=sorted(resource_scores,key=resource_scores.get,reverse=True)
+                resource=(resource_model['class'] if resource_model.get('model_candidate_used') else
+                          ranked[0] if resource_scores[ranked[0]]>=.85 and resource_scores[ranked[0]]-resource_scores[ranked[1]]>=.08 else None)
             stone_map=resource=='torch'
             inventory={}
             if stone_map:
@@ -585,7 +638,7 @@ class DailyVision:
                         inventory[name]=values[0]
             from hunting_resources import read_balance
             balance = read_balance(doc) or {}
-            return {'state': 'hunt_map', 'resource':resource,'resource_icon_scores':resource_scores, **balance, 'selected_text': selected[0]['text'] if selected else None,
+            return {'state': 'hunt_map', 'resource':resource,'resource_icon_scores':resource_scores,'resource_model_candidate':resource_model, **balance, 'selected_text': selected[0]['text'] if selected else None,
                     'difficulty': difficulties[0] if len(difficulties)==1 else self.hunt_difficulty(image),
                     'difficulty_points':{'previous':[165,659],'next':[317,659]},
                     'stone_map':stone_map,'stone_stage_points':stone_points,

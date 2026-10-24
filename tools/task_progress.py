@@ -7,7 +7,7 @@ from project_paths import ROOT
 from game_calendar import game_day
 from mirror_status import settlement_from_report, verified_season_end
 
-LABELS = {'completed':'已完成', 'incomplete':'未完成', 'unknown':'待核对', 'disabled':'未启用', 'ready':'起点就绪','unavailable':'结算中', 'season_end':'赛季末 · 已跳过'}
+LABELS = {'completed':'已完成', 'incomplete':'未完成', 'unknown':'待核对', 'disabled':'未启用', 'ready':'起点就绪','unavailable':'结算中', 'season_end':'赛季末 · 已跳过', 'resource_end':'资源或预算不足 · 已结束'}
 
 
 def latest_observation(report):
@@ -72,7 +72,18 @@ class ProgressReader:
         if report.get('cache_date') and report['cache_date'] != day:
             return result('unknown', '回执与当前缓存日期不一致。', day=day)
         scope = {'hunting':'daily', 'goddess_check_in':'daily', 'goddess_daily_reward':'daily', 'mirror':'daily',
-                 'guild':'guild', 'equipment':'equipment', 'task_rewards':'daily_weekly_rewards', 'rewards':'pass_rewards'}.get(task_id)
+                 'guild':'guild', 'equipment':'equipment', 'task_rewards':'daily_weekly_rewards', 'rewards':'pass_rewards', 'character_pass':'character_pass'}.get(task_id)
+        # [合并进度] 角色开关严格布尔；角色未决必须先于普通完成记录阻断。
+        character_enabled = event['rewards'].get('character_pass_enabled', False)
+        if type(character_enabled) is not bool:
+            return result('unknown', '角色通行证开关格式异常，请重新保存设置。', day=day)
+        character_cache = None
+        if task_id == 'character_pass' and not character_enabled:
+            return result('disabled', '当期角色通行证在设置中关闭。', day=day)
+        if task_id == 'rewards' and character_enabled:
+            character_cache = self.read(cache_path(self.root, daily, 'character_pass'))
+            if character_cache and (character_cache.get('_unreadable') or character_cache.get('cache_date') != day or character_cache.get('pending')):
+                return result('unknown', '角色通行证记录未核实或存在未决，不能标记整项完成。', day=day)
         if task_id == 'event':
             if event['cache_date'] != day:
                 return result('unknown', '活动和日常缓存日期不一致。', day=day)
@@ -98,20 +109,36 @@ class ProgressReader:
             if settlement_from_report(report, day):
                 return result('season_end', '已进入镜中场景并点击自动战斗，确认赛季结算提示后返回主菜单；跳过本段，战斗次数不变。', day=day)
             return result('unknown', '赛季末回执尚未完整核实，不能据此跳过或记作战斗完成。', day=day)
+        # 回执充分的资源耗尽/无拍手返回仍保持任务未完成；不归类为设置停用。
+        from daily_availability import normal_unavailable_reason
+        unavailable_reason=normal_unavailable_reason(report)
+        if unavailable_reason:
+            # [进度] 正常结束不代表完成全部场次，显示资源原因并保留真实账本。
+            if task_id == 'mirror' and report.get('unavailable') == 'mirror_resource_limit':
+                return result('resource_end', unavailable_reason, day=day)
+            # 原签到回执已确认时，仅签到项保持完成；未出现的拍手奖励仍未完成。
+            # [合并] 一项签到到账不能代表合并行的所有启用互动已到账。
+            confirmed_check_in=(task_id=='goddess_check_in' and set(daily['goddess']['actions'])<=set((report.get('progress') or {}).get('goddess',{}).get('done',[])))
+            return result('completed' if confirmed_check_in else 'incomplete',unavailable_reason,day=day)
+        if report.get('unavailable') in ('free_resources_exhausted','no_hand_after_check_in','no_available_interaction','mirror_resource_limit'):
+            return result('unknown','正常跳过回执尚不完整，保留待核对。',day=day)
         if report.get('skipped'):
             return result('disabled', '本次因配置停用跳过，不记作任务完成。', day=day)
         obs = latest_observation(report)
         state = obs.get('state')
         # Positive current-frame evidence takes precedence over an earlier scan.
-        if task_id in ('rewards', 'task_rewards') and state in ('daily_tasks','weekly_tasks','pass_tasks','pass_levels') and obs.get('claimable') is True:
+        if (task_id in ('rewards', 'character_pass', 'task_rewards')
+                and not (task_id in ('rewards', 'character_pass') and cache and cache.get('action_policy') == 'direct_once')
+                and state in ('daily_tasks','weekly_tasks','pass_tasks','pass_levels') and obs.get('claimable') is True):
             return result('incomplete', '当前页面有可领取项目，领奖检查尚未完成。', day=day)
         if task_id == 'free_draw' and state == 'gacha_page' and obs.get('free_available') is True:
             return result('incomplete', '当前类别仍有免费入口，服装与装备需分别核对。', day=day)
         if task_id == 'management' and state == 'management_panel' and obs.get('panel', {}).get('state') == 'enabled':
             return result('incomplete', '经营领取按钮可用，当前仍有待领取收益。', day=day)
         if task_id in ('goddess_check_in','goddess_daily_reward') and state == 'goddess_options':
-            action = 'check_in' if task_id == 'goddess_check_in' else 'daily_reward'
-            if any(item.get('action') == action for item in obs.get('offers', []) if isinstance(item, dict)):
+            # [界面] 合并行检查所有启用动作；旧单项历史仍只检查原日奖。
+            wanted=daily['goddess']['actions'] if task_id=='goddess_check_in' else ['daily_reward']
+            if any(item.get('action') in wanted for item in obs.get('offers', []) if isinstance(item, dict)):
                 return result('incomplete', '当前出现对应互动选项，尚未核对领取结果。', day=day)
         if report.get('module_completed') is False or report.get('deferred_actions'):
             return result('unknown', '部分互动尚未开放或未核实；返回主页不等于任务完成。', day=day)
@@ -119,7 +146,7 @@ class ProgressReader:
             return result('unknown', '仅验证了入口，尚未核对任务完成情况。', day=day)
         if task_id == 'navigation':
             return result('ready', '已确认主菜单；这仅表示导航起点就绪。', day=day) if state == 'main_menu' else result('unknown', '尚未确认主菜单。', day=day)
-        if report.get('execute') is True and report.get('completed') is True and task_id not in ('equipment', 'event', 'hunting', 'mirror', 'guild', 'goddess_check_in', 'goddess_daily_reward', 'rewards', 'task_rewards'):
+        if report.get('execute') is True and report.get('completed') is True and task_id not in ('equipment', 'event', 'hunting', 'mirror', 'guild', 'goddess_check_in', 'goddess_daily_reward', 'rewards', 'character_pass', 'task_rewards'):
             return result('completed', '本轮回执已核实所选任务范围完成。', day=day)
         if task_id == 'equipment':
             flags = (cache or {}).get('equipment') or report.get('progress') or {}
@@ -142,14 +169,19 @@ class ProgressReader:
                     return result('incomplete', f"所选难度已核实 {count}/{target} 次；共享AP消耗 {cache.get('spent_total', 0)}。", '本地缓存', day)
             elif cache.get('completed') is True:
                 return result('completed', f"本活动已有完成批次，累计已用 {cache.get('spent_total', '未知')} AP；不重做。", '本地缓存', day)
-        if task_id == 'guild' and cache and cache.get('completed') is True and cache.get('issued') is True:
-            return result('completed', '本缓存日期已有签到成功及返回回执。', '本地缓存', day)
+        if task_id == 'guild' and cache and cache.get('completed') is True:
+            if cache.get('issued') is True:
+                return result('completed', '本缓存日期已有签到成功及返回回执。', '本地缓存', day)
+            if cache.get('outcome') == 'visited_without_reward_receipt':
+                return result('completed', '已稳定进入公会并返回主页；未观察到新奖励弹窗。', '本地缓存', day)
         if task_id in ('goddess_check_in','goddess_daily_reward'):
-            action = 'check_in' if task_id == 'goddess_check_in' else 'daily_reward'
+            # [进度] 同一真实账本服务合并行与旧日奖ID，不因单项done显示整段完成或建议重复领取。
+            wanted=daily['goddess']['actions'] if task_id=='goddess_check_in' else ['daily_reward']
             progress = cache or report.get('progress') or {}
-            if action in progress.get('goddess', {}).get('done', []):
-                return result('completed', '已有对应互动的已核实记录。' + ('奖励可能再开放，本次仍需复查。' if action == 'daily_reward' else ''), '本地缓存', day, action == 'daily_reward')
-            if not daily['goddess']['enabled'] or action not in daily['goddess']['actions']:
+            done=set(progress.get('goddess', {}).get('done', []))
+            if wanted and set(wanted)<=done:
+                return result('completed', '所有启用互动已有已核实记录，不重复点击。', '本地缓存', day)
+            if not daily['goddess']['enabled'] or not set(wanted)&set(daily['goddess']['actions']):
                 return result('disabled', '对应女神像互动在设置中停用。', day=day)
         if task_id == 'hunting':
             hunting = (cache or report.get('progress') or {}).get('hunting', {})
@@ -220,10 +252,35 @@ class ProgressReader:
                 return result('incomplete', f'已核实 {count}/{target} 场，尚未达到配置目标。', '本地缓存', day)
             if not daily['mirror']['enabled'] or target == 0:
                 return result('disabled', '镜中之战在设置中停用或次数为零。', day=day)
+        # [直接领取消费] 新策略只展示动作完成，不能沿用旧checked_groups宣称奖励已检查。
+        if task_id in ('rewards', 'character_pass') and cache and cache.get('action_policy') == 'direct_once':
+            tabs = [tab for tab in ('tasks', 'levels') if event['rewards']['pass_' + tab]]
+            books = ('character',) if task_id == 'character_pass' else event['rewards']['pass_order']
+            required = {f'{book}:{tab}' for book in books for tab in tabs}
+            done = (cache.get('completed') is True and cache.get('action_completed') is True
+                    and required <= set(cache.get('action_groups', [])))
+            if done and task_id == 'rewards' and character_enabled:
+                done = bool(character_cache and character_cache.get('action_policy') == 'direct_once'
+                    and character_cache.get('completed') is True and character_cache.get('action_completed') is True
+                    and {f'character:{tab}' for tab in tabs} <= set(character_cache.get('action_groups', [])))
+            if done:
+                progress = result('completed', '通行证一次领取操作已执行，奖励未核实；下次按设置重新执行。', '本地缓存', day, True)
+                progress['label'] = '本日动作已执行 · 奖励未核实'
+                return progress
+            return result('unknown', '通行证一次领取操作尚未全部完成，奖励未核实。', day=day)
+        # [角色进度] 旧记录继续保留原有解释，不覆盖或迁移历史账本。
+        if task_id=='character_pass' and cache and cache.get('completed') is True:
+            if {'character:tasks','character:levels'}<=set(cache.get('checked_groups',[])):
+                return result('completed','本游戏日角色通行证可领奖励已检查；下次运行仍复查。','本地缓存',day,True)
         if task_id == 'rewards' and cache and cache.get('completed') is True:
             required = {f'{book}:{tab}' for book in event['rewards']['pass_order'] for tab in ('tasks','levels')}
             if required and required <= set(cache.get('checked_groups', [])):
-                return result('completed', '本游戏日已检查两本通行证四组；本次仍会复查新增奖励。', '本地缓存', day, True)
+                # [结果消费] 开启角色后，旧普通完成记录不能代替角色独立检查依据。
+                if character_enabled and not (character_cache and character_cache.get('completed') is True
+                        and {'character:tasks', 'character:levels'} <= set(character_cache.get('checked_groups', []))):
+                    return result('unknown', '普通通行证已有检查记录；当期角色通行证仍待检查。', day=day)
+                label = '普通及角色通行证' if character_enabled else '两本普通通行证'
+                return result('completed', f'本游戏日已检查{label}可领奖励；本次仍会复查新增奖励。', '本地缓存', day, True)
         if task_id == 'task_rewards' and cache and cache.get('completed') is True:
             if {'daily','weekly'} <= set(cache.get('checked_modes', [])):
                 return result('completed', '本游戏日每日及每周领奖扫描已完成；不代表所有任务均做完，每次仍会复查。', '本地缓存', day, True)

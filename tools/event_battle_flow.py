@@ -13,9 +13,33 @@ METHODS = ("continuous", "quick")
 MAX_RUNS = 100
 
 
+
 class EventBattleController:
     @classmethod
-    def resume_pending(cls, config_event, ledger):
+    def from_verified_hub(cls,config_event,ledger,verified):
+        """[中心交接] 真实入口回执和中心双帧身份核实后才绑定控制器；已完成只返回，不选模式。"""
+        observation=verified.get('observation',{})
+        receipt=verified.get('entry_receipt',{})
+        frames=verified.get('hub_frames',[])
+        frames_valid=(isinstance(frames,list) and len(frames)==2
+            and bool(frames[0].get('image')) and bool(frames[1].get('image'))
+            and frames[0]['image']!=frames[1]['image']
+            and all(frame.get('observation',{}).get('state')=='event_hub'
+                and frame['observation'].get('title_verified') is True
+                and frame['observation'].get('event_id')==observation.get('event_id') for frame in frames))
+        if (receipt.get('input_kind')!='left_click' or not receipt.get('client_point')
+                or not frames_valid
+                or observation.get('state')!='event_hub' or observation.get('title_verified') is not True
+                or not observation.get('event_id') or observation['event_id']!=config_event.get('event_id')
+                or not all(observation.get('points',{}).get(mode) for mode in MODES)):
+            raise RuntimeError('活动中心交接缺少真实入口回执或独立身份双帧，不绑定账本。')
+        controller=cls(config_event,ledger)
+        controller._bound_event_id=observation['event_id'];controller._entered_event=True
+        if controller._remaining()<=0:controller._phase='return_to_main'
+        return controller
+
+    @classmethod
+    def resume_pending(cls, config_event, ledger, verified_checkpoint=None):
         """Restore result collection only; never reconstruct a submit decision."""
         from game_calendar import game_day
         pending = ledger.get('pending')
@@ -44,6 +68,16 @@ class EventBattleController:
         controller._bound_event_id = pending['event_id']
         controller._batch = deepcopy(pending)
         controller._phase = 'await_result'
+        # [恢复] 只有宿主重新核验原图与回执后交回同一检查点，才恢复已返回的最终胜利状态。
+        checkpoint = pending.get('result_checkpoint')
+        if verified_checkpoint is not None:
+            if (not checkpoint or verified_checkpoint != checkpoint
+                    or checkpoint.get('op_id') != pending['op_id']
+                    or checkpoint.get('input_receipt') != pending['input_receipt']
+                    or not checkpoint.get('return_receipt')):
+                raise RuntimeError('最终胜利检查点与原操作回执不符，不能恢复结算。')
+            controller._saw_final_victory = True
+            controller._verified_result_checkpoint = True
         return controller
 
     def __init__(self, config_event, ledger):
@@ -66,6 +100,7 @@ class EventBattleController:
         self._quick_reward_seen = False
         self._quick_dismiss_committed = False
         self._saw_final_victory = False
+        self._verified_result_checkpoint = False
         self._preview_baseline = None
         self._prepared_only = False
 
@@ -209,6 +244,9 @@ class EventBattleController:
         return False
 
     def _prepare_batch(self, obs):
+        # [资源门禁] 识出新活动页面不等于旧AP策略适用；券资源未接入时明确停止，不开战。
+        if obs.get('resource_policy_supported') is False:
+            return self._review(obs.get('unsupported_resource_reason') or '当前活动资源策略尚未接入。')
         if not self._mode_selected:
             return self._wait("等待活动中心确认所选战斗模式。")
         if not self._matches_identity(obs, require_mode=True):
@@ -240,6 +278,13 @@ class EventBattleController:
         return self._action("back_to_event_hub", point)
 
     def _dialog_decision(self, obs):
+        # [门禁] 通用活动消费必须有本页标题和固定位置AP数字证据；未知标题不能套用导航绑定直接提交。
+        expected=self._bound_event_id or self.config.get('event_id')
+        if isinstance(expected,str) and expected.startswith('title_'):
+            if obs.get('event_id')!=expected or obs.get('title_verified') is not True:
+                return self._wait('设置页活动标题尚未与本轮绑定身份一致。')
+            if obs.get('resource_family')!='free_event_ap' or not obs.get('resource_semantics_evidence'):
+                return self._wait('设置页尚未明确核对固定位置X/5活动AP，不提交。')
         expected_state = "event_quick_dialog" if self.config["battle_method"] == "quick" else "event_auto_dialog"
         if obs.get("state") != expected_state:
             return self._wait("等待所选战斗方式的设置对话框。")
@@ -327,6 +372,15 @@ class EventBattleController:
         batch = self._batch
         if batch is None:
             return self._review("本控制器没有已提交批次身份。")
+        # [恢复导航] 仅已重新核验原图检查点可从中心回原模式，绝不重开提交或消费对话框。
+        if obs['state']=='event_hub':
+            if not self._verified_result_checkpoint or not self._saw_final_victory:
+                return self._review('活动中心恢复缺少已核验最终胜利检查点，保留pending。')
+            if obs.get('event_id')!=batch['event_id'] or obs.get('title_verified') is not True:
+                return self._review('活动中心恢复身份不符或标题未核实，保留pending。')
+            point=obs.get('points',{}).get(batch['mode'])
+            if point is None:return self._wait('等待原批次模式的已识别入口。')
+            return self._action('select_mode',point,mode=batch['mode'])
         if not self._matches_identity(obs):
             return self._review("结算页面的活动身份与提交批次不符。")
         if batch["method"] == "quick":
@@ -387,8 +441,12 @@ class EventBattleController:
                 return self._review("连续战斗返回后的模式不符。")
             stage = obs.get("stage")
             normal_next = stage == batch["start_stage"] + batch["quantity"]
+            # [末次同关] 当前关卡的三项已领取勾选绑定身份；不能用灰按钮、AP0或固定15代替。
+            cleared=obs.get('cleared_stage_evidence') or {}
             terminal_same_stage = (stage == batch["start_stage"] + batch["quantity"] - 1
-                                   and obs.get("points", {}).get("open_quick") is not None)
+                and cleared.get('kind')=='current_stage_three_claimed_reward_checks'
+                and cleared.get('event_id')==batch['event_id']
+                and cleared.get('mode')==batch['mode'] and cleared.get('stage')==stage)
             if not (normal_next or terminal_same_stage):
                 return self._review("连续战斗返回关卡未到预期下一关。")
             if not self._resource_delta_ok(batch, obs):

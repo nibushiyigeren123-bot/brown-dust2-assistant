@@ -35,6 +35,7 @@
       "special",
       "season"
     ],
+    "character_pass_enabled": false,
     "pass_tasks": true,
     "pass_levels": true,
     "daily_task_rewards": true,

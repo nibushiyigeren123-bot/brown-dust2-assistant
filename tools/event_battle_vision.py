@@ -11,25 +11,8 @@ from event_prepare_vision import EventPreparationVision
 from m00_recognize import read_image, ROOT
 
 
-def resource_balance(doc):
-    """Read only the fixed AP row, never currency or battle-stage numbers."""
-    rows = doc.within((1115, 10, 1278, 58))
-    matches = []
-    for row in rows:
-        match = re.search(r'(\d+)/(\d+)(?:[|丨]?\+(\d[\d,]*))?', row['text'])
-        if not match or int(match[2]) <= 0 or int(match[1]) > int(match[2]):
-            continue
-        extra = int(match[3].replace(',', '')) if match[3] else None
-        if extra is None:
-            right = [r for r in rows if r['box'][0] >= row['box'][2] - 3
-                     and abs(r['point'][1] - row['point'][1]) < 15
-                     and re.fullmatch(r'\+\d[\d,]*', r['text'])]
-            if len(right) == 1:
-                extra = int(right[0]['text'][1:].replace(',', ''))
-        matches.append({'free_ap': int(match[1]), 'free_ap_capacity': int(match[2]),
-                        'owned_extra_ap': extra, 'resource_text': match[0],
-                        'resource_source': 'fixed_header_OCR'})
-    return matches[0] if len(matches) == 1 else {'free_ap': None, 'owned_extra_ap': None}
+# [资源] 所有活动布局统一采用固定右上X/5合同。
+from event_ap_vision import resource_balance
 
 
 def button_cost(doc, roi):
@@ -80,7 +63,11 @@ class EventBattleVision:
                       'min': minimum['point'], 'free_toggle': [829, 253 if quick else 245],
                       'plus': [815, 441 if quick else 352],
                       'minus': [465, 441 if quick else 352]}
-            return {'state': 'event_quick_dialog' if quick else 'event_auto_dialog', **identity,
+            # [身份/资源] 对话框核对本页标题；AP只来自统一固定区域数字，不依赖活动名称和图标。
+            from event_generic_vision import title_identity
+            title=title_identity(doc,(10,580,350,710))
+            # [未知] 免费模式不依赖额外持有余额；未知额外余额保持None，不能当作0。
+            return {'state': 'event_quick_dialog' if quick else 'event_auto_dialog', **identity, **(title or {}),
                     'total_cost': cost, 'quantity': quantity,
                     'free_only': DailyVision.toggle(image, (815, 242, 852, 264) if quick else (815, 235, 852, 255)),
                     'points': points, **balance}
@@ -94,10 +81,15 @@ class EventBattleVision:
             if doc.find(text, (350, 80, 1000, 500), exact=True):
                 return {'state': 'event_defeat', **balance}
         base = self.preparation.base.inspect(image, payload)
+        # [层级] 主页只认固定字幕解锁；中心用实际标题及普通/挑战两个入口独立确认身份。
+        from event_generic_vision import generic_event_observation
+        generic=generic_event_observation(image,payload,base['state'])
+        if generic:return generic
         if base['state'] == 'main_menu':
-            entry = self.preparation.home_event(image)
+            entry = self.preparation.home_event(image, payload)
             if entry:
-                base.update(event_id=entry['event_id'], points={'enter_event': entry['point']}, event_entry_evidence=entry)
+                base.update(points={'enter_event': entry['point']}, event_entry_evidence=entry)
+                if entry.get('event_id'):base['event_id']=entry['event_id']
             return base
         if self.preparation.anchor(image, 'hub_loyal_maid'):
             normal = doc.find('普通战斗', (300, 600, 500, 680), exact=True)
@@ -128,9 +120,21 @@ class EventBattleVision:
 
     def inspect_file(self, path, output, payload=None):
         path, output = Path(path), Path(output)
-        payload = payload if payload is not None else windows_ocr(path, output / 'ocr')
         image = read_image(path)
+        from common_navigation import PageDiagnosis
+        if PageDiagnosis().inspect(image)['state']=='main_menu':
+            from event_entry_vision import read_unlock_entry
+            return read_unlock_entry(image,output/'home_entry') or {'state':'main_menu','points':{}}
+        payload = payload if payload is not None else windows_ocr(path, output / 'ocr')
         result = self.inspect(image, payload)
+        if result.get('state')=='unknown' or (result.get('state')=='main_menu' and not result.get('points',{}).get('enter_event')) or (result.get('state') in ('event_preparation','event_auto_dialog','event_quick_dialog') and not result.get('event_id')):
+            from model_ocr_provider import recovery_page_ocr
+            recovered=recovery_page_ocr(image)
+            if recovered:
+                candidate=self.inspect(image,recovered)
+                if candidate.get('state')!='unknown':
+                    result=candidate
+                    result['ocr_recovery_backend']=recovered.get('backend')
         box = result.pop('_unit_cost_roi', None)
         if box:
             result['unit_cost'] = read_amount_crop(image, box, output, 'event_unit_cost')

@@ -20,6 +20,8 @@ class PageDiagnosis:
         self.opening = OpeningRecognizer()
         from return_navigation_vision import ReturnNavigationVision
         self.returns = ReturnNavigationVision()
+        from goddess_scene_vision import GoddessSceneVision
+        self.goddess_scene=GoddessSceneVision()
         self.assets = ROOT / "assets" / "navigation"
         self.config = json.loads((self.assets / "home_button.json").read_text(encoding="utf-8"))
         source_width = self.config.get('source_client_width')
@@ -29,6 +31,14 @@ class PageDiagnosis:
         self.glyph_mask = foreground_mask(self.glyph)
         self.settings_glyph = read_image(self.assets / "settings_house.png")
         self.settings_mask = foreground_mask(self.settings_glyph)
+        # [普通返回入口] 独立保存真实PrintWindow的房子与H键小图；旧资源保持兼容。
+        ordinary_path = self.assets / 'ordinary_home_v90.json'
+        self.ordinary_home = None
+        if ordinary_path.exists():
+            self.ordinary_home = json.loads(ordinary_path.read_text(encoding='utf-8'))
+            for kind in ('house', 'key'):
+                item = self.ordinary_home[kind]
+                item['gray'] = cv2.cvtColor(read_image(self.assets / item['template']), cv2.COLOR_BGR2GRAY)
         self.square_home_masks = None
         if (self.assets / 'square_home_glyph.png').exists() and (self.assets / 'square_home_key.png').exists():
             self.square_home_masks = [foreground_mask(read_image(self.assets / name))
@@ -63,10 +73,52 @@ class PageDiagnosis:
                 "client_box": [x * width / norm_width, y * height / 720,
                                w * width / norm_width, h * height / 720]}
 
+    def _find_ordinary_home(self, image):
+        """仅在右上固定位置配对普通房子和H键；结果只交给既有导航复核流程。"""
+        spec = self.ordinary_home
+        height, width = image.shape[:2]
+        if not spec or abs(width / height - 16 / 9) > .025:
+            return None
+        gray = cv2.cvtColor(cv2.resize(image, (1280, 720), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY)
+        found = {}
+        for kind in ('house', 'key'):
+            item = spec[kind]
+            x1, y1, x2, y2 = item['box']
+            margin = spec['search_margin']
+            region = gray[y1-margin:y2+margin, x1-margin:x2+margin]
+            template = item['gray']
+            # [独立图形核实] 只比较白色笔画及邻接边缘，避免人物、地面参与返回授权。
+            foreground = np.uint8(template >= 210) * 255
+            support = cv2.dilate(foreground, np.ones((3, 3), np.uint8))
+            values = cv2.matchTemplate(region, template, cv2.TM_CCOEFF_NORMED, mask=support)
+            values[~np.isfinite(values)] = -1
+            _, score, _, (tx, ty) = cv2.minMaxLoc(values)
+            sample = region[ty:ty+template.shape[0], tx:tx+template.shape[1]]
+            brightness = float(sample[foreground > 0].mean())
+            if score < spec['threshold'] or brightness < spec['min_foreground_gray']:
+                return None
+            found[kind] = {'score':float(score), 'brightness':brightness,
+                           'box':[x1-margin+tx, y1-margin+ty, x2-x1, y2-y1]}
+        # [联动门禁] 两个图形都存在还须上下对齐；单图、错位或暗遮罩均不放行。
+        hx, hy, hw, hh = found['house']['box']
+        kx, ky, kw, kh = found['key']['box']
+        dx, dy = kx+kw/2-hx-hw/2, ky+kh/2-hy-hh/2
+        if not (spec['pair_dx'][0] <= dx <= spec['pair_dx'][1]
+                and spec['pair_dy'][0] <= dy <= spec['pair_dy'][1]):
+            return None
+        return {'variant':'ordinary_house_and_H_key_v90',
+                'score':round(min(found[k]['score'] for k in found), 4),
+                'pair_evidence':found,
+                'client_point':[(hx+hw/2)*width/1280, (hy+hh/2)*height/720],
+                'client_box':[hx*width/1280, hy*height/720, hw*width/1280, hh*height/720]}
+
     def find_home(self, image):
         # A house-with-gear opens wallpaper settings; it is never a return button.
         if self.find_settings(image):
             return None
+        ordinary = self._find_ordinary_home(image)
+        if ordinary:
+            return ordinary
         original = self._find_glyph(image, self.glyph_mask, self.config["source_client_width"], 0.70)
         if original:
             return original
@@ -97,10 +149,15 @@ class PageDiagnosis:
             return {**returned, 'opening':opening}
         if opening["state"] == "main_menu":
             return {"state": "main_menu", "next_action": "done", "opening": opening}
-        if opening['state'] == 'loading_or_unknown_overlay':
-            return {'state':opening['state'],'next_action':'wait','opening':opening}
+        # [返回入口] 小控件已独立证明可见时，通用遮罩猜测不能挡住退出。
         if returned:
             return {**returned, 'opening':opening}
+        # [广场退出] 女神像/十字键/下中四钮共同成立，仍须独立明亮房子与H键才授权。
+        square_home=self.goddess_scene.home(image)
+        if square_home:
+            return {'state':'goddess_scene_with_home','next_action':'click_home','home_button':square_home}
+        if opening['state'] == 'loading_or_unknown_overlay':
+            return {'state':opening['state'],'next_action':'wait','opening':opening}
         if opening["next_action"] == "click_blank":
             return {"state": opening["state"], "next_action": "dismiss_opening", "opening": opening}
         if opening['state'] == 'pass_panel':
@@ -141,10 +198,17 @@ def ensure_main_menu(window, output, execute=False, timeout=20):
         check_requested_stop()
         image, geometry = window.capture()
         frame = cv2.cvtColor(np.asarray(image),cv2.COLOR_RGB2BGR)
-        started=time.monotonic();result=context.diagnose(frame, diagnosis.inspect(frame))
+        # [轻量主链] 已核实的主页和退出控件无需加载全局模型；未知页才请求候选复核。
+        started=time.monotonic();result=diagnosis.inspect(frame)
+        if result['next_action']=='wait':
+            result=context.diagnose(frame,result)
         result['recognition_ms']=round((time.monotonic()-started)*1000,1)
         path=output/f"frame_{len(report['observations']):03d}.png";path=next_path(path);image.save(path)
-        report['observations'].append({'image':str(path),'window':geometry,**result});save()
+        report['observations'].append({'image':str(path),'window':geometry,**result})
+        # [结果保全] 退出结算/领奖弹层前保留实际像素；不结算、不改pending、不重放提交。
+        if result['state'] in ('mirror_result','mirror_result_footer','event_defeat','event_reward','reward_overlay','guild_check_in_receipt','rank_promotion','battle_statistics','event_victory_final'):
+            persist_references(str(path))
+        save()
         return result,geometry,frame
 
     def target(result, geometry, attempt=0):
@@ -162,6 +226,14 @@ def ensure_main_menu(window, output, execute=False, timeout=20):
             if result['state']=='main_menu':
                 home_stable+=1
                 if not execute or home_stable>=2:
+                    # [终点实证] 只持久化最终主页两帧，内存回收后仍可逐项审核返回结果。
+                    import hashlib
+                    final=report['observations'][-2:] if execute else report['observations'][-1:]
+                    report['return_evidence']=[]
+                    for observation in final:
+                        persist_references(observation['image'])
+                        evidence=Path(observation['image'])
+                        report['return_evidence'].append({'image':str(evidence),'sha256':hashlib.sha256(evidence.read_bytes()).hexdigest(),'state':observation['state']})
                     report.update(completed=True,completion='main_menu_observed_twice' if execute else 'main_menu_observed')
                     break
                 time.sleep(.25);continue

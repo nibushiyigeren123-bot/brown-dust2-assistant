@@ -97,14 +97,38 @@ def summarize_report(report, task_id):
         if task_id == 'navigation' and state and state != 'main_menu':
             return prefix + '只读模式仅识别，不会关闭弹窗或进入主菜单。若要进入主菜单，请切换实机操作，再点“执行选中单段”。'
         return prefix + '只读检查结束，没有点击游戏。'
+    # [直接领取反馈] 新策略完成位只代表一次输入流程，旧的奖励检查说明不能用于它。
+    if (report.get('completed') and task_id in ('rewards', 'character_pass')
+            and report.get('action_policy') == 'direct_once'):
+        return prefix + '已执行一次通行证领取操作并返回主页；奖励未核实。'
+    # [合并反馈] 旧策略仍按原有已检查范围说明，不改历史结果。
+    if report.get('completed') and task_id == 'rewards':
+        scope = '普通及角色通行证' if report.get('character_pass_enabled') else '普通通行证'
+        return prefix + scope + '当前可领奖励已检查并返回主页；未完成任务保留。'
+    if report.get('completed') and task_id=='character_pass':
+        return prefix+'角色通行证当前可领奖励已检查并返回主页；未完成任务保留。'
     if report.get('completed') and task_id == 'task_rewards':
         return prefix + '每日及每周可领奖励已检查并返回主页；未完成任务保留。下次运行会重新检查每周。'
     if report.get('completed'):
+        # 正常返回说明与领取完成分开，避免因skipped被误说成配置停用。
+        from daily_availability import normal_unavailable_reason
+        unavailable_reason=normal_unavailable_reason(report)
+        if unavailable_reason:return prefix+'正常跳过：'+unavailable_reason
+        # [门禁] 镜中结束证据未通过共享复核时，不把返主页称为战斗完成。
+        if report.get('unavailable') == 'mirror_resource_limit':
+            return prefix+'资源结束回执尚未完整核实，保留待核对；未补记战斗完成。'
         if report.get('unavailable')=='season_settlement':
             from mirror_status import settlement_from_report
             if not settlement_from_report(report, report.get('cache_date')):
                 return prefix+'赛季末回执尚未完整核实，请查看任务进度与运行记录。'
             return prefix+'赛季末 · 已跳过。'+(report.get('skip_reason') or '已确认结算提示并返回主菜单，继续其他日常；未记作战斗完成。')
+        if report.get('skipped'):
+            # [跳过反馈] 特殊回执已在前面解释；设置停用和普通跳过都不能冒充任务完成。
+            reason = report.get('skip_reason') or '本段没有执行任务。'
+            disabled = (report.get('completion_scope') == 'disabled_in_settings'
+                or (task_id == 'event' and reason == '活动战斗在配置中停用；本次未消费。'))
+            label = '设置停用，正常跳过：' if disabled else '正常跳过：'
+            return prefix + label + readable_reason(reason) + ' 本次不记作任务完成。'
         if task_id in ('goddess_check_in','goddess_daily_reward') and report.get('deferred_actions'):
             done=report.get('progress',{}).get('goddess',{}).get('done',[])
             if task_id == 'goddess_check_in' and 'check_in' in done and 'daily_reward' in report['deferred_actions']:

@@ -46,6 +46,15 @@ def inspect(path, vision, config, output, ocr_json=None):
     return inspect_frame(path, vision, config, output, payload)
 
 
+def inspect_goddess_window(path,vision,config,output,controller,module):
+    """[期限接线] 广场回执后和恢复女神像未决时走纯像素；未知/遮挡不触发慢OCR后备。"""
+    pending=controller.ledger.data.get('pending') or {}
+    if module=='goddess' and (controller.goddess_scene_attempts or pending.get('module')=='goddess'):
+        if controller.goddess_window_expired():return {'state':'unknown','reason':'goddess_absolute_window_expired'}
+        return vision.inspect_goddess_fast(read_image(path),square_entered=True)
+    return inspect(path,vision,config,output)
+
+
 def same_rechecked_action(original,fresh):
     if original==fresh:
         return True
@@ -57,6 +66,42 @@ def same_rechecked_action(original,fresh):
             and not original.get('consumes') and not fresh.get('consumes')):
         return sum((a-b)**2 for a,b in zip(original['point'],fresh['point']))<=40**2
     return False
+
+
+def capture_statue_result_frames(window,geometry,output,expected_day):
+    """[结果保全] 回执落盘后先采有界即时帧再OCR；停止、换日、窗口变化立即中止，不发输入。"""
+    from game_window import check_requested_stop
+    from game_calendar import check_execution_day
+    frames=[];started=time.monotonic()
+    for index,offset in enumerate((0,.2,.5,.9,1.5)):
+        delay=offset-(time.monotonic()-started)
+        if delay>0:time.sleep(delay)
+        check_requested_stop();check_execution_day(expected_day)
+        image,current=window.capture()
+        if current!=geometry:raise RuntimeError('女神像结果采集窗口几何改变，保留原pending。')
+        path=next_path(Path(output)/f'statue_result_{index:02}.png');image.save(path)
+        persist_references(str(path))
+        frames.append({'image':str(path),'geometry':current,'seconds_after_receipt':round(time.monotonic()-started,3)})
+    return frames
+
+
+def return_home_with_unresolved_reward(window,output,ledger,decision,report):
+    """[受限恢复] 仅原女神像零费用签到/领奖未决允许返主页；不保存或核销账本，不报告业务完成。"""
+    pending=ledger.data.get('pending') or {}
+    if (decision.get('status')!='needs_review' or decision.get('return_home_preserving_pending') is not True
+            or pending.get('module')!='goddess' or pending.get('task') not in ('check_in','daily_reward')
+            or pending.get('cost')!=0 or pending.get('quantity')!=1 or not pending.get('input_receipt')
+            or pending.get('config_hash')!=ledger.config_hash):
+        raise RuntimeError('女神像未决返回决策身份不符，不执行导航。')
+    before=json.dumps(pending,sort_keys=True,ensure_ascii=False)
+    returned=ensure_main_menu(window,Path(output)/'return_with_pending',execute=True,timeout=network_wait_seconds())
+    if json.dumps(ledger.data.get('pending'),sort_keys=True,ensure_ascii=False)!=before:
+        raise RuntimeError('返回导航意外改变原pending，停止。')
+    report.update(completed=False,module_completed=False,returned_to_main_menu=bool(returned.get('completed')),
+                  pending_preserved=True,stopped=decision,return_navigation=returned)
+    if report.get('goddess_wait_windows'):
+        trace=report['goddess_wait_windows'][-1];trace['home_verification_finished_monotonic']=time.monotonic()
+        trace['return_navigation_seconds']=round(time.monotonic()-trace.get('return_requested_monotonic',time.monotonic()),3)
 
 
 def prepare_goddess_menu(window,vision,output):
@@ -189,6 +234,8 @@ def run(args):
     window = GameWindow.find()
     report = {'module': args.module, 'execute': args.execute, 'cache_date':config['cache_date'], 'completed': False,
               'actions': [], 'observations': [], 'ledger': str(ledger_path) if args.execute else None}
+    # [来源] 保留实际加载的镜中策略，供下游独立核对资源结束证据。
+    if args.module == 'mirror': report['mirror_policy'] = dict(config['mirror'])
 
     def save():
         report_write(output / 'run.json', report)
@@ -225,12 +272,14 @@ def run(args):
                 save()
                 from hunting_survey import survey_resources
                 report['resource_survey']=survey_resources(window,config,output/'resource_survey',ROOT,on_frame=probe_frame)
+                # 总览已分别确认米饭与火把两帧，传给本次控制器决定免费耗尽跳过。
+                controller.resource_survey=report['resource_survey']['resources']
                 save()
             wanted=config['goddess']['actions']
             if getattr(args,'entry_only',False) and ledger.data['pending']:
                 raise RuntimeError('Entry-only navigation refuses an unresolved action')
             if (args.execute and args.module=='goddess' and not ledger.data['pending']
-                    and config['goddess']['enabled'] and config['goddess']['user_positioned_near_statue']
+                    and config['goddess']['enabled']
                     and set(wanted)<=set(config['goddess']['actions'])
                     and not all(task in ledger.data['goddess']['done'] for task in wanted)):
                 prepared=prepare_goddess_menu(window,vision,output/'prepare_menu')
@@ -255,14 +304,22 @@ def run(args):
                         return report
             while time.monotonic() < deadline:
                 if win32api.GetAsyncKeyState(0x77) & 0x8000:
-                    report['stopped'] = 'F8'
-                    break
-                image, geometry = window.capture()
-                path = output / f"frame_{len(report['observations']):03}.png"
-                path=next_path(path);image.save(path)
-                observation = inspect(path, vision, config, output)
+                    # [全队列停止] 使用已命中的这次F8结果落盘控制信号，松键后父队列仍能停止。
+                    from execution_control import stop_execution
+                    stop_execution('用户已按F8停止当前任务', 'stopped')
+                # [墙钟上界] 到期先派返回决策，不再截图或进入OCR；截图后也再次检查期限。
+                expired=controller.goddess_window_expired() if args.module=='goddess' else None
+                if expired:
+                    path=None;geometry=None
+                    observation={'state':'unknown','reason':'goddess_absolute_window_expired'}
+                else:
+                    image, geometry = window.capture()
+                    path = output / f"frame_{len(report['observations']):03}.png"
+                    path=next_path(path);image.save(path)
+                    observation = inspect_goddess_window(path,vision,config,output,controller,args.module)
+                    if args.module=='goddess':report['goddess_last_visual_state']=observation['state']
                 from frame_store import active
-                if active():
+                if active() and path is not None:
                     observation['image_evidence'] = str(path)
                 if args.module == 'hunting':
                     from hunting_resources import retain_observation
@@ -293,11 +350,28 @@ def run(args):
                     if ledger.data['mirror'].pop('availability', None) is not None:
                         ledger.save()
                 decision = controller.step(observation)
-                report['observations'].append({'image': str(path), 'geometry': geometry,
+                if args.module=='goddess' and controller.goddess_button_deadline is not None:
+                    # [实测计时] 等按钮到期与返主页双帧耗时分开记录，禁止将两者混成五秒。
+                    windows=report.setdefault('goddess_wait_windows',[])
+                    if not windows or windows[-1]['deadline_monotonic']!=controller.goddess_button_deadline:
+                        windows.append({'started_monotonic':controller.goddess_button_deadline-5,
+                            'deadline_monotonic':controller.goddess_button_deadline,'origin':'restored_pending_first_observation'})
+                    if decision.get('return_home_preserving_pending') or decision.get('outcome')=='goddess_button_window_expired':
+                        windows[-1].update(return_requested_monotonic=time.monotonic(),
+                            wait_elapsed_seconds=round(time.monotonic()-windows[-1]['started_monotonic'],3),
+                            reason=decision['reason'],last_visual_state=report.get('goddess_last_visual_state',observation['state']))
+                report['observations'].append({'image': str(path) if path is not None else None, 'geometry': geometry,
                                                'observation': observation, 'decision': decision})
                 save()
                 if not args.execute:
                     break
+                # 当前两帧资源归零后，只做分类导航总览；pending由controller.step优先处理，不能借归零清账。
+                if decision.get('requires_resource_survey') and args.module=='hunting':
+                    from hunting_survey import survey_resources
+                    report['resource_survey']=survey_resources(window,config,output/'resource_recheck',ROOT,on_frame=probe_frame)
+                    controller.resource_survey=report['resource_survey']['resources']
+                    save()
+                    continue
                 if decision['status'] == 'action':
                     if getattr(args,'entry_only',False) and (decision.get('consumes') or decision.get('type') not in ('open_goddess_collection','enter_goddess_square')):
                         report['stopped']='entry_only_refused_non_navigation_action'
@@ -308,7 +382,7 @@ def run(args):
                     fresh, fresh_geometry = window.capture()
                     fresh_path = output / f"preclick_{len(report['observations']):03}.png"
                     fresh_path=next_path(fresh_path);fresh.save(fresh_path)
-                    fresh_observation = inspect(fresh_path, vision, config, output)
+                    fresh_observation = inspect_goddess_window(fresh_path,vision,config,output,controller,args.module)
                     if args.module == 'hunting':
                         retain_observation(ROOT, fresh_observation, fresh_path, config['cache_date'])
                     fresh_decision = controller.step(fresh_observation)
@@ -323,6 +397,10 @@ def run(args):
                     if win32api.GetAsyncKeyState(0x77) & 0x8000:
                         report['stopped'] = 'F8'
                         break
+                    if args.module=='goddess' and controller.goddess_window_expired():
+                        report['observations'][-1]['input_skipped']='goddess_absolute_window_expired_before_input'
+                        save()
+                        continue
                     if decision.get('consumes'):
                         if active():
                             decision['image_evidence'] = {'before':str(path), 'preclick':str(fresh_path)}
@@ -331,27 +409,54 @@ def run(args):
                     click_options = {'native_motion': True, 'press_ms': 250} if decision['type'] == 'dismiss_hunt_reward' else {}
                     receipt = window.click_client([x * geometry['width'] / 1280, y * geometry['height'] / 720], geometry, **click_options)
                     report['actions'].append({**decision, **receipt})
-                    controller.after_action(decision)
+                    controller.after_action({**decision,'input_receipt':receipt})
+                    if decision['type'] in ('enter_goddess_square','interact_statue'):
+                        report.setdefault('goddess_wait_windows',[]).append({
+                            'started_monotonic':controller.goddess_button_deadline-5,
+                            'deadline_monotonic':controller.goddess_button_deadline,
+                            'origin':decision['type']+'_receipt','input_receipt':receipt})
                     if decision.get('consumes'):
                         ledger.data['pending']['input_receipt'] = receipt
                         ledger.save()
                     save()
-                    time.sleep(0.9)
+                    if decision['type']=='interact_statue':
+                        frames=capture_statue_result_frames(window,geometry,output,config['cache_date'])
+                        report.setdefault('statue_result_frames',[]).extend(frames);save()
+                        # [结果核对] 采集完成才OCR；只让现有结果合同结算同一pending，不派发下一步动作。
+                        for frame in frames:
+                            if not ledger.data.get('pending'):break
+                            from game_window import check_requested_stop
+                            check_requested_stop()
+                            result_observation=inspect_goddess_window(Path(frame['image']),vision,config,output,controller,args.module)
+                            result_decision=controller.step(result_observation)
+                            report['observations'].append({**frame,'observation':result_observation,
+                                'decision':result_decision,'scope':'post_statue_input_result_only'})
+                            save()
+                    else:time.sleep(0.9)
                 elif decision['status'] == 'finished':
                     if decision.get('skipped'):
                         report.update(skipped=True,unavailable=decision.get('unavailable'),skip_reason=decision.get('reason'))
                     deferred=decision.get('deferred_actions',[])
-                    report['module_completed'] = not deferred
+                    report['module_completed'] = decision.get('module_completed', not deferred)
+                    # [输出] 结束证据交给队列与进度共同复核，不改实际战斗完成账本。
+                    if decision.get('mirror_resource_end'): report['mirror_resource_end'] = decision['mirror_resource_end']
                     if args.module == 'goddess' and args.checkpoint in ('check_in','daily_reward'):
                         report['completion_checkpoint'] = args.checkpoint
                         report['module_completed'] = goddess_checkpoint_complete(args.checkpoint, ledger.data, config['cache_date'])
                     report['deferred_actions'] = deferred
                     report['completion_scope'] = decision.get('completion_scope','requested_tasks')
+                    if decision.get('free_exhaustion'):report['free_exhaustion']=decision['free_exhaustion']
+                    # 正常返回与到账核实分开；已结束的零费尝试完整留在events，不写领取完成。
+                    if decision.get('outcome'):report['outcome']=decision['outcome']
                     report['completion_reason'] = decision.get('reason')
                     if args.module == 'goddess' and args.checkpoint in deferred:
                         report['completion_reason'] = ('尚未识别并领取女神像今日奖励，已返回主菜单；该项保留未完成，请核对叹号入口画面。'
                             if args.checkpoint == 'daily_reward' else '当前没有可用的女神像签到互动，签到尚未核实。')
                     returned = ensure_main_menu(window, output/'return_to_menu', execute=True, timeout=network_wait_seconds())
+                    if report.get('goddess_wait_windows'):
+                        trace=report['goddess_wait_windows'][-1]
+                        trace['home_verification_finished_monotonic']=time.monotonic()
+                        trace['return_navigation_seconds']=round(time.monotonic()-trace.get('return_requested_monotonic',time.monotonic()),3)
                     report['returned_to_main_menu'] = returned['completed']
                     report['completed'] = returned['completed']
                     if args.module == 'mirror':
@@ -365,12 +470,33 @@ def run(args):
                     if not returned['completed']:
                         report['stopped'] = 'task_verified_but_return_to_menu_not_verified'
                     break
+                elif decision['status'] == 'skipped':
+                    # [设置停用] 只跳过没有未决的本段；返回主页完成不等于写入任务完成。
+                    if ledger.data.get('pending'):
+                        report['stopped'] = {'status': 'needs_review',
+                            'reason': '停用模块仍存在未决操作，保留回执待核对。'}
+                        break
+                    report.update(skipped=True, skip_reason=decision.get('reason'),
+                                  completion_scope='disabled_in_settings')
+                    returned = ensure_main_menu(window, output/'return_to_menu',
+                                                execute=True, timeout=network_wait_seconds())
+                    report['returned_to_main_menu'] = returned['completed']
+                    report['completed'] = returned['completed']
+                    if not returned['completed']:
+                        report['stopped'] = 'disabled_but_return_to_menu_not_verified'
+                    break
+                elif decision.get('return_home_preserving_pending') is True:
+                    return_home_with_unresolved_reward(window,output,ledger,decision,report)
+                    save()
+                    break
                 elif decision['status'] not in ('wait',):
-                    if decision['status']=='skipped':
-                        report['skipped']=True
                     report['stopped'] = decision
                     break
-                time.sleep(0.25)
+                # [精确等待] 最后一次轮询睡眠不跨过女神像绝对截止，避免额外固定等待。
+                pause=.25
+                if args.module=='goddess' and controller.goddess_button_deadline is not None:
+                    pause=max(0,min(pause,controller.goddess_button_deadline-time.monotonic()))
+                time.sleep(pause)
             if args.execute and not report['completed'] and 'stopped' not in report:
                 report['stopped'] = 'timeout_without_verified_completion'
         except Exception as error:
